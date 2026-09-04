@@ -78,6 +78,8 @@ contract InterfaceFreezeTest is Test {
         assertEq(ITaskEscrow.DisputeWindowClosed.selector, bytes4(keccak256("DisputeWindowClosed()")));
         assertEq(IWorkerRegistry.DuplicateNullifier.selector, bytes4(keccak256("DuplicateNullifier()")));
         assertEq(IWorkerRegistry.AttestationUsed.selector, bytes4(keccak256("AttestationUsed()")));
+        assertEq(IWorkerRegistry.ZeroWorker.selector, bytes4(keccak256("ZeroWorker()")));
+        assertEq(IWorkerRegistry.ZeroNullifier.selector, bytes4(keccak256("ZeroNullifier()")));
         assertEq(IAbuseMark.MarkCooldown.selector, bytes4(keccak256("MarkCooldown()")));
     }
 

@@ -10,6 +10,18 @@ optimizer_runs = 200
 via_ir = false
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
+# forge coverage disables the optimizer and then fails with "Stack too deep" under solc
+# 0.8.24. The cause is test/mocks/MockERC8004.sol, bisected by the T-12 agent on PR #62 --
+# an earlier note here blamed vendored forge-std, which was wrong: removing the mock alone
+# makes coverage run. The stack pressure is giveFeedback building a nine-field memory struct
+# from eight parameters, plus getSummary's nested client loop.
+#
+# Not yet fixed: two attempts at rewriting the mock (storage-pointer push, extracted client
+# helper) were abandoned mid-build rather than risk breaking a frozen path at speed. Until
+# then --ir-minimum is Foundry's documented workaround and is what every brief's §9 coverage
+# command passes; the default profile keeps via_ir off so ordinary builds and tests stay fast.
+# Fixing the mock and dropping --ir-minimum from the three briefs is a clean small task.
+
 [fmt]
 line_length = 110
 tab_width = 4

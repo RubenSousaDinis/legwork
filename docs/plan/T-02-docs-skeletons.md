@@ -96,7 +96,7 @@ README.md
 | `grep -c '^outcome:' docs/spikes/RESULTS.md` | prints `7`; same for `^evidence:` and `^decision:` |
 | `grep -cE '^## (S1\|S2\|S3\|S5\|Graph\|Preflight\|Timing)$' docs/spikes/RESULTS.md` | prints `7` (bare-id headings; anchors `#s1`… resolve) |
 | `grep -c '^| \*\*FIX\*\*\|^| \*\*DOC\*\*' docs/threat-model.md` | prints `19` |
-| `grep -Fq 'state of this repo on 2026-09-04' README.md && grep -Fq 'Pre-kickoff artifacts: this planning pack' README.md` | T-00 lines intact |
+| `grep -Fiq 'state of this repo on 2026-09-04' README.md && grep -Fq 'Pre-kickoff artifacts: this planning pack' README.md` | T-00 lines intact |
 | `bash scripts/ci/banned-words.sh` | exit 0 |
 | link check (§9) | no `MISSING` line |
 

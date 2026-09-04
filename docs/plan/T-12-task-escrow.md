@@ -77,7 +77,7 @@ contracts/test/TaskEscrow*.t.sol
 1. Read `AGENTS.md`, then `contracts/src/interfaces/ITaskEscrow.sol`, `IWorkerRegistry.sol`, `IReputation.sol`, `IAbuseMark.sol`, the four mocks, `Keys.sol`, and OZ 5 `Pausable`/`SafeERC20` in `lib/`.
 2. PR 1/2: write the contract with the storage and check orders in §2 (stubs for the PR-2 functions); `forge build`.
 3. Write `TaskEscrow.base.t.sol` and `TaskEscrow.t.sol`; one revert per `vm.expectRevert(Selector.selector)`; events with `vm.expectEmit(true, true, true, true)`; for `test_Claim_LazyExpiry` assert both events in order.
-4. `forge test --match-contract TaskEscrow -vvv`; `forge coverage --match-contract TaskEscrow`; `forge fmt --check`; open PR `T-12 (1/2)`.
+4. `forge test --match-contract TaskEscrow -vvv`; `forge coverage --match-contract TaskEscrow --ir-minimum`; `forge fmt --check`; open PR `T-12 (1/2)`.
 5. PR 2/2 (same branch prefix, after 1/2 merges): fill `approve`, `dispute`, `autoRelease`, `resolve`, `_release`; write `TaskEscrow.release.t.sol`; re-run §9; open PR `T-12 (2/2)`.
 
 ## 8. Acceptance tests
@@ -103,15 +103,15 @@ contracts/test/TaskEscrow*.t.sol
 | `test_Resolve_ToBuyer_NoFee` (2/2) | disputed → owner `resolve(1, true)`: buyer +3_450_000, worker ±0, treasury ±0, escrow −3_450_000; `Resolved`; emits `TaskResolved(1, true)`; hooks recorded with outcome `3` on both mocks; `activeClaimOf(worker1) == 0`; `openTasksOf(buyer) == 0` |
 | `test_Resolve_ToWorker_NoFee` (2/2) | `resolve(1, false)`: worker +3_000_000, buyer +450_000, treasury ±0; outcome `2` recorded on both mocks; emits `TaskResolved(1, false)`; from the relayer → `OwnableUnauthorizedAccount`; on a `Submitted` task → `BadState` |
 | `test_Pause_NeverBlocksRelease` (2/2) | prepare tasks in `Claimed`, `Submitted` (inside and past the window) and `Disputed`; `pause()`; `post`, `postAsBuyer`, `claim`, `claimFor` → `EnforcedPause`; `submit`, `releaseClaim`, `approve`, `dispute`, `autoRelease`, `resolve`, `expire` all succeed while paused; `unpause()` restores `post`/`claim`; `pause` from the relayer → `OwnableUnauthorizedAccount` |
-| `forge coverage --match-contract TaskEscrow` | row `src/TaskEscrow.sol` ≥ 90 % lines (both PRs) |
+| `forge coverage --match-contract TaskEscrow --ir-minimum` | row `src/TaskEscrow.sol` ≥ 90 % lines (both PRs) |
 
 ## 9. Verification commands
 ```bash
 cd contracts
 forge build
 forge test --match-contract TaskEscrow -vvv
-forge coverage --match-contract TaskEscrow
-forge coverage --match-contract TaskEscrow --report summary | grep -E "TaskEscrow|Total"
+forge coverage --match-contract TaskEscrow --ir-minimum
+forge coverage --match-contract TaskEscrow --report summary --ir-minimum | grep -E "TaskEscrow|Total"
 forge fmt --check
 ```
 Expected: every test in §8 for the PR listed by name and green; the coverage row for `src/TaskEscrow.sol` shows ≥ 90 % lines; `forge fmt --check` prints nothing.
