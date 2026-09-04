@@ -4,7 +4,8 @@
 # Exit 1 = someone else holds it, or it is already done. Stop. Do not start.
 set -euo pipefail
 
-ID="${1:?usage: scripts/claim.sh T-12}"
+ID="${1:?usage: scripts/claim.sh T-12 [--continue]}"
+CONT="${2:-}"
 BRIEF=$(ls "docs/plan/${ID}-"*.md 2>/dev/null | head -1)
 [ -n "$BRIEF" ] || { echo "no brief for $ID under docs/plan/"; exit 1; }
 BRANCH=$(sed -n 's/^branch: *//p' "$BRIEF" | head -1)
@@ -32,15 +33,22 @@ for d in $DEPS; do
 done
 
 # --- the lock -------------------------------------------------------------
-# If origin already has this branch, the task is claimed. The only case where
-# that is fine is a second PR of the same task by the same agent (brief says
-# "(1/2)"/"(2/2)"), so compare the claimer before refusing.
+# If origin already has this branch, the task is claimed — refuse, full stop.
+# Continuation is explicit (--continue) and never inferred from identity: local
+# agents share a machine and a git user, so "is this claim mine?" cannot be
+# answered from $WHO. Guessing wrong puts two agents on one branch, which is
+# the exact failure this script exists to prevent.
 if git rev-parse --quiet --verify "refs/remotes/origin/$BRANCH" >/dev/null; then
   HELD=$(git log --format=%s "origin/$BRANCH" | grep "^$ID: claim by" | tail -1 || true)
-  case "$HELD" in
-    *"by $WHO "*) echo "already yours: $HELD — continuing"; git checkout -B "$BRANCH" "origin/$BRANCH"; exit 0 ;;
-    *) echo "ALREADY CLAIMED: $HELD"; echo "Stop. Do not start $ID. Report it to the operator."; exit 1 ;;
-  esac
+  if [ "$CONT" = "--continue" ]; then
+    echo "continuing an existing claim as instructed: $HELD"
+    git checkout -B "$BRANCH" "origin/$BRANCH"
+    exit 0
+  fi
+  echo "ALREADY CLAIMED: $HELD"
+  echo "Stop. Do not start $ID. Report it to the operator."
+  echo "(Second PR of a two-PR task, and the lead told you to start it? scripts/claim.sh $ID --continue)"
+  exit 1
 fi
 
 git checkout --quiet -B "$BRANCH" origin/main
