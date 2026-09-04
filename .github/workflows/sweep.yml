@@ -1,0 +1,16 @@
+name: sweep
+# Vercel Hobby cron is daily-only, so the 5-minute sweeper lives here.
+on:
+  schedule: [{ cron: '*/5 * * * *' }]
+  workflow_dispatch: {}
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: expire claims, auto-release past the dispute window
+        run: |
+          [ -n "${API_BASE_URL:-}" ] || { echo "API_BASE_URL not set yet — nothing to sweep"; exit 0; }
+          curl -fsS -X POST "$API_BASE_URL/admin/sweep" -H "X-Admin-Key: $SWEEP_SECRET"
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          SWEEP_SECRET: ${{ secrets.SWEEP_SECRET }}

@@ -1,0 +1,40 @@
+{
+  "name": "@legwork/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint app",
+    "test": "vitest run --passWithNoTests",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "catalog:",
+    "postgres": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "jose": "catalog:",
+    "pino": "catalog:",
+    "sharp": "catalog:",
+    "exifr": "catalog:",
+    "viem": "catalog:",
+    "@legwork/shared": "workspace:*",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
+    "drizzle-kit": "catalog:",
+    "@electric-sql/pglite": "catalog:"
+  }
+}

@@ -1,0 +1,111 @@
+name: ci
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge fmt --check
+        working-directory: contracts
+      - run: forge build --sizes
+        working-directory: contracts
+      - run: forge test -vvv
+        working-directory: contracts
+
+  ts:
+    runs-on: ubuntu-latest
+    env: { LIVE_LLM: '', LIVE_CHAIN: '' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      - run: pnpm -r lint
+      - run: pnpm -r test
+      - run: pnpm -r build
+
+  subgraph-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @legwork/subgraph codegen && pnpm --filter @legwork/subgraph build
+
+  banned-words:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/banned-words.sh
+
+  path-ownership:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'bootstrap') && !contains(github.event.pull_request.labels.*.name, 'interface-change')
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: bash scripts/ci/path-ownership.sh "$PR_BODY" "$BASE_SHA"
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+  commit-trailers:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: bash scripts/ci/commit-trailers.sh "${{ github.event.pull_request.base.sha }}"
+
+  claim:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'bootstrap') && !contains(github.event.pull_request.labels.*.name, 'interface-change')
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: bash scripts/ci/claim.sh "$BASE_SHA" "$PR_TITLE"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+      - name: ANTHROPIC_API_KEY read only where allowed
+        run: |
+          bad=$(git ls-files | grep -E '\.(ts|tsx|js|mjs)$' \
+            | grep -v -e '^packages/screening/src/classifier/live\.ts$' -e '^scripts/' \
+            | xargs grep -ln 'ANTHROPIC_API_KEY' 2>/dev/null || true)
+          [ -z "$bad" ] || { echo "ANTHROPIC_API_KEY read outside classifier/live.ts and scripts/:"; echo "$bad"; exit 1; }
+      - name: no tracked .env, no private key literal
+        run: |
+          git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' && exit 1
+          git ls-files -z | xargs -0 grep -lnE '\b0x[a-fA-F0-9]{64}\b' 2>/dev/null | grep -v -e '^contracts/lib/' -e '^docs/plan/' && exit 1
+          echo "secrets: clean"
+
+  no-live-llm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          bad=$(git ls-files '*.test.ts' | grep -v '\.live\.test\.ts$' \
+            | xargs grep -ln 'classifier/live' 2>/dev/null || true)
+          [ -z "$bad" ] || { echo "live classifier imported by a non-live test:"; echo "$bad"; exit 1; }
+          echo "no-live-llm: clean"

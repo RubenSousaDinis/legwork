@@ -1,0 +1,20 @@
+node_modules/
+.next/
+out/
+dist/
+cache/
+broadcast/
+coverage/
+*.local
+.DS_Store
+.vercel
+
+# secrets — .env.example is the only env file that is tracked
+.env
+.env.*
+!.env.example
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/deployments/anvil.json

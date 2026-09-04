@@ -1,0 +1,32 @@
+{
+  "name": "legwork",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "db:push": "pnpm --filter @legwork/api db:push",
+    "abi:gen": "bash contracts/abi-gen.sh",
+    "osm:extract": "echo 'not yet — T-22' && exit 1",
+    "demo:run": "echo 'not yet — T-29' && exit 1",
+    "demo:reset": "echo 'not yet — T-29' && exit 1",
+    "inserts": "echo 'not yet — T-44' && exit 1",
+    "e2e:anvil": "echo 'not yet — T-36' && exit 1",
+    "claim": "bash scripts/claim.sh",
+    "release": "bash scripts/release.sh",
+    "claims": "bash scripts/claims.sh"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "tsx": "catalog:",
+    "vitest": "catalog:",
+    "eslint": "catalog:",
+    "typescript-eslint": "catalog:",
+    "prettier": "catalog:",
+    "@types/node": "catalog:"
+  }
+}
