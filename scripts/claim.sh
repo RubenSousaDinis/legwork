@@ -96,7 +96,7 @@ gh pr create --draft --base main --head "$BRANCH" \
 > ready for review until the agent runs \`gh pr ready\`. Do not review a draft.
 
 ## Task
-$ID — $TITLE · brief: \`$BRIEF\` · issue: #${N:-?} · PR <1/1 — change to 1/2 or 2/2 if your brief ships two>
+Refs #${N:-?} — $ID — $TITLE · brief: \`$BRIEF\` · PR <1/1 — change to 1/2 or 2/2 if your brief ships two>
 
 ## owned-paths:
 \`\`\`
