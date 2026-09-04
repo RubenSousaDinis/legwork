@@ -1,0 +1,6 @@
+# `graph codegen` / `graph build` output — regenerate, never commit.
+generated/
+build/
+# matchstick's downloaded binary and its last-run cache
+tests/.bin/
+tests/.latest.json

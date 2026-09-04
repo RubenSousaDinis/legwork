@@ -2,4 +2,116 @@ specVersion: 1.0.0
 description: Legwork — tasks, workers, feedback and marks on Base Sepolia
 schema:
   file: ./schema.graphql
-dataSources: []
+dataSources:
+  - kind: ethereum
+    name: WorkerRegistry
+    network: base-sepolia
+    source:
+      abi: WorkerRegistry
+      address: "0x0000000000000000000000000000000000000000" # T-23
+      startBlock: 0 # T-23
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/worker-registry.ts
+      entities:
+        - Worker
+      abis:
+        - name: WorkerRegistry
+          file: ./abis/WorkerRegistry.json
+      eventHandlers:
+        - event: WorkerRegistered(indexed uint256,indexed address,string,uint8)
+          handler: handleWorkerRegistered
+        - event: WorkerSeeded(indexed uint256,indexed address,string,uint8)
+          handler: handleWorkerSeeded
+        - event: WorkerReset(indexed uint256,indexed address)
+          handler: handleWorkerReset
+
+  - kind: ethereum
+    name: TaskEscrow
+    network: base-sepolia
+    source:
+      abi: TaskEscrow
+      address: "0x0000000000000000000000000000000000000000" # T-23
+      startBlock: 0 # T-23
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/task-escrow.ts
+      entities:
+        - Task
+        - Buyer
+        - Worker
+        - PosterStats
+      abis:
+        - name: TaskEscrow
+          file: ./abis/TaskEscrow.json
+      eventHandlers:
+        - event: TaskPosted(indexed uint256,indexed address,uint256,uint8,bytes32,uint96,uint96,string,uint32,uint32,uint32)
+          handler: handleTaskPosted
+        - event: TaskClaimed(indexed uint256,indexed address)
+          handler: handleTaskClaimed
+        - event: ClaimReleased(indexed uint256,indexed address)
+          handler: handleClaimReleased
+        - event: ClaimExpired(indexed uint256,indexed address)
+          handler: handleClaimExpired
+        - event: TaskSubmitted(indexed uint256,indexed address,bytes32)
+          handler: handleTaskSubmitted
+        - event: TaskReleased(indexed uint256,indexed address,uint96,uint96)
+          handler: handleTaskReleased
+        - event: TaskDisputed(indexed uint256)
+          handler: handleTaskDisputed
+        - event: TaskResolved(indexed uint256,bool)
+          handler: handleTaskResolved
+        - event: TaskRefunded(indexed uint256,indexed address,uint96)
+          handler: handleTaskRefunded
+        - event: BuyerAllowlisted(indexed address,bool)
+          handler: handleBuyerAllowlisted
+
+  - kind: ethereum
+    name: Reputation
+    network: base-sepolia
+    source:
+      abi: Reputation
+      address: "0x0000000000000000000000000000000000000000" # T-23
+      startBlock: 0 # T-23
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/reputation.ts
+      entities:
+        - Feedback
+        - Worker
+      abis:
+        - name: Reputation
+          file: ./abis/Reputation.json
+      eventHandlers:
+        - event: Feedback(indexed uint256,indexed bytes32,uint8,uint256,bool)
+          handler: handleFeedback
+
+  - kind: ethereum
+    name: AbuseMark
+    network: base-sepolia
+    source:
+      abi: AbuseMark
+      address: "0x0000000000000000000000000000000000000000" # T-23
+      startBlock: 0 # T-23
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/abuse-mark.ts
+      entities:
+        - Mark
+        - Outcome
+      abis:
+        - name: AbuseMark
+          file: ./abis/AbuseMark.json
+      eventHandlers:
+        - event: Marked(indexed uint256,uint8,bytes32)
+          handler: handleMarked
+        - event: Outcome(indexed uint256,indexed uint256,uint8)
+          handler: handleOutcome

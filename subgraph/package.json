@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "node -e \"const y=require('fs').readFileSync('subgraph.yaml','utf8'); if(/dataSources:\\\\s*\\\\[\\\\]/.test(y)){console.log('subgraph: no dataSources yet — T-09 wires them');process.exit(0)} process.exit(7)\" || graph codegen",
-    "build": "node -e \"const y=require('fs').readFileSync('subgraph.yaml','utf8'); if(/dataSources:\\\\s*\\\\[\\\\]/.test(y)){console.log('subgraph: no dataSources yet — T-09 wires them');process.exit(0)} process.exit(7)\" || graph build",
+    "codegen": "graph codegen",
+    "build": "graph build",
     "typecheck": "echo 'subgraph typechecks via graph build'",
     "lint": "echo 'no lint for subgraph'",
-    "test": "echo 'no unit tests for subgraph'"
+    "test": "echo 'mapping tests run under matchstick: cd subgraph && pnpm graph test'"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "catalog:",
