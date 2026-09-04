@@ -1,0 +1,40 @@
+area:contracts,0e8a16,package the PR touches
+area:chain,0e8a16,package the PR touches
+area:shared,0e8a16,package the PR touches
+area:screening,0e8a16,package the PR touches
+area:payments,0e8a16,package the PR touches
+area:mcp,0e8a16,package the PR touches
+area:subgraph,0e8a16,package the PR touches
+area:api,0e8a16,package the PR touches
+area:miniapp,0e8a16,package the PR touches
+area:dashboard,0e8a16,package the PR touches
+area:docs,0e8a16,package the PR touches
+area:scripts,0e8a16,package the PR touches
+area:root,0e8a16,package the PR touches
+wave:1,1d76db,scheduled day
+wave:2,1d76db,scheduled day
+wave:3,1d76db,scheduled day
+wave:4,1d76db,scheduled day
+wave:5,1d76db,scheduled day
+wave:6,1d76db,scheduled day
+wave:7,1d76db,scheduled day
+wave:8,1d76db,scheduled day
+wave:9,1d76db,scheduled day
+wave:10,1d76db,scheduled day
+size:S,c5def5,under 1.5h
+size:M,c5def5,2-3h
+size:L,c5def5,about 4h - two PRs
+agent:local,5319e7,class L - has .env - may touch Base Sepolia
+agent:cloud,5319e7,class C - no secrets - fakes only
+status:ready,ededed,dispatchable - dependencies merged - nobody holds it
+status:claimed,d4c5f9,an agent holds it - set by scripts/claim.sh after the branch push
+status:in-review,0052cc,its PR is marked ready
+status:done,0e8a16,merged
+interface-change,b60205,lead-only - touches frozen files - merged first
+bootstrap,b60205,T-00 only - path-ownership skipped
+hotfix,e99695,after the Day-9 freeze - filmed path only
+docs,fef2c0,markdown only - reviewed by rendered diff
+blocked,fbca04,agent posted BLOCKED - needs the lead
+needs-operator,fbca04,needs a physical or account action
+optional,ededed,dropped first when behind
+substitute,ededed,dispatched only on a spike failure
