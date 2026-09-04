@@ -1,7 +1,10 @@
 name: ci
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    # labeled/unlabeled matter: `gh pr create --label` creates the PR first and applies
+    # labels a moment later, so the `opened` run sees no labels and the interface-change
+    # and bootstrap skips below do not fire. Re-running on the label fixes that.
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [main]
 concurrency:
