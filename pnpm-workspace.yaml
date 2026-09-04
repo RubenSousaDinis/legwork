@@ -74,6 +74,10 @@ catalog:
   # -- subgraph --
   "@graphprotocol/graph-cli": ^0.98.1
   "@graphprotocol/graph-ts": ^0.38.2
+  # matchstick shells out to subgraph/node_modules/assemblyscript/bin/asc; graph-ts 0.38
+  # compiles with the 0.19 line, and pnpm's isolated layout does not hoist graph-cli's copy.
+  matchstick-as: ^0.6.0
+  assemblyscript: 0.19.23
 
   # -- docs --
   # zod 4 emits JSON Schema natively via z.toJSONSchema(); @asteasolutions/zod-to-openapi
