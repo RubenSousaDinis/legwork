@@ -6,7 +6,7 @@ day: 1→2
 size: M
 agent_class: C
 must: true
-depends_on: [T-01, T-04]              # T-01a (interfaces, mocks, Keys.sol) is enough to start; T-04's confirmed giveFeedback selector must be merged before review
+depends_on: [T-01a, T-04]              # T-01a (interfaces, mocks, Keys.sol) is enough to start; T-04's confirmed giveFeedback selector must be merged before review
 owned_paths:
   - contracts/src/Reputation.sol
   - contracts/src/AbuseMark.sol

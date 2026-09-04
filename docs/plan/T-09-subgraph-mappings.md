@@ -6,7 +6,7 @@ day: 1→2
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]                    # T-01b freezes subgraph/schema.graphql; T-01a's ABIs are enough to codegen
+depends_on: [T-01b]                    # T-01b freezes subgraph/schema.graphql; T-01a's ABIs are enough to codegen
 owned_paths:
   - subgraph/**                       # EXCEPT subgraph/schema.graphql, subgraph/README.md, and the address/startBlock VALUES in subgraph.yaml
   - "!subgraph/schema.graphql"

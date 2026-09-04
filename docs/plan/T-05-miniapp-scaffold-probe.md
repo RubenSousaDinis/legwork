@@ -6,7 +6,7 @@ day: 1
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]            # T-01b (TypeScript side) must be merged
+depends_on: [T-01b]            # T-01b (TypeScript side) must be merged
 owned_paths:
   - apps/miniapp/**
 labels: [area:miniapp, wave:1, size:M, agent:cloud]

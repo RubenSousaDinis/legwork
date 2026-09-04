@@ -6,7 +6,7 @@ day: 1→2
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]                    # T-01a (IWorkerRegistry, mocks, Keys.sol) is enough to start
+depends_on: [T-01a]                    # T-01a (IWorkerRegistry, mocks, Keys.sol) is enough to start
 owned_paths:
   - contracts/src/WorkerRegistry.sol
   - contracts/test/WorkerRegistry*.t.sol

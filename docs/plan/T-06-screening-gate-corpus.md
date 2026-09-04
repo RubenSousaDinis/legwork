@@ -6,7 +6,7 @@ day: 1→2
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]                    # T-01b (zod schemas, constants, enums, specHash) must be merged
+depends_on: [T-01b]                    # T-01b (zod schemas, constants, enums, specHash) must be merged
 owned_paths:
   - packages/screening/src/gate/**
   - packages/screening/src/pipeline.ts

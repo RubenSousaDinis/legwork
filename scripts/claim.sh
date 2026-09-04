@@ -29,7 +29,10 @@ git fetch --quiet origin
 DEPS=$(sed -n 's/^depends_on: *\[\([^]]*\)\].*/\1/p' "$BRIEF" | head -1 | tr -d ' ' | tr ',' '\n')
 for d in $DEPS; do
   [ -n "$d" ] || continue
-  dn=$(awk -v id="${d%%[ab]}" '$1==id {print $2}' docs/plan/ISSUES.txt)
+  # No suffix stripping: T-01a and T-01b are separate issues because they merge
+  # hours apart, and four briefs need only 01a. Collapsing them onto T-01 would
+  # hold the contract lane behind the TypeScript half for no reason.
+  dn=$(awk -v id="$d" '$1==id {print $2}' docs/plan/ISSUES.txt)
   [ -n "${dn:-}" ] || continue
   st=$(gh issue view "$dn" --json state -q .state)
   [ "$st" = "CLOSED" ] || { echo "$ID depends on $d, which is not merged yet (issue #$dn is $st)."; echo "Stop. Tell the operator the dependency is open."; exit 1; }

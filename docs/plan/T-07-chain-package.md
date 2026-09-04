@@ -6,7 +6,7 @@ day: 1→2
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]                    # T-01a (ABIs, enums, constants, addresses) is enough to start
+depends_on: [T-01a]                    # T-01a (ABIs, enums, constants, addresses) is enough to start
 owned_paths:
   - packages/chain/**
 labels: [area:chain, wave:1, size:M, agent:cloud]

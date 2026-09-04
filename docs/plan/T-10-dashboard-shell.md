@@ -6,7 +6,7 @@ day: 1
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]            # T-01b (TypeScript side: DemoData schema, enums) must be merged
+depends_on: [T-01b]            # T-01b (TypeScript side: DemoData schema, enums) must be merged
 owned_paths:
   - apps/dashboard/**
 labels: [area:dashboard, wave:1, size:M, agent:cloud]

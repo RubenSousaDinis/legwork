@@ -6,7 +6,7 @@ day: 1
 size: M
 agent_class: C
 must: true
-depends_on: [T-01]
+depends_on: [T-01b]
 owned_paths:
   - apps/api/**                      # EXCEPT apps/api/src/db/schema.ts (frozen, T-01) and the stub files listed in §4, which pass to their owners on merge
 labels: [area:api, wave:1, size:M, agent:cloud]
