@@ -79,10 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - run: bash scripts/ci/claim.sh "$BASE_SHA" "$PR_TITLE"
+      - run: bash scripts/ci/claim.sh "$BASE_REF" "$PR_TITLE" "$HEAD_SHA"
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   secrets:
     runs-on: ubuntu-latest
