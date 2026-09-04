@@ -24,7 +24,7 @@ function recordingLogger(): { logger: Logger; records: Record<string, unknown>[]
   return { logger, records };
 }
 
-function harness(node: MockNode, options: { maxAttempts?: number } = {}) {
+function harness(node: MockNode) {
   const transport = node.transport();
   const account = privateKeyToAccount(generatePrivateKey());
   const publicClient = createPublicClient({ chain: foundry, transport, pollingInterval: 5 });
@@ -36,7 +36,6 @@ function harness(node: MockNode, options: { maxAttempts?: number } = {}) {
     publicClient: publicClient as PublicClient,
     lock: new MemoryNonceLock(),
     logger,
-    ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
   });
   return { queue, records };
 }
