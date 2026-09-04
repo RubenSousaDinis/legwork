@@ -1,7 +1,7 @@
 # Frozen in T-01b. No coordinate anywhere: `area` is a geohash-5 and that is all the public
 # index ever knows about where a task happened.
 
-type Worker @entity {
+type Worker @entity(immutable: false) {
   id: Bytes!                 # worker address
   nullifier: BigInt!
   seeded: Boolean!           # from WorkerSeeded only — never inferred
@@ -15,7 +15,7 @@ type Worker @entity {
   registeredAt: BigInt!
 }
 
-type Buyer @entity {
+type Buyer @entity(immutable: false) {
   id: Bytes!                 # buyer address
   allowlisted: Boolean!
   taskCount: Int!
@@ -26,7 +26,7 @@ type Buyer @entity {
   tasks: [Task!]! @derivedFrom(field: "buyer")
 }
 
-type Task @entity {
+type Task @entity(immutable: false) {
   id: ID!                    # taskId
   taskType: Int!
   specHash: Bytes!
@@ -51,7 +51,7 @@ type Task @entity {
 
 # The entity IS the rater slot: id = "<worker address>-<raterKey>", updated in place so a
 # repeat outcome from the same rater replaces the previous value and adds no voice.
-type Feedback @entity {
+type Feedback @entity(immutable: false) {
   id: ID!
   worker: Worker!
   raterKey: Bytes!
@@ -78,7 +78,7 @@ type Outcome @entity(immutable: true) {
   at: BigInt!
 }
 
-type PosterStats @entity {
+type PosterStats @entity(immutable: false) {
   id: ID!                    # "global"
   distinctExternalBuyers: Int!
   externalTasks: Int!
