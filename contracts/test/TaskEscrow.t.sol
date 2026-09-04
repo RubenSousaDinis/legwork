@@ -69,7 +69,7 @@ contract TaskEscrowTest is TaskEscrowBase {
         assertEq(_post(p), 6);
         assertEq(escrow.openTasksOf(otherBuyer), 1);
 
-        uint256 postedAt = block.timestamp;
+        uint256 postedAt = escrow.getTask(1).postedAt;
         vm.warp(postedAt + 1801);
         escrow.expire(1);
         assertEq(escrow.openTasksOf(buyer), 4);
@@ -181,12 +181,17 @@ contract TaskEscrowTest is TaskEscrowBase {
         vm.prank(relayer);
         vm.expectRevert(Pausable.EnforcedPause.selector);
         escrow.claimFor(id2, worker3);
+
+        vm.prank(deployer);
+        escrow.unpause();
+        _claim(id2, worker3);
+        assertEq(escrow.getTask(id2).worker, worker3, "unpause restores claiming");
     }
 
     function test_Claim_LazyExpiry() public {
         uint256 id = _post();
         _claim(id, worker1);
-        uint256 t0 = block.timestamp;
+        uint256 t0 = escrow.getTask(id).claimedAt;
 
         vm.warp(t0 + 1800);
         vm.prank(relayer);
@@ -212,7 +217,7 @@ contract TaskEscrowTest is TaskEscrowBase {
         uint256 id = _post();
         uint256 fresh = _post();
         _claim(id, worker1);
-        uint256 t0 = block.timestamp;
+        uint256 t0 = escrow.getTask(id).claimedAt;
 
         vm.warp(t0 + 1801);
         _claim(id, worker3);
@@ -301,7 +306,7 @@ contract TaskEscrowTest is TaskEscrowBase {
     function test_Expire_RefundsBuyer() public {
         // (a) posted, never claimed.
         uint256 id = _post();
-        uint256 postedAt = block.timestamp;
+        uint256 postedAt = escrow.getTask(id).postedAt;
         uint256 openCount = escrow.openTasksOf(buyer);
         uint256 buyerBefore = usdc.balanceOf(buyer);
         uint256 escrowBefore = usdc.balanceOf(address(escrow));
@@ -323,7 +328,7 @@ contract TaskEscrowTest is TaskEscrowBase {
         // (b) claimed, never submitted.
         uint256 claimed = _post();
         _claim(claimed, worker1);
-        uint256 claimedAt = block.timestamp;
+        uint256 claimedAt = escrow.getTask(claimed).claimedAt;
         vm.warp(claimedAt + 3601);
         escrow.expire(claimed);
         assertEq(uint8(escrow.getTask(claimed).state), uint8(ITaskEscrow.TaskState.Refunded));
@@ -339,7 +344,7 @@ contract TaskEscrowTest is TaskEscrowBase {
 
         // (d) a stop never traps the refund either.
         uint256 whilePaused = _post();
-        uint256 pausedAt = block.timestamp;
+        uint256 pausedAt = escrow.getTask(whilePaused).postedAt;
         vm.prank(deployer);
         escrow.pause();
         vm.warp(pausedAt + 1801);
@@ -351,7 +356,7 @@ contract TaskEscrowTest is TaskEscrowBase {
     function test_Boundary_ClaimTTL() public {
         uint256 id = _post();
         _claim(id, worker1);
-        uint256 claimedAt = block.timestamp;
+        uint256 claimedAt = escrow.getTask(id).claimedAt;
 
         vm.warp(claimedAt + 1799);
         vm.prank(relayer);
@@ -368,7 +373,7 @@ contract TaskEscrowTest is TaskEscrowBase {
         assertEq(escrow.getTask(id).worker, worker3);
 
         uint256 stillOpen = _post();
-        uint256 postedAt = block.timestamp;
+        uint256 postedAt = escrow.getTask(stillOpen).postedAt;
 
         vm.warp(postedAt + 1800);
         vm.expectRevert(ITaskEscrow.NotExpired.selector);
@@ -389,7 +394,7 @@ contract TaskEscrowTest is TaskEscrowBase {
         _claim(early, worker1);
         _claim(onTime, worker3);
         _claim(late, worker2);
-        uint256 claimedAt = block.timestamp;
+        uint256 claimedAt = escrow.getTask(late).claimedAt;
         bytes32 proof = keccak256("proof");
 
         vm.warp(claimedAt + 3599);
