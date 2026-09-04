@@ -79,10 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - run: bash scripts/ci/claim.sh "$BASE_SHA" "$PR_TITLE"
+      - run: bash scripts/ci/claim.sh "$BASE_REF" "$PR_TITLE" "$HEAD_SHA"
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   secrets:
     runs-on: ubuntu-latest
@@ -100,7 +101,10 @@ jobs:
       - name: no tracked .env, no private key literal
         run: |
           git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' && exit 1
-          git ls-files -z | xargs -0 grep -lnE '\b0x[a-fA-F0-9]{64}\b' 2>/dev/null | grep -v -e '^contracts/lib/' -e '^docs/plan/' && exit 1
+          # A bare 64-hex literal is not a key: keccak hashes, tx hashes and specHash golden
+          # vectors are exactly that shape and live all over this repo. Flag a 64-hex value
+          # only when it is assigned to a key-named variable; gitleaks covers the generic case.
+          git ls-files -z | xargs -0 grep -lnE '(PRIVATE_KEY|SIGNING_KEY|privateKey|signingKey|PRIVKEY)[A-Za-z0-9_]*\s*[:=]\s*["'"'"'`]?0x[a-fA-F0-9]{64}' 2>/dev/null | grep -v -e '^contracts/lib/' -e '^docs/plan/' && exit 1
           echo "secrets: clean"
 
   no-live-llm:
