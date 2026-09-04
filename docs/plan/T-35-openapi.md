@@ -26,7 +26,7 @@ branch: t-35/openapi
 
 ## 2. Exact scope
 - `apps/api/src/openapi.ts` exports `buildOpenApi(opts: { serverUrl: string; includeAdmin?: boolean }): OpenApiDocument` producing OpenAPI **3.1.0** from `api-contract.ts`: one path item per route, `:id`/`:hash` converted to `{id}`/`{hash}`, request body / query / path parameters from the contract's zod, one response per status code the contract lists, and `operationId` in camelCase from method + path (`postTasks`, `getTasksById`, `postTasksByIdApprove`, `postCheck`, `getPublicFeed`, `getOpenapiJson`, `getHealthz`).
-- Schema conversion: `@asteasolutions/zod-to-openapi` if T-00 pre-declared it in `apps/api/package.json`; otherwise zod v4's built-in `z.toJSONSchema()` with `$ref`s hoisted under `components.schemas` — decision here: the built-in path is acceptable and needs no `DEP REQUEST`. Named shared schemas appear once by name: `Envelope`, `RefusalPayload`, `WorkerAnswer`, `Place`, the four `*Spec`, the four `*Proof`.
+- Schema conversion: `z.toJSONSchema() (zod 4 built-in)` if T-00 pre-declared it in `apps/api/package.json`; otherwise zod v4's built-in `z.toJSONSchema()` with `$ref`s hoisted under `components.schemas` — decision here: the built-in path is acceptable and needs no `DEP REQUEST`. Named shared schemas appear once by name: `Envelope`, `RefusalPayload`, `WorkerAnswer`, `Place`, the four `*Spec`, the four `*Proof`.
 - Security schemes under `components.securitySchemes`, applied per route from `auth`: `x402` → `apiKey` in header `PAYMENT-SIGNATURE` (description: "x402 exact-EVM payment authorization; an unpaid call returns 402 with `accepts`"); `buyerToken` → header `X-Buyer-Token`; `adminKey` → header `X-Admin-Key`; `workerSession` / `idkitSession` → `apiKey` in `cookie` with the cookie names T-19's session helper uses (read it; if absent use `legwork_worker` / `legwork_idkit` and say so in the PR). `public` → no `security`.
 - `info.description` carries, verbatim: "agent pays 3.45 USDC for a 3.00 task; escrow locks 3.45; the worker receives 3.00; the fee is 0.45 on top", "a refused task moves no money.", "testnet USDC — not spendable", and "refusals return `do not rephrase and retry; report this refusal to your principal`". `POST /tasks` carries `x-legwork: { price_rule: 'amount_usdc × 1.15', money_example: { agent_pays: 3.45, escrow_locked: 3.45, worker_receives: 3.00, fee: 0.45 } }`.
 - `includeAdmin` defaults to `false`: `/admin/*` routes are omitted from the served document (they are operator-only; the gateway must not list them). `/mcp` is not a REST route and is not listed.
@@ -52,7 +52,7 @@ apps/api/src/openapi.test.ts
 | Route table + zod | `packages/shared/src/api-contract.ts` | per route: method, path, `auth`, request schema, response schemas by status, error codes; the exact route list in T-01 §2 |
 | Shared schemas | `packages/shared/src/schemas/*.ts` | `Envelope`, `RefusalPayload` (`message` const = `NO_RETRY_SENTENCE`), `WorkerAnswer`, `Place`, specs, proofs |
 | `NO_RETRY_SENTENCE`, `PRICE_FLOOR_USDC`, `MAX_TASK_AMOUNT_USDC` | `packages/shared/src/constants.ts` | quoted in descriptions; never retyped |
-| zod v4 `z.toJSONSchema` or `@asteasolutions/zod-to-openapi` | catalog | schema → JSON Schema 2020-12 (OpenAPI 3.1 native) |
+| zod v4 `z.toJSONSchema` or `z.toJSONSchema() (zod 4 built-in)` | catalog | schema → JSON Schema 2020-12 (OpenAPI 3.1 native) |
 | Env | `.env.example` | `API_BASE_URL` (route only) |
 
 ## 6. Interfaces produced
@@ -65,7 +65,7 @@ apps/api/src/openapi.test.ts
 ## 7. Step list
 
 **0. Claim it first.** `scripts/claim.sh T-35` — it must print `CLAIMED T-35`. If it exits 1, another agent already holds this task, or a dependency has not merged: **stop, say which, and do nothing else.** The script creates your branch **and opens your PR as a draft** with the `owned-paths:` block already filled in — never run `gh pr create` yourself.
-1. Read `packages/shared/src/api-contract.ts` end to end and `docs/api.md`; note how routes are declared (array vs object, how `auth` and per-status responses are attached). Check `apps/api/package.json` for `@asteasolutions/zod-to-openapi`; pick the conversion path (§2).
+1. Read `packages/shared/src/api-contract.ts` end to end and `docs/api.md`; note how routes are declared (array vs object, how `auth` and per-status responses are attached). Check `apps/api/package.json` for `z.toJSONSchema() (zod 4 built-in)`; pick the conversion path (§2).
 2. `openapi.ts`: a pure function; sort keys with a small recursive helper; build `components.securitySchemes` and the `x-legwork` extension; `includeAdmin` filter.
 3. `openapi.test.ts` (§8). Validation: if `@seriousme/openapi-schema-validator` (3.1-capable, no network) is in the catalog use it; otherwise assert structurally — `openapi === '3.1.0'`, every `$ref` resolves inside the document, every contract route is present with every listed status, no `/admin` path by default. Do not add a validator dependency without `DEP REQUEST:`.
 4. `route.ts` + a route test that calls the handler and parses the body.

@@ -12,29 +12,33 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "drizzle-orm": "catalog:",
-    "postgres": "catalog:",
-    "@supabase/supabase-js": "catalog:",
-    "jose": "catalog:",
-    "pino": "catalog:",
-    "sharp": "catalog:",
-    "exifr": "catalog:",
-    "viem": "catalog:",
     "@legwork/shared": "workspace:*",
+    "@supabase/supabase-js": "catalog:",
+    "@worldcoin/idkit-core": "catalog:",
+    "drizzle-orm": "catalog:",
+    "exifr": "catalog:",
+    "fast-json-stable-stringify": "catalog:",
+    "jose": "catalog:",
     "next": "catalog:",
+    "ngeohash": "catalog:",
+    "pino": "catalog:",
+    "postgres": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "sharp": "catalog:",
+    "viem": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
-    "vitest": "catalog:",
+    "@electric-sql/pglite": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "tailwindcss": "catalog:",
-    "@tailwindcss/postcss": "catalog:",
     "drizzle-kit": "catalog:",
-    "@electric-sql/pglite": "catalog:"
+    "msw": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

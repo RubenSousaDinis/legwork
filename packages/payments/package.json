@@ -15,14 +15,18 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
+    "@legwork/shared": "workspace:*",
     "@x402/core": "catalog:",
     "@x402/evm": "catalog:",
-    "zod": "catalog:",
-    "@legwork/shared": "workspace:*"
+    "@x402/fetch": "catalog:",
+    "viem": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@types/node": "catalog:",
+    "msw": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@types/node": "catalog:"
+    "vitest": "catalog:"
   }
 }

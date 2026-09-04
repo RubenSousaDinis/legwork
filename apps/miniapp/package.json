@@ -11,20 +11,25 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@legwork/shared": "workspace:*",
     "@worldcoin/idkit": "catalog:",
-    "@worldcoin/minikit-js": "catalog:",    "@legwork/shared": "workspace:*",
+    "@worldcoin/idkit-core": "catalog:",
+    "@worldcoin/minikit-js": "catalog:",
     "next": "catalog:",
+    "ngeohash": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "viem": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
-    "vitest": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "msw": "catalog:",
     "tailwindcss": "catalog:",
-    "@tailwindcss/postcss": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
