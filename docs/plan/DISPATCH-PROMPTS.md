@@ -564,6 +564,11 @@ inventing an interface.
 ## Standing rules you are enforcing at dispatch
 
 - **Your review queue is `gh pr list --draft=false`.** Every claimed task shows as a draft PR from minute one, so the PR list doubles as the claim board — but a draft is never reviewed. `gh pr ready` is the agent's finish signal.
+- **A CI fix on `main` does not reach an open PR.** On `pull_request` events GitHub runs the
+  workflow from the PR's own merge ref, so an open PR keeps running the `ci.yml` and
+  `scripts/ci/*` it was opened with. Toggling a label re-runs the *stale* workflow. When you
+  fix CI on `main`, every open PR must merge `main` in (or rebase, if still draft) and push —
+  that `synchronize` is what picks the fix up. Say so in the round-2 prompt.
 - **Claiming is the agent's job, not yours.** Every prompt tells the agent to run `scripts/claim.sh` before it writes anything; that push is what makes the task exclusive. If an agent reports `ALREADY CLAIMED`, check `scripts/claims.sh` (or just the draft PR list) — you have double-dispatched, or a dead agent still holds it. Only you clear a stale claim (`scripts/release.sh T-xx --force`, 90 min with no commit and no PR).
 
 - One task per agent. Never hand a session a second brief; start a fresh one.
