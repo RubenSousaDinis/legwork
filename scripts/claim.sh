@@ -23,7 +23,10 @@ git fetch --quiet origin
 # --- dependency gate ------------------------------------------------------
 # Cheap here, expensive later: a brief written against an interface that has
 # not merged yet produces a PR that has to be thrown away.
-DEPS=$(sed -n 's/^depends_on: *\[\(.*\)\]/\1/p' "$BRIEF" | tr -d ' ' | tr ',' '\n')
+# [^]]* and the trailing .* matter: `s///p` prints the whole line, so without
+# them a trailing `# T-01b must be merged` comment is parsed as part of the
+# dependency and the lookup below silently finds nothing. 17 briefs carry one.
+DEPS=$(sed -n 's/^depends_on: *\[\([^]]*\)\].*/\1/p' "$BRIEF" | head -1 | tr -d ' ' | tr ',' '\n')
 for d in $DEPS; do
   [ -n "$d" ] || continue
   dn=$(awk -v id="${d%%[ab]}" '$1==id {print $2}' docs/plan/ISSUES.txt)
