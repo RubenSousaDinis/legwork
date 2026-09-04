@@ -66,6 +66,10 @@ catalog:
   # -- test --
   msw: ^2.7.0
   "@playwright/test": ^1.49.1
+  # jsdom stays on 26: 27+ wants node ^22.12 and .nvmrc pins 22.11.0.
+  jsdom: ^26.1.0
+  "@testing-library/react": ^16.3.3
+  "@testing-library/dom": ^10.4.1
 
   # -- subgraph --
   "@graphprotocol/graph-cli": ^0.98.1
