@@ -551,5 +551,15 @@
     "inputs": [],
     "name": "WorkerAlreadyBound",
     "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroNullifier",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroWorker",
+    "type": "error"
   }
 ]

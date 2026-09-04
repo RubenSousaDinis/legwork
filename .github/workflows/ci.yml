@@ -63,7 +63,7 @@ jobs:
       - run: bash scripts/ci/path-ownership.sh "$PR_BODY" "$BASE_SHA"
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.ref }}
 
   commit-trailers:
     runs-on: ubuntu-latest

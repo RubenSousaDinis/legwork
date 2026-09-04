@@ -4,7 +4,11 @@
 # section-owned: several tasks each append their own heading, so they are
 # allowed for any PR that lists them and the reviewer checks the diff.
 set -uo pipefail
-BODY="${1:-}"; BASE="${2:?usage: path-ownership.sh <pr-body> <base-sha>}"
+BODY="${1:-}"; BASE="${2:?usage: path-ownership.sh <pr-body> <base-ref-or-sha>}"
+# Prefer the live base branch over the pinned base.sha. If a branch merges main in,
+# the merge-base against a stale sha is old and everything main brought along looks
+# like this branch's work.
+if git rev-parse --quiet --verify "origin/$BASE" >/dev/null 2>&1; then BASE="origin/$BASE"; fi
 shopt -s globstar extglob nullglob
 
 mapfile -t GLOBS < <(printf '%s\n' "$BODY" \
