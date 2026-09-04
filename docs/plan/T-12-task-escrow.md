@@ -111,7 +111,7 @@ cd contracts
 forge build
 forge test --match-contract TaskEscrow -vvv
 forge coverage --match-contract TaskEscrow --ir-minimum
-forge coverage --match-contract TaskEscrow --report summary | grep -E "TaskEscrow|Total" --ir-minimum
+forge coverage --match-contract TaskEscrow --report summary --ir-minimum | grep -E "TaskEscrow|Total"
 forge fmt --check
 ```
 Expected: every test in §8 for the PR listed by name and green; the coverage row for `src/TaskEscrow.sol` shows ≥ 90 % lines; `forge fmt --check` prints nothing.

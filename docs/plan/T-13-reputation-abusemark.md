@@ -104,7 +104,7 @@ contracts/test/AbuseMark*.t.sol
 cd contracts
 forge build
 forge test --match-contract "Reputation|AbuseMark" -vvv
-forge coverage --report summary | grep -E "Reputation|AbuseMark|Total" --ir-minimum
+forge coverage --report summary --ir-minimum | grep -E "Reputation|AbuseMark|Total"
 forge fmt --check
 ```
 Expected: every test in §8 listed by name and green; both coverage rows ≥ 95 % lines; `forge fmt --check` prints nothing.

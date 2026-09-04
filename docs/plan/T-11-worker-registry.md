@@ -93,7 +93,7 @@ contracts/test/WorkerRegistry*.t.sol
 cd contracts
 forge build
 forge test --match-contract WorkerRegistry -vvv
-forge coverage --report summary | grep -E "WorkerRegistry|Total" --ir-minimum
+forge coverage --report summary --ir-minimum | grep -E "WorkerRegistry|Total"
 forge fmt --check
 ```
 Expected: every test in §8 listed by name and green; the coverage row for `src/WorkerRegistry.sol` shows ≥ 95 % lines; `forge fmt --check` prints nothing.

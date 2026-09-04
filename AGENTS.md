@@ -39,7 +39,7 @@ Never release a task you do not hold; a claim that looks abandoned is the lead's
 - Commit small and often, imperative mood. Every commit message ends with the trailer
   `AI-Usage: <tool + model> drafted <what>; human <reviewed|edited> <what>` — CI checks it.
 - The PR is opened for you as a draft by `scripts/claim.sh`, titled `T-XX: <brief title>`. Fill **every** section of its body and paste the output of the brief's "Verification commands" in before `gh pr ready`.
-- Never force-push a branch once it is ready for review (a draft is yours to rewrite). Never push to `main`. Merges are merge commits (squash is disabled) — your granular history is part of the submission.
+- Never force-push a branch once it is ready for review (a draft is yours to rewrite). **One exception:** when the reviewer tells you to rebase on `main`, that instruction requires rewriting pushed commits — use `--force-with-lease` pinned to the tip you fetched, and say so in the PR. No other force-push is allowed. Never push to `main`. Merges are merge commits (squash is disabled) — your granular history is part of the submission.
 
 ## Tests and CI
 - Required checks: `contracts` (forge fmt/build/test), `ts` (typecheck, lint, test, build — includes the screening corpus), `subgraph-build`, `banned-words`, `path-ownership`, `commit-trailers`, `claim`, `secrets`, `no-live-llm`.
