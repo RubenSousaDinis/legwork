@@ -15,16 +15,19 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "mcp-handler": "catalog:",
+    "@legwork/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "catalog:",
+    "@x402/evm": "catalog:",
     "@x402/fetch": "catalog:",
-    "zod": "catalog:",
-    "@legwork/shared": "workspace:*"
+    "mcp-handler": "catalog:",
+    "viem": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
+    "msw": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@types/node": "catalog:"
+    "vitest": "catalog:"
   },
   "bin": {
     "legwork-mcp": "./bin/legwork-mcp.ts"

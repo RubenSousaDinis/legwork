@@ -82,7 +82,7 @@ contracts/test/AbuseMark*.t.sol
 1. Read `AGENTS.md`, then the four interfaces, the two mocks, `Keys.sol`, and OZ 5 `Ownable` in `lib/`. Check that T-04's `interface-change` PR has merged; if not, code against the merged T-01a files and rebase when it lands (§13).
 2. Write `Reputation.sol`; `forge build`; write `Reputation.t.sol` rows of §8.
 3. Write `AbuseMark.sol` with the check orders in §2; `forge build`; write `AbuseMark.t.sol` rows of §8. For "emits nothing" use `vm.recordLogs()` and assert the recorded log count from the AbuseMark address is zero; for the recorded `giveFeedback` compare every one of the eight fields.
-4. `forge test --match-contract "Reputation|AbuseMark" -vvv`; `forge coverage --report summary` (rows `src/Reputation.sol` and `src/AbuseMark.sol` ≥ 95 % lines); `forge fmt --check`; fill the draft PR and run `gh pr ready`.
+4. `forge test --match-contract "Reputation|AbuseMark" -vvv`; `forge coverage --report summary --ir-minimum` (rows `src/Reputation.sol` and `src/AbuseMark.sol` ≥ 95 % lines); `forge fmt --check`; fill the draft PR and run `gh pr ready`.
 
 ## 8. Acceptance tests
 | Test / command | Asserts |
@@ -97,14 +97,14 @@ contracts/test/AbuseMark*.t.sol
 | `test_Mark_WritesGiveFeedback` | for each `classId` 1..6 with a fresh hash and `vm.warp` past the cooldown: the recorded call has `agentId == 1207`, `value == -1`, `valueDecimals == 0`, `tag1 == "task-refused"`, `tag2 == classLabel(classId)` (compared to the literal, e.g. class 5 → `"authentication circumvention"`), `endpoint == ""`, `feedbackURI == ""`, `feedbackHash == specHash` |
 | `test_Outcome_OnlyEscrow` | before `setEscrow`: `signer`/owner → `NotEscrow`; after `setEscrow(escrowAddr)`: `outcome(1207, 7, 1)` records `giveFeedback(1207, 1, 0, "paid-on-proof", "", "", "", bytes32(uint256(7)))` and emits `Outcome(1207, 7, 1)`; `outcome(…, 2)` records `(-1, "disputed")`; `outcome(…, 3)` records `(1, "disputed")`; codes 0 and 4 → `BadOutcome`; no storage changes (`marksOf`, `lastMarkAt` unchanged) |
 | `test_RegisterIdentity_HoldsAgentId` | `selfAgentId() == 0` initially; owner `registerIdentity("data:application/json,{\"name\":\"Legwork Task API\"}")` returns the mock's next id and `selfAgentId()` equals it; the mock recorded the URI; second call → `IdentityAlreadyRegistered`; from `signer` → `OwnableUnauthorizedAccount` |
-| `forge coverage --report summary` | `src/Reputation.sol` ≥ 95 % lines, `src/AbuseMark.sol` ≥ 95 % lines |
+| `forge coverage --report summary --ir-minimum` | `src/Reputation.sol` ≥ 95 % lines, `src/AbuseMark.sol` ≥ 95 % lines |
 
 ## 9. Verification commands
 ```bash
 cd contracts
 forge build
 forge test --match-contract "Reputation|AbuseMark" -vvv
-forge coverage --report summary | grep -E "Reputation|AbuseMark|Total"
+forge coverage --report summary | grep -E "Reputation|AbuseMark|Total" --ir-minimum
 forge fmt --check
 ```
 Expected: every test in §8 listed by name and green; both coverage rows ≥ 95 % lines; `forge fmt --check` prints nothing.

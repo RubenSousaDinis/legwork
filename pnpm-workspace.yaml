@@ -72,4 +72,5 @@ catalog:
   "@graphprotocol/graph-ts": ^0.38.2
 
   # -- docs --
-  "@asteasolutions/zod-to-openapi": ^7.3.0
+  # zod 4 emits JSON Schema natively via z.toJSONSchema(); @asteasolutions/zod-to-openapi
+  # is zod-3 only and was removed rather than pinning zod back. T-35 uses the built-in.

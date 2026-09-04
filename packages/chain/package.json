@@ -15,13 +15,17 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "viem": "catalog:",
+    "@legwork/shared": "workspace:*",
+    "pino": "catalog:",
     "postgres": "catalog:",
-    "@legwork/shared": "workspace:*"
+    "viem": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@types/node": "catalog:",
+    "msw": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@types/node": "catalog:"
+    "vitest": "catalog:"
   }
 }

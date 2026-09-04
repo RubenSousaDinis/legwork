@@ -15,15 +15,16 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "catalog:",
     "@anthropic-ai/sdk": "catalog:",
+    "@legwork/shared": "workspace:*",
     "fastest-levenshtein": "catalog:",
     "ngeohash": "catalog:",
-    "@legwork/shared": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
+    "msw": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@types/node": "catalog:"
+    "vitest": "catalog:"
   }
 }

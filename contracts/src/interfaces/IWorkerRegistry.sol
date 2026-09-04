@@ -12,6 +12,12 @@ interface IWorkerRegistry {
     error BadAttestation();
     error AttestationUsed();
     error UnknownNullifier();
+    /// @dev address(0) is the "not bound" sentinel in `workerOf`, so binding a nullifier to it
+    ///      would read back as unbound and let the same human register a second account.
+    error ZeroWorker();
+    /// @dev 0 is the "no nullifier" sentinel in `nullifierOf`; a worker holding it is
+    ///      indistinguishable from an unregistered address, and Reputation is keyed by it.
+    error ZeroNullifier();
 
     event WorkerRegistered(
         uint256 indexed nullifierHash, address indexed worker, string area, uint8 taskTypes
