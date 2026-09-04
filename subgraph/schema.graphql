@@ -1,3 +1,85 @@
-type _Placeholder @entity(immutable: true) {
+# Frozen in T-01b. No coordinate anywhere: `area` is a geohash-5 and that is all the public
+# index ever knows about where a task happened.
+
+type Worker @entity {
+  id: Bytes!                 # worker address
+  nullifier: BigInt!
+  seeded: Boolean!           # from WorkerSeeded only — never inferred
+  reset: Boolean!
+  area: String!
+  taskTypes: Int!
+  completed: Int!
+  lastCompletedAt: BigInt
+  score: BigInt!
+  distinctRaters: Int!
+  registeredAt: BigInt!
+}
+
+type Buyer @entity {
+  id: Bytes!                 # buyer address
+  allowlisted: Boolean!
+  taskCount: Int!
+  # Counters, because @derivedFrom fields are not readable inside a mapping.
+  # PosterStats increments on TaskPosted when the buyer is not allowlisted; a later
+  # BuyerAllowlisted flip sets the flag and logs a warning rather than retro-decrementing.
+  countedExternal: Boolean!
+  tasks: [Task!]! @derivedFrom(field: "buyer")
+}
+
+type Task @entity {
+  id: ID!                    # taskId
+  taskType: Int!
+  specHash: Bytes!
+  amount: BigInt!
+  fee: BigInt!
+  buyer: Buyer!
+  buyerAgentId: BigInt!
+  worker: Worker
+  state: String!
+  area: String!
+  postedAt: BigInt!
+  claimedAt: BigInt
+  submittedAt: BigInt
+  releasedAt: BigInt
+  proofHash: Bytes
+  seeded: Boolean!           # true when the claiming worker is seeded
+  txPost: Bytes!
+  txClaim: Bytes
+  txSubmit: Bytes
+  txRelease: Bytes
+}
+
+# The entity IS the rater slot: id = "<worker address>-<raterKey>", updated in place so a
+# repeat outcome from the same rater replaces the previous value and adds no voice.
+type Feedback @entity {
   id: ID!
+  worker: Worker!
+  raterKey: Bytes!
+  outcome: Int!
+  task: Task!
+  newRater: Boolean!
+  at: BigInt!
+}
+
+type Mark @entity(immutable: true) {
+  id: ID!
+  agentId: BigInt!
+  classId: Int!
+  specHash: Bytes!
+  at: BigInt!
+  tx: Bytes!
+}
+
+type Outcome @entity(immutable: true) {
+  id: ID!
+  agentId: BigInt!
+  task: Task!
+  outcome: Int!
+  at: BigInt!
+}
+
+type PosterStats @entity {
+  id: ID!                    # "global"
+  distinctExternalBuyers: Int!
+  externalTasks: Int!
 }

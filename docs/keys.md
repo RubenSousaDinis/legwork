@@ -1,4 +1,4 @@
-# repo-seed — `docs/keys.md` (draft; T-01b commits it)
+# Keys and roles
 
 Split four ways plus two, funded Sept 3 (07-pre-kickoff item 2). One job per key. A dedicated hackathon keystore; never a personal key. Every key lives in Vercel env / the operator's `~/legwork.env`; cloud agents never see one.
 
