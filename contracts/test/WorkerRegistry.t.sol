@@ -280,6 +280,64 @@ contract WorkerRegistryTest is Test {
         assertTrue(registry.isWorker(Keys.worker1()));
     }
 
+    function test_Register_ZeroWorkerReverts() public {
+        uint256 n = 7;
+        bytes memory toTheSentinel = _goodAttest(n, address(0), AREA, TASK_TYPES, deadline);
+
+        vm.prank(Keys.relayer());
+        vm.expectRevert(IWorkerRegistry.ZeroWorker.selector);
+        registry.registerFor(n, address(0), AREA, TASK_TYPES, deadline, toTheSentinel);
+
+        // The guard runs before the relayer check, so the wrong caller does not mask it.
+        vm.prank(Keys.worker1());
+        vm.expectRevert(IWorkerRegistry.ZeroWorker.selector);
+        registry.registerFor(n, address(0), AREA, TASK_TYPES, deadline, toTheSentinel);
+
+        // The revert alone is not the point. `workerOf` reads address(0) as "not bound", so a
+        // stored sentinel would read back unbound and let the same human take a second account.
+        // The invariant holds only if `n` is still free and still binds exactly once.
+        _assertUnbound(address(0), n);
+
+        bytes memory forWorker1 = _goodAttest(n, Keys.worker1(), AREA, TASK_TYPES, deadline);
+        vm.prank(Keys.relayer());
+        registry.registerFor(n, Keys.worker1(), AREA, TASK_TYPES, deadline, forWorker1);
+        assertEq(registry.workerOf(n), Keys.worker1(), "the nullifier binds to the real address");
+
+        bytes memory forWorker2 = _goodAttest(n, Keys.worker2(), AREA, TASK_TYPES, deadline);
+        vm.prank(Keys.relayer());
+        vm.expectRevert(IWorkerRegistry.DuplicateNullifier.selector);
+        registry.registerFor(n, Keys.worker2(), AREA, TASK_TYPES, deadline, forWorker2);
+        assertFalse(registry.isWorker(Keys.worker2()), "one human, one account");
+
+        // The seeding path refuses the sentinel too.
+        vm.prank(Keys.deployer());
+        vm.expectRevert(IWorkerRegistry.ZeroWorker.selector);
+        registry.seedWorker(address(0), SEED_NULLIFIER, SEED_AREA, SEED_TASK_TYPES);
+    }
+
+    function test_Register_ZeroNullifierReverts() public {
+        bytes memory noNullifier = _goodAttest(0, Keys.worker1(), AREA, TASK_TYPES, deadline);
+
+        vm.prank(Keys.relayer());
+        vm.expectRevert(IWorkerRegistry.ZeroNullifier.selector);
+        registry.registerFor(0, Keys.worker1(), AREA, TASK_TYPES, deadline, noNullifier);
+
+        // Also ahead of the relayer check.
+        vm.prank(Keys.worker1());
+        vm.expectRevert(IWorkerRegistry.ZeroNullifier.selector);
+        registry.registerFor(0, Keys.worker1(), AREA, TASK_TYPES, deadline, noNullifier);
+
+        _assertUnbound(Keys.worker1(), 0);
+
+        // Why 0 is not a usable nullifier: an address that never registered already reads back
+        // as nullifier 0, and Reputation is keyed by that value.
+        assertEq(registry.nullifierOf(Keys.worker3()), 0, "a stranger already reads as nullifier 0");
+
+        vm.prank(Keys.deployer());
+        vm.expectRevert(IWorkerRegistry.ZeroNullifier.selector);
+        registry.seedWorker(Keys.worker2(), 0, SEED_AREA, SEED_TASK_TYPES);
+    }
+
     function test_Seed_EmitsWorkerSeededNotRegistered() public {
         vm.recordLogs();
         vm.prank(Keys.deployer());

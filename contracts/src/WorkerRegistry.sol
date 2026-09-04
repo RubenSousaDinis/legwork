@@ -67,7 +67,14 @@ contract WorkerRegistry is IWorkerRegistry, Ownable, EIP712 {
 
     /// @inheritdoc IWorkerRegistry
     /// @dev Check order is fixed so the same error always fires first: relayer, deadline, digest
-    ///      already spent, signer, nullifier already bound, address already bound.
+    ///      zero worker, zero nullifier, relayer, deadline, digest already spent, signer,
+    ///      nullifier already bound, address already bound.
+    ///
+    ///      The two sentinel checks come first because they defeat the invariant rather than
+    ///      breach it: `workerOf` reads `address(0)` as "not bound", so a nullifier bound to the
+    ///      zero address reads back unbound and lets the same human take a second account, and
+    ///      `nullifierOf` reads `0` as "never registered", so a worker holding nullifier 0 is
+    ///      indistinguishable from a stranger — and Reputation is keyed by that value.
     function registerFor(
         uint256 nullifierHash,
         address worker,
@@ -76,6 +83,8 @@ contract WorkerRegistry is IWorkerRegistry, Ownable, EIP712 {
         uint256 deadline,
         bytes calldata attestation
     ) external {
+        if (worker == address(0)) revert ZeroWorker();
+        if (nullifierHash == 0) revert ZeroNullifier();
         if (msg.sender != relayer) revert NotRelayer();
         if (block.timestamp > deadline) revert AttestationExpired();
 
@@ -101,10 +110,14 @@ contract WorkerRegistry is IWorkerRegistry, Ownable, EIP712 {
     }
 
     /// @inheritdoc IWorkerRegistry
+    /// @dev The same two sentinel guards as `registerFor`: a demo row must not be the one that
+    ///      poisons the mappings either.
     function seedWorker(address worker, uint256 syntheticNullifier, string calldata area, uint8 taskTypes)
         external
         onlyOwner
     {
+        if (worker == address(0)) revert ZeroWorker();
+        if (syntheticNullifier == 0) revert ZeroNullifier();
         if (workerOf[syntheticNullifier] != address(0)) revert DuplicateNullifier();
         if (records[worker].bound) revert WorkerAlreadyBound();
 
@@ -161,7 +174,11 @@ contract WorkerRegistry is IWorkerRegistry, Ownable, EIP712 {
         return records[worker].taskTypes;
     }
 
-    /// @dev Writes both directions of the binding. Callers check the two collision cases first.
+    /// @dev Writes both directions of the binding. Callers check the sentinels and the two
+    ///      collision cases first.
+    ///      `area` stays `calldata` on purpose: assigning it straight to storage copies calldata
+    ///      to storage in one step. Taking `string memory` here would add a calldata-to-memory
+    ///      hop first and cost more for no benefit — this is deliberate, not an oversight.
     function _bind(uint256 nullifierHash, address worker, string calldata area, uint8 taskTypes, bool seeded)
         private
     {
