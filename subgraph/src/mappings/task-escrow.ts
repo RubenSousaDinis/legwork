@@ -35,8 +35,7 @@ function creditCompletion(worker: Worker, timestamp: BigInt): void {
 }
 
 export function handleTaskPosted(event: TaskPosted): void {
-  const result = getOrCreateBuyer(event.params.buyer);
-  const buyer = result.buyer;
+  const buyer = getOrCreateBuyer(event.params.buyer);
   buyer.taskCount = buyer.taskCount + 1;
 
   const task = new Task(taskId(event.params.taskId));
@@ -190,8 +189,7 @@ export function handleTaskRefunded(event: TaskRefunded): void {
  * are exact under this rule.
  */
 export function handleBuyerAllowlisted(event: BuyerAllowlisted): void {
-  const result = getOrCreateBuyer(event.params.buyer);
-  const buyer = result.buyer;
+  const buyer = getOrCreateBuyer(event.params.buyer);
   buyer.allowlisted = event.params.allowed;
   buyer.save();
 

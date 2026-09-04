@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
 import { Buyer, PosterStats, Worker } from "../../generated/schema";
 
 /** The `PosterStats` singleton id. There is exactly one row. */
@@ -30,31 +30,22 @@ export function getOrCreateWorker(address: Address, timestamp: BigInt): Worker {
 }
 
 /**
- * Load a `Buyer`, or create it un-allowlisted with no tasks counted yet.
+ * Load a `Buyer`, or create it un-allowlisted with nothing counted yet.
  *
- * `created` on the returned wrapper is what `TaskPosted` uses to decide whether this
- * poster is a new distinct external buyer — `Buyer.tasks` is `@derivedFrom` and a
- * mapping cannot read it.
+ * `countedExternal` — not "did this call create the row" — is what `TaskPosted` uses to
+ * decide whether this poster is a new distinct external buyer. `Buyer.tasks` is
+ * `@derivedFrom` and unreadable inside a mapping, and a row can exist before its first
+ * post because `BuyerAllowlisted` created it.
  */
-export class BuyerResult {
-  buyer: Buyer;
-  created: boolean;
+export function getOrCreateBuyer(address: Address): Buyer {
+  let buyer = Buyer.load(address);
+  if (buyer != null) return buyer;
 
-  constructor(buyer: Buyer, created: boolean) {
-    this.buyer = buyer;
-    this.created = created;
-  }
-}
-
-export function getOrCreateBuyer(address: Address): BuyerResult {
-  const existing = Buyer.load(address);
-  if (existing != null) return new BuyerResult(existing, false);
-
-  const buyer = new Buyer(address);
+  buyer = new Buyer(address);
   buyer.allowlisted = false;
   buyer.taskCount = 0;
   buyer.countedExternal = false;
-  return new BuyerResult(buyer, true);
+  return buyer;
 }
 
 /** The singleton, created with both counters at zero on first use. */
@@ -66,9 +57,4 @@ export function getPosterStats(): PosterStats {
   stats.distinctExternalBuyers = 0;
   stats.externalTasks = 0;
   return stats;
-}
-
-/** `Bytes` for an address, so entity ids read the same everywhere. */
-export function addressId(address: Address): Bytes {
-  return Bytes.fromHexString(address.toHexString()) as Bytes;
 }
