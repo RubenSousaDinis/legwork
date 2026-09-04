@@ -72,7 +72,7 @@ contracts/test/WorkerRegistry*.t.sol
 2. Write the contract with the storage layout and the check order in §2; `forge build`.
 3. Write `WorkerRegistryTest.setUp`: deploy with `Keys.deployer` as owner, `Keys.relayer`, `Keys.verifier`; `vm.chainId(84532)`; `vm.warp(1_757_000_000)`; a default attestation for `(nullifier = 0xA11CE, worker1, "ez5ku", 15, deadline = block.timestamp + 600)` signed by the verifier key.
 4. Implement each test in §8, one revert per `vm.expectRevert(Selector.selector)`; for events use `vm.expectEmit` and, for `test_Seed_EmitsWorkerSeededNotRegistered`, `vm.recordLogs()` + a topic-0 scan.
-5. `forge test --match-contract WorkerRegistry -vvv`; `forge coverage --report summary` (row `src/WorkerRegistry.sol` ≥ 95 % lines); `forge fmt --check`.
+5. `forge test --match-contract WorkerRegistry -vvv`; `forge coverage --report summary --ir-minimum` (row `src/WorkerRegistry.sol` ≥ 95 % lines); `forge fmt --check`.
 6. Open PR 1. When T-20 merges the fixture, open the follow-up PR with `WorkerRegistry.fixture.t.sol` only.
 
 ## 8. Acceptance tests
@@ -85,7 +85,7 @@ contracts/test/WorkerRegistry*.t.sol
 | `test_Seed_EmitsWorkerSeededNotRegistered` | `seedWorker(worker2, 0x5EED, "ez5kv", 3)` from the owner emits exactly one log whose topic 0 is `WorkerSeeded.selector` and none with `WorkerRegistered.selector`; `isWorker(worker2) == true`, `isSeeded(worker2) == true`, `nullifierOf(worker2) == 0x5EED`, `workerOf(0x5EED) == worker2`, `areaOf == "ez5kv"`, `taskTypesOf == 3`; from the relayer → `OwnableUnauthorizedAccount` |
 | `test_Reset_AllowsFreshAttestationOnly` | register `worker1` with attestation A; `resetWorker(n)` emits `WorkerReset(n, worker1)` and every view for `worker1`/`n` returns the zero value; replaying A → `AttestationUsed`; attestation B (same `n`, same `worker1`, `deadline + 1`) → succeeds; `resetWorker(0xBAD)` → `UnknownNullifier`; `resetWorker` of a seeded worker clears `isSeeded` too; from a non-owner → `OwnableUnauthorizedAccount` |
 | `test_Views_O1Reads` | after one registration and one seed, each of `isWorker`, `isSeeded`, `nullifierOf`, `workerOf`, `areaOf`, `taskTypesOf` returns the stored value; each external view call measured with `gasleft()` before/after costs `< 15_000` gas; unknown address and unknown nullifier return zero values |
-| `forge coverage --report summary` | `src/WorkerRegistry.sol` lines ≥ 95 % |
+| `forge coverage --report summary --ir-minimum` | `src/WorkerRegistry.sol` lines ≥ 95 % |
 | follow-up PR: `test_Fixture_TypeScriptAttestationVerifies` | the T-20 fixture registers successfully under `vm.chainId(fixture.chainId)` at `fixture.verifyingContract`; `usedDigest(fixture.digest) == true` afterwards |
 
 ## 9. Verification commands
@@ -93,7 +93,7 @@ contracts/test/WorkerRegistry*.t.sol
 cd contracts
 forge build
 forge test --match-contract WorkerRegistry -vvv
-forge coverage --report summary | grep -E "WorkerRegistry|Total"
+forge coverage --report summary | grep -E "WorkerRegistry|Total" --ir-minimum
 forge fmt --check
 ```
 Expected: every test in §8 listed by name and green; the coverage row for `src/WorkerRegistry.sol` shows ≥ 95 % lines; `forge fmt --check` prints nothing.

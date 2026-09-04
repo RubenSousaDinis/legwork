@@ -10,6 +10,11 @@ optimizer_runs = 200
 via_ir = false
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
+# forge coverage disables the optimizer, and vendored forge-std then hits "Stack too deep"
+# under solc 0.8.24 — with no project code involved. --ir-minimum is Foundry's own documented
+# workaround and is what every brief's §9 coverage command passes. The default profile keeps
+# via_ir off so ordinary builds and tests stay fast.
+
 [fmt]
 line_length = 110
 tab_width = 4
