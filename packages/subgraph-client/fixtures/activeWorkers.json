@@ -1,0 +1,56 @@
+{
+  "data": {
+    "completedRecently": [
+      {
+        "id": "0x5eed000000000000000000000000000000000001",
+        "seeded": true,
+        "reset": false,
+        "area": "ez1dp",
+        "taskTypes": 3,
+        "completed": 1,
+        "lastCompletedAt": "1788559200",
+        "score": "1",
+        "distinctRaters": 1,
+        "registeredAt": "1788066400"
+      },
+      {
+        "id": "0x5eed000000000000000000000000000000000002",
+        "seeded": true,
+        "reset": false,
+        "area": "ez1dp",
+        "taskTypes": 3,
+        "completed": 1,
+        "lastCompletedAt": "1788555600",
+        "score": "1",
+        "distinctRaters": 1,
+        "registeredAt": "1788066400"
+      },
+      {
+        "id": "0x5eed000000000000000000000000000000000003",
+        "seeded": true,
+        "reset": false,
+        "area": "ez1dp",
+        "taskTypes": 3,
+        "completed": 1,
+        "lastCompletedAt": "1788552000",
+        "score": "1",
+        "distinctRaters": 1,
+        "registeredAt": "1788066400"
+      }
+    ],
+    "newlyRegistered": [
+      {
+        "id": "0x0417000000000000000000000000000000000417",
+        "seeded": false,
+        "reset": false,
+        "area": "ez1dp",
+        "taskTypes": 3,
+        "completed": 0,
+        "lastCompletedAt": null,
+        "score": "0",
+        "distinctRaters": 0,
+        "registeredAt": "1788562800"
+      }
+    ]
+  }
+}
