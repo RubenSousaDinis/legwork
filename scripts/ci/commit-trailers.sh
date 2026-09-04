@@ -8,6 +8,9 @@ while read -r sha; do
   if ! git log -1 --format=%B "$sha" | grep -q '^AI-Usage:'; then
     echo "missing AI-Usage: trailer — $(git log -1 --format='%h %s' "$sha")"; fail=1
   fi
-done < <(git rev-list "$BASE..HEAD")
+# --no-merges: a pull_request checkout is GitHub's synthetic "Merge X into Y"
+# commit, which nobody authored and which carries no trailer. Real merges of
+# main into a branch are exempt for the same reason.
+done < <(git rev-list --no-merges "$BASE..HEAD")
 [ "$fail" -eq 0 ] && echo "commit-trailers: clean"
 exit $fail
