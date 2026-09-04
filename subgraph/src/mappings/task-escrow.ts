@@ -65,15 +65,17 @@ export function handleTaskPosted(event: TaskPosted): void {
   // deploy time (T-14) before it posts anything, so an honest green demo reads
   // `distinctExternalBuyers: 0` — that is the number the W3 gate is judged on and it is
   // never dressed up as real outside interest.
+  // The singleton exists from the first post either way: a demo where the only poster is
+  // the operator has to be able to read a real `0`, not a missing row.
+  const stats = getPosterStats();
   if (!buyer.allowlisted) {
-    const stats = getPosterStats();
     stats.externalTasks = stats.externalTasks + 1;
     if (!buyer.countedExternal) {
       stats.distinctExternalBuyers = stats.distinctExternalBuyers + 1;
       buyer.countedExternal = true;
     }
-    stats.save();
   }
+  stats.save();
   buyer.save();
 }
 
