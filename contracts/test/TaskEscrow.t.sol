@@ -108,6 +108,87 @@ contract TaskEscrowTest is TaskEscrowBase {
         assertEq(escrow.getTask(_post(p)).fee, 150_000, "15% on top of the floor");
     }
 
+    function test_Post_RevertsOnZeroBuyer() public {
+        // `expire` refunds through safeTransfer(buyer, …) and USDC rejects the zero address,
+        // so a task posted to a zero buyer could never be refunded — the money would sit here.
+        ITaskEscrow.PostParams memory p = _params();
+        p.buyer = address(0);
+
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.NotBuyer.selector);
+        escrow.post(p);
+
+        // The self-custodial path cannot reach it either, even asked in the only way that
+        // satisfies its own p.buyer == msg.sender rule.
+        vm.prank(address(0));
+        vm.expectRevert(ITaskEscrow.NotBuyer.selector);
+        escrow.postAsBuyer(p);
+
+        assertEq(escrow.taskCount(), 0, "no task was written");
+    }
+
+    function test_Post_RevertsOnUnboundedWindow() public {
+        // A disputeWindow of type(uint32).max holds the worker's one claim slot open forever
+        // once the task is submitted, and postAsBuyer is callable by anyone.
+        ITaskEscrow.PostParams memory p = _params();
+        p.disputeWindow = type(uint32).max;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.claimTTL = 59;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.claimTTL = 604_801;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.submitTTL = 59;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.submitTTL = 604_801;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.disputeWindow = 59;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        p = _params();
+        p.disputeWindow = 604_801;
+        vm.prank(relayer);
+        vm.expectRevert(ITaskEscrow.AmountOutOfRange.selector);
+        escrow.post(p);
+
+        assertEq(escrow.taskCount(), 0, "none of the seven wrote a task");
+
+        // Both ends of the range are allowed.
+        p = _params();
+        p.claimTTL = 60;
+        p.submitTTL = 60;
+        p.disputeWindow = 60;
+        assertEq(_post(p), 1);
+
+        p = _params();
+        p.claimTTL = 604_800;
+        p.submitTTL = 604_800;
+        p.disputeWindow = 604_800;
+        assertEq(_post(p), 2);
+        assertEq(escrow.getTask(2).disputeWindow, 604_800);
+    }
+
     function test_Seeded_CannotClaimExternalTask() public {
         uint256 id = _post();
 
