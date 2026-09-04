@@ -36,6 +36,10 @@ contract TaskEscrow is ITaskEscrow, Ownable, Pausable {
     uint96 public constant MIN_TASK_AMOUNT = 1_000_000;
     /// @notice 15 minutes out after a claim goes stale, so claim-and-vanish cannot loop.
     uint32 public constant CLAIM_COOLDOWN = 900;
+    /// @notice Floor for every per-task window. A minute is the shortest one a human can act in.
+    uint32 public constant MIN_WINDOW = 60;
+    /// @notice Ceiling for every per-task window: seven days.
+    uint32 public constant MAX_WINDOW = 604_800;
 
     /// @notice No setter in v0: the bound is onchain, not policy.
     uint256 public maxOpenTasksPerBuyer = 5;
@@ -98,6 +102,13 @@ contract TaskEscrow is ITaskEscrow, Ownable, Pausable {
     function _post(PostParams calldata p, address payer) internal returns (uint256 taskId) {
         if (p.taskType != 1 && p.taskType != 2 && p.taskType != 4 && p.taskType != 8) revert BadTaskType();
         if (p.amount < MIN_TASK_AMOUNT || p.amount > MAX_TASK_AMOUNT) revert AmountOutOfRange();
+        if (p.buyer == address(0)) revert NotBuyer();
+        if (
+            _windowOutOfRange(p.claimTTL) || _windowOutOfRange(p.submitTTL)
+                || _windowOutOfRange(p.disputeWindow)
+        ) {
+            revert AmountOutOfRange();
+        }
         if (openTasksOf[p.buyer] >= maxOpenTasksPerBuyer) revert OverOpenCap();
 
         uint96 fee = uint96(uint256(p.amount) * FEE_BPS / 10_000);
@@ -141,6 +152,16 @@ contract TaskEscrow is ITaskEscrow, Ownable, Pausable {
             p.submitTTL,
             p.disputeWindow
         );
+    }
+
+    /// @dev A window outside these bounds is a posting mistake with no way back. `expire`
+    ///      refunds through `safeTransfer(buyer, …)` and USDC rejects the zero address, so a
+    ///      zero buyer would strand the money for good; and a `disputeWindow` of
+    ///      `type(uint32).max` holds the worker's one claim slot open forever once the task is
+    ///      submitted, which an owner `resolve` is then the only way out of. `postAsBuyer` is
+    ///      callable by anyone, so both are checked here rather than left to the API.
+    function _windowOutOfRange(uint32 window) internal pure returns (bool) {
+        return window < MIN_WINDOW || window > MAX_WINDOW;
     }
 
     // --------------------------------------------------------------- claiming
