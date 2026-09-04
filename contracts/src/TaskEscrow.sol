@@ -8,6 +8,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {ITaskEscrow} from "./interfaces/ITaskEscrow.sol";
 import {IWorkerRegistry} from "./interfaces/IWorkerRegistry.sol";
+import {IReputation} from "./interfaces/IReputation.sol";
+import {IAbuseMark} from "./interfaces/IAbuseMark.sol";
+import {Outcomes} from "./interfaces/Outcomes.sol";
 
 /// @title TaskEscrow — the money path for one real-world task
 /// @notice Holds a task's USDC from `post` through `Released`, `Refunded` or `Resolved`.
@@ -264,32 +267,99 @@ contract TaskEscrow is ITaskEscrow, Ownable, Pausable {
     // ---------------------------------------------------------------- settling
 
     /// @inheritdoc ITaskEscrow
-    function approve(uint256) external pure {
-        // PR 2/2
-        revert BadState();
+    /// @dev The buyer accepts the proof, or the relayer does it on the buyer's behalf.
+    function approve(uint256 taskId) external {
+        Task storage t = _tasks[taskId];
+        if (msg.sender != t.buyer && msg.sender != relayer) revert NotBuyerOrRelayer();
+        if (t.state != TaskState.Submitted) revert BadState();
+        _release(taskId);
     }
 
     /// @inheritdoc ITaskEscrow
-    function dispute(uint256) external pure {
-        // PR 2/2
-        revert BadState();
+    /// @dev A dispute moves no money. It parks the task until the owner arbitrates.
+    function dispute(uint256 taskId) external {
+        Task storage t = _tasks[taskId];
+        if (msg.sender != t.buyer && msg.sender != relayer) revert NotBuyerOrRelayer();
+        if (t.state != TaskState.Submitted) revert BadState();
+        if (block.timestamp >= uint256(t.submittedAt) + t.disputeWindow) revert DisputeWindowClosed();
+
+        t.state = TaskState.Disputed;
+
+        emit TaskDisputed(taskId);
     }
 
     /// @inheritdoc ITaskEscrow
-    function autoRelease(uint256) external pure {
-        // PR 2/2
-        revert BadState();
+    /// @dev Anyone, once the window has run out: a buyer who stops watching cannot hold a
+    ///      worker's proof hostage by doing nothing.
+    function autoRelease(uint256 taskId) external {
+        Task storage t = _tasks[taskId];
+        if (t.state != TaskState.Submitted) revert BadState();
+        if (block.timestamp < uint256(t.submittedAt) + t.disputeWindow) revert DisputeWindowOpen();
+        _release(taskId);
     }
 
     /// @inheritdoc ITaskEscrow
-    function resolve(uint256, bool) external pure {
-        // PR 2/2
-        revert BadState();
+    /// @dev Zero fee on either branch — we do not earn on a task we arbitrate. To the worker:
+    ///      the worker is paid the rate and the buyer gets the fee back. To the buyer: the
+    ///      buyer gets both. The treasury is paid only in `_release`.
+    function resolve(uint256 taskId, bool toBuyer) external onlyOwner {
+        Task storage t = _tasks[taskId];
+        if (t.state != TaskState.Disputed) revert BadState();
+
+        address worker = t.worker;
+        address buyer = t.buyer;
+        uint96 amount = t.amount;
+        uint96 fee = t.fee;
+        uint256 agentId = t.buyerAgentId;
+        uint8 code = toBuyer ? Outcomes.RESOLVED_TO_BUYER : Outcomes.RESOLVED_TO_WORKER;
+
+        t.state = TaskState.Resolved;
+        activeClaimOf[worker] = 0;
+        openTasksOf[buyer]--;
+
+        emit TaskResolved(taskId, toBuyer);
+
+        if (toBuyer) {
+            IERC20(usdc).safeTransfer(buyer, uint256(amount) + fee);
+        } else {
+            IERC20(usdc).safeTransfer(worker, amount);
+            IERC20(usdc).safeTransfer(buyer, fee);
+        }
+        _writeOutcome(taskId, worker, buyer, agentId, code);
     }
 
-    function _release(uint256) internal pure {
-        // PR 2/2
-        revert BadState();
+    /// @dev Checks-effects-interactions: state, counters and the event first, then the two
+    ///      transfers, then the two feedback hooks.
+    function _release(uint256 taskId) internal {
+        Task storage t = _tasks[taskId];
+
+        address worker = t.worker;
+        address buyer = t.buyer;
+        uint96 amount = t.amount;
+        uint96 fee = t.fee;
+        uint256 agentId = t.buyerAgentId;
+
+        t.state = TaskState.Released;
+        activeClaimOf[worker] = 0;
+        openTasksOf[buyer]--;
+
+        emit TaskReleased(taskId, worker, amount, fee);
+
+        IERC20(usdc).safeTransfer(worker, amount);
+        IERC20(usdc).safeTransfer(treasury, fee);
+        _writeOutcome(taskId, worker, buyer, agentId, Outcomes.PAID);
+    }
+
+    /// @dev Worker-side feedback is keyed by the World ID nullifier, so a rotated payout
+    ///      address neither resets a history nor sheds one. Agent-side feedback is skipped
+    ///      when the buyer posted without an ERC-8004 identity: there is nothing to mark.
+    function _writeOutcome(uint256 taskId, address worker, address buyer, uint256 agentId, uint8 code)
+        internal
+    {
+        bytes32 raterKey = agentId != 0 ? bytes32(agentId) : bytes32(uint256(uint160(buyer)));
+        IReputation(reputation)
+            .feedback(IWorkerRegistry(registry).nullifierOf(worker), raterKey, code, taskId);
+        if (agentId != 0) IAbuseMark(abuseMark).outcome(agentId, taskId, code);
     }
 
     /// @inheritdoc ITaskEscrow
