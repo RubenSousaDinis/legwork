@@ -1,0 +1,20 @@
+{
+  "place": { "place_id": "node/2734018563", "name": "Farmácia Central", "street_address": "Rua Direita 12", "locality": "Leiria", "country": "PT" },
+  "worker": { "handle": "#w-0417", "verified": true, "credential": "sandbox World ID" },
+  "agent": { "handle": "#8004-1207", "erc8004_id": 1207 },
+  "money": { "agent_pays": 3.45, "escrow_locked": 3.45, "worker_receives": 3.0, "fee": 0.45 },
+  "feed": [
+    { "task_type": "verify-open", "status": "released", "seeded": false, "amount_usdc": 3.0, "via": "x402" },
+    { "task_type": "call-confirm", "status": "refused", "seeded": false, "amount_usdc": 2.0, "via": "hire_human", "refusal_class": "authentication circumvention" },
+    { "task_type": "photo-of", "status": "submitted", "seeded": true, "amount_usdc": 3.0 },
+    { "task_type": "compare-two", "status": "open", "seeded": true, "amount_usdc": 1.0 }
+  ],
+  "worker_pool": { "real": 1, "seeded": 20 },
+  "preflight": { "active": 4, "verified": 1, "seeded": 3, "score_floor": 4.2, "median_minutes": 9, "median_source": "seeded" },
+  "chips": [
+    "sandbox World ID", "operator-attested", "relayed claim · gas paid by Legwork",
+    "testnet USDC — not spendable", "GPS unavailable in webview — disclosed", "1 real · +20 seeded (demo data)"
+  ],
+  "narrationVariant": "A",
+  "tx_placeholder": "0x8f2a…c41d"
+}
