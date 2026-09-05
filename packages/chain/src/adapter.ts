@@ -1,6 +1,6 @@
 import type { TASK_STATE, TaskStateName } from '@legwork/shared';
 import type { Address, Hash, Hex, WalletClient } from 'viem';
-import type { DecodedEvent } from './events.js';
+import type { DecodedEvent } from './events';
 
 /** The eight states of `ITaskEscrow.TaskState`, as their on-chain ordinals. */
 export type TaskState = (typeof TASK_STATE)[TaskStateName];

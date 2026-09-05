@@ -1,5 +1,5 @@
 import { parseEventLogs, type Log, type TransactionReceipt } from 'viem';
-import { allEventAbis } from './abi.js';
+import { allEventAbis } from './abi';
 
 export interface DecodedEvent {
   name: string;

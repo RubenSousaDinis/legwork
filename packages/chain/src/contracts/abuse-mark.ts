@@ -1,6 +1,6 @@
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import { abuseMarkAbi } from '../abi.js';
-import { ContractClient } from './base.js';
+import { abuseMarkAbi } from '../abi';
+import { ContractClient } from './base';
 
 /**
  * `IAbuseMark`. `mark` is the only call the signer key may make, and `outcome` is

@@ -1,4 +1,4 @@
-import type { TaskType } from './enums.js';
+import type { TaskType } from './enums';
 
 /** Economics, limits and timings frozen in T-01a. */
 

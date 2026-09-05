@@ -1,7 +1,7 @@
 import { encodeFunctionData, getContract, type Abi, type Address, type PublicClient, type TransactionReceipt } from 'viem';
-import type { Role } from '../clients.js';
-import type { DirectSender } from '../adapter.js';
-import type { TxQueue } from '../tx-queue.js';
+import type { Role } from '../clients';
+import type { DirectSender } from '../adapter';
+import type { TxQueue } from '../tx-queue';
 
 /** The queues a client may send through. A client that is read-only gets none. */
 export type Queues = Partial<Record<Role, TxQueue>>;

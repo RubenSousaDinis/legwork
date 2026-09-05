@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { TASK_TYPES } from './enums.js';
-import { LONGPOLL_MAX_S } from './constants.js';
-import { Envelope } from './schemas/envelope.js';
-import { RefusalPayload } from './schemas/refusal.js';
-import { Preflight, TaskId, TaskView, TxResult, Geohash5 } from './api-contract.js';
+import { TASK_TYPES } from './enums';
+import { LONGPOLL_MAX_S } from './constants';
+import { Envelope } from './schemas/envelope';
+import { RefusalPayload } from './schemas/refusal';
+import { Preflight, TaskId, TaskView, TxResult, Geohash5 } from './api-contract';
 
 /**
  * The six MCP tools, two modes. **Hosted** (`https://<host>/mcp`, read-only) cannot answer an

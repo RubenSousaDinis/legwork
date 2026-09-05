@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Place } from './place.js';
+import { Place } from './place';
 
 export const SOURCES = ['google', 'osm', 'own-list', 'website', 'other', 'none'] as const;
 export const Source = z.enum(SOURCES);

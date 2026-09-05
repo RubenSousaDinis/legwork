@@ -2,10 +2,10 @@ import { z } from 'zod';
 import {
   DEFAULT_CLAIM_TTL_S, DEFAULT_DISPUTE_WINDOW_S, DEFAULT_SUBMIT_TTL_S,
   MAX_TASK_AMOUNT_USDC, NEED_BY_MIN_LEAD_S, PRICE_FLOOR_USDC, SPEC_MAX_CHARS,
-} from '../constants.js';
-import type { TaskType } from '../enums.js';
-import { canonicalJson } from './spec-hash.js';
-import { CallConfirmSpec, CompareTwoSpec, PhotoOfSpec, VerifyOpenSpec } from './specs.js';
+} from '../constants';
+import type { TaskType } from '../enums';
+import { canonicalJson } from './spec-hash';
+import { CallConfirmSpec, CompareTwoSpec, PhotoOfSpec, VerifyOpenSpec } from './specs';
 
 const twoDecimals = (n: number) => Math.round(n * 100) / 100 === n;
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NOTE_MAX_CHARS } from '../constants.js';
+import { NOTE_MAX_CHARS } from '../constants';
 
 /**
  * The only shape in which worker text ever reaches an agent. `_source` and `_untrusted` are

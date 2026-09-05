@@ -1,6 +1,6 @@
 import { toFunctionSelector, type Abi, type Hex } from 'viem';
-import { abuseMarkAbi, reputationAbi, taskEscrowAbi, workerRegistryAbi } from './abi.js';
-import { ChainRevert } from './adapter.js';
+import { abuseMarkAbi, reputationAbi, taskEscrowAbi, workerRegistryAbi } from './abi';
+import { ChainRevert } from './adapter';
 
 /**
  * `error Foo(address)` → `0x…` selector, the same keccak-of-signature scheme functions use.

@@ -17,8 +17,8 @@ import {
   type PostParams,
   type Task,
   type TxResult,
-} from './adapter.js';
-import type { DecodedEvent } from './events.js';
+} from './adapter';
+import type { DecodedEvent } from './events';
 
 /** T-01 §2: `post` requires `p.amount ≥ 1_000_000` — one USDC, the smallest errand there is. */
 const MIN_TASK_AMOUNT = 1_000_000n;
