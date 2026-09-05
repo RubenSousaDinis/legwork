@@ -1,0 +1,14 @@
+{
+  "data": {
+    "marks": [
+      {
+        "id": "0x9999999999999999999999999999999999999999999999999999999999999999-0",
+        "agentId": "1207",
+        "classId": 5,
+        "specHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "at": "1788523200",
+        "tx": "0x9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    ]
+  }
+}

@@ -81,12 +81,38 @@
   },
   {
     "inputs": [],
+    "name": "MAX_WINDOW",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "MIN_TASK_AMOUNT",
     "outputs": [
       {
         "internalType": "uint96",
         "name": "",
         "type": "uint96"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_WINDOW",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -147,26 +173,26 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "taskId",
         "type": "uint256"
       }
     ],
     "name": "approve",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "taskId",
         "type": "uint256"
       }
     ],
     "name": "autoRelease",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -223,13 +249,13 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "taskId",
         "type": "uint256"
       }
     ],
     "name": "dispute",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -624,18 +650,18 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "taskId",
         "type": "uint256"
       },
       {
         "internalType": "bool",
-        "name": "",
+        "name": "toBuyer",
         "type": "bool"
       }
     ],
     "name": "resolve",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
