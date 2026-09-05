@@ -3,10 +3,15 @@ import './globals.css';
 
 /**
  * OG and Twitter cards point at the `/opengraph-image` route so every link unfurls
- * with the escrow meter. `metadataBase` is deliberately unset: Next resolves the
- * relative path against the deployment origin, so no origin is hard-coded here.
+ * with the escrow meter. `metadataBase` is the deployment origin, falling back to
+ * localhost in development; no origin is hard-coded for production.
  */
+const ORIGIN = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(ORIGIN),
   title: 'Legwork — dashboard',
   description:
     'Public, read-only mission control: escrow, screening and the worker pool for bounded, attributable errands on Base Sepolia.',

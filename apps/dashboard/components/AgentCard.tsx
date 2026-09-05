@@ -62,7 +62,7 @@ export function AgentCard({ agent, present = false }: AgentCardProps) {
       ) : null}
 
       <p className="agent-paid" data-floor="24">
-        {agent.paidOnProof} tasks paid on proof
+        {agent.paidOnProof} {agent.paidOnProof === 1 ? 'task' : 'tasks'} paid on proof
       </p>
 
       <div className="agent-marks">

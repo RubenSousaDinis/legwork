@@ -14,6 +14,11 @@ const FG_3 = '#8b918d';
 const VERIFIED = '#35c79a';
 const REFUSAL = '#e4a33f';
 
+/*
+ * The card is drawn with glyphs the bundled font already covers. `@vercel/og`
+ * downloads a font for anything it does not, and this build must never reach the
+ * network — so no check mark, no arrow, no math symbol below.
+ */
 /**
  * Every link unfurls with the escrow meter. `DATA_MODE` is read here on the server —
  * this route runs only on the server, so the mode never reaches a client bundle.
@@ -88,7 +93,7 @@ export default async function OpengraphImage() {
           </div>
           {released ? (
             <div style={{ display: 'flex', fontSize: 30, color: VERIFIED }}>
-              → worker · +{usdc(featured?.fee ?? 0)} fee · proof ✓
+              to worker · +{usdc(featured?.fee ?? 0)} fee · proof on file
             </div>
           ) : null}
         </div>
