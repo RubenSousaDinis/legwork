@@ -1,6 +1,6 @@
 import { CALL_CONFIRM_DENYLIST, type AbuseClass, type TaskType } from '@legwork/shared';
-import { stringLeaves, type Leaf } from './leaves.js';
-import { findPersonOrIdentifier } from './person.js';
+import { stringLeaves, type Leaf } from './leaves';
+import { findPersonOrIdentifier } from './person';
 
 /** Label → the slug used inside a rule id. The labels themselves come from `@legwork/shared`. */
 export const ABUSE_CLASS_SLUG = {

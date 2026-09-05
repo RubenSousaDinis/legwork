@@ -5,9 +5,9 @@ import {
   canonicalJson,
   type AbuseClass,
 } from '@legwork/shared';
-import type { PlaceIndex } from './place-index.js';
-import { normalizePhone } from './place-index.js';
-import { REASONS } from './reasons.js';
+import type { PlaceIndex } from './place-index';
+import { normalizePhone } from './place-index';
+import { REASONS } from './reasons';
 
 /** Step 2's outcomes. Everything is `invalid_request` except the one residential refusal. */
 export type SchemaCheckResult =

@@ -9,12 +9,12 @@ import {
   type RefusalPayload,
   type TaskType,
 } from '@legwork/shared';
-import { KeywordFallbackClassifier, type Classifier, type ClassifierResult } from './classifier/types.js';
-import { stringLeaves } from './gate/leaves.js';
-import type { PlaceIndex } from './gate/place-index.js';
-import { REASONS } from './gate/reasons.js';
-import { ABUSE_CLASS_SLUG, runDeterministicRules } from './gate/rules.js';
-import { runSchemaChecks } from './gate/schema-checks.js';
+import { KeywordFallbackClassifier, type Classifier, type ClassifierResult } from './classifier/types';
+import { stringLeaves } from './gate/leaves';
+import type { PlaceIndex } from './gate/place-index';
+import { REASONS } from './gate/reasons';
+import { ABUSE_CLASS_SLUG, runDeterministicRules } from './gate/rules';
+import { runSchemaChecks } from './gate/schema-checks';
 
 export type ScreenDeps = {
   places: PlaceIndex;

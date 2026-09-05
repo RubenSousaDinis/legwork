@@ -1,5 +1,5 @@
 import { ABUSE_CLASS_ID, type AbuseClass } from '@legwork/shared';
-import type { SubgraphClient } from './client.js';
+import type { SubgraphClient } from './client';
 import {
   ACTIVE_WORKERS_QUERY,
   MARKS_BY_AGENT_QUERY,
@@ -7,8 +7,8 @@ import {
   RECENT_TASKS_QUERY,
   RELEASED_TASKS_BY_WORKERS_QUERY,
   TASK_QUERY,
-} from './queries.js';
-import type { MarkRow, PosterStatsRow, PreflightSource, TaskRow, WorkerRow } from './types.js';
+} from './queries';
+import type { MarkRow, PosterStatsRow, PreflightSource, TaskRow, WorkerRow } from './types';
 
 const DEFAULT_PAGE = 100;
 
