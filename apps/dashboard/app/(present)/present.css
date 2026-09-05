@@ -1,0 +1,327 @@
+/*
+ * Present mode: a fixed 1920x1080 stage scaled fluidly by `--u`.
+ *
+ * Every length inside `.stage` is `calc(<design px> * var(--u))`. There is no bare
+ * px, no `transform: scale()` and no `zoom` anywhere below, because T-39 measures
+ * `getComputedStyle().fontSize` and that has to equal the size actually rendered.
+ */
+.stage {
+  --u: min(100vw / 1920, 100vh / 1080);
+  width: calc(1920 * var(--u));
+  height: calc(1080 * var(--u));
+  margin: 0 auto;
+  background: var(--ink-900);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(60 * var(--u));
+  font-family: var(--font-body);
+}
+
+/* ------------------------------------------------------------------- header */
+.stage .present-header {
+  height: calc(96 * var(--u));
+  flex: 0 0 calc(96 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(40 * var(--u));
+  border-bottom: calc(1 * var(--u)) solid var(--hairline-1);
+}
+.stage .present-wordmark {
+  font-size: calc(36 * var(--u));
+}
+.stage .present-time {
+  display: flex;
+  align-items: baseline;
+  gap: calc(24 * var(--u));
+}
+.stage .present-clock,
+.stage .present-elapsed {
+  font-size: calc(32 * var(--u));
+  color: var(--fg-1);
+}
+.stage .present-chips {
+  display: flex;
+  align-items: center;
+  gap: calc(12 * var(--u));
+}
+
+/* ------------------------------------------------------- three-column stage */
+
+/*
+ * 60 + 580 + 40 + 560 + 40 + 580 + 60 = 1920.
+ * The centre column runs x 680 to 1240, inside the 656-1264 band that a 9:16
+ * crop keeps, so the escrow meter and the first feed row survive the crop.
+ */
+.stage .present-columns {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: calc(580 * var(--u)) calc(560 * var(--u)) calc(580 * var(--u));
+  gap: calc(40 * var(--u));
+  padding: calc(28 * var(--u)) 0;
+  min-height: 0;
+}
+.stage .present-col {
+  display: flex;
+  flex-direction: column;
+  gap: calc(20 * var(--u));
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------- cards */
+.stage .card {
+  background: var(--ink-800);
+  border: calc(1 * var(--u)) solid var(--border-1);
+  border-radius: calc(12 * var(--u));
+  padding: calc(20 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--u));
+  min-height: 0;
+  overflow: hidden;
+}
+.stage .section-label {
+  font-size: calc(16 * var(--u));
+  letter-spacing: 0.1em;
+}
+.stage .card-title {
+  font-size: calc(24 * var(--u));
+}
+.stage .chip {
+  font-size: calc(32 * var(--u));
+  padding: calc(4 * var(--u)) calc(14 * var(--u));
+  border-width: calc(1 * var(--u));
+  border-radius: calc(999 * var(--u));
+  gap: calc(8 * var(--u));
+}
+.stage .mono-tag {
+  font-size: calc(24 * var(--u));
+  padding: calc(4 * var(--u)) calc(10 * var(--u));
+  border-radius: calc(6 * var(--u));
+}
+.stage .badge {
+  font-size: calc(24 * var(--u));
+  padding: calc(4 * var(--u)) calc(10 * var(--u));
+  border-width: calc(1 * var(--u));
+  border-radius: calc(8 * var(--u));
+}
+.stage .badge-sm {
+  font-size: calc(24 * var(--u));
+  padding: calc(2 * var(--u)) calc(8 * var(--u));
+}
+.stage .mono {
+  font-size: calc(24 * var(--u));
+}
+.stage p {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------ escrow meter */
+.stage .meter-route {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--u));
+  height: calc(56 * var(--u));
+}
+.stage .meter-dot {
+  width: calc(18 * var(--u));
+  height: calc(18 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: var(--fg-1);
+  flex: 0 0 auto;
+}
+.stage .meter-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: calc(10 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: var(--ink-700);
+  border-top: calc(2 * var(--u)) dashed var(--hairline-1);
+  overflow: hidden;
+}
+.stage .meter-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: calc(var(--fill, 0) * 100%);
+  background: var(--verified-500);
+  display: block;
+}
+.stage .meter-footprint {
+  width: calc(34 * var(--u));
+  height: calc(48 * var(--u));
+  flex: 0 0 auto;
+}
+.stage .meter-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(12 * var(--u));
+  line-height: 1.1;
+}
+.stage .meter-state {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+  font-size: calc(48 * var(--u));
+}
+.stage .meter-amount {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-1);
+  font-size: calc(84 * var(--u));
+}
+.stage .meter-tail,
+.stage .meter-proof {
+  font-family: var(--font-mono);
+  font-size: calc(32 * var(--u));
+  color: var(--verified-500);
+}
+.stage .meter-present[data-state='released'] .meter-amount,
+.stage .meter-present[data-state='released'] .meter-state {
+  color: var(--verified-500);
+}
+.stage .meter-present[data-state='refunded'] .meter-amount,
+.stage .meter-present[data-state='refunded'] .meter-state {
+  color: var(--fg-3);
+}
+
+/* -------------------------------------------------------------- agent card */
+.stage .agent-marks {
+  display: flex;
+  align-items: baseline;
+  gap: calc(12 * var(--u));
+}
+.stage .mark-numeral {
+  font-size: calc(56 * var(--u));
+}
+.stage .mark-label,
+.stage .agent-id,
+.stage .agent-paid,
+.stage .agent-label,
+.stage .agent-score {
+  font-size: calc(24 * var(--u));
+}
+.stage .agent-mark-class {
+  font-family: var(--font-mono);
+  font-size: calc(24 * var(--u));
+  color: var(--refusal-500);
+}
+.stage .agent-chips {
+  display: flex;
+  gap: calc(12 * var(--u));
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------- preflight trio */
+.stage .preflight-trio {
+  display: flex;
+  gap: calc(36 * var(--u));
+}
+.stage .preflight-stat {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4 * var(--u));
+}
+.stage .preflight-number {
+  font-size: calc(56 * var(--u));
+}
+.stage .preflight-label {
+  font-size: calc(32 * var(--u));
+}
+.stage .preflight-meta {
+  font-size: calc(24 * var(--u));
+}
+.stage .pool-headline {
+  display: flex;
+  gap: calc(12 * var(--u));
+  flex-wrap: wrap;
+}
+.stage .pool-highlight {
+  font-size: calc(24 * var(--u));
+  color: var(--fg-1);
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------ screening log */
+.stage .screening-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--u));
+  min-height: 0;
+}
+.stage .screening-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  padding-bottom: calc(10 * var(--u));
+  border-bottom: calc(1 * var(--u)) solid var(--hairline-2);
+}
+.stage .screening-reason {
+  font-size: calc(32 * var(--u));
+  color: var(--refusal-500);
+}
+.stage .screening-class {
+  color: var(--refusal-500);
+  font-family: var(--font-mono);
+}
+.stage .screening-reason-passed {
+  font-size: calc(24 * var(--u));
+  color: var(--fg-2);
+}
+
+/* ------------------------------------------------------------------ task row */
+.stage .task-row {
+  border: calc(1 * var(--u)) solid var(--border-1);
+  border-radius: calc(12 * var(--u));
+  background: var(--ink-800);
+  padding: calc(16 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(8 * var(--u));
+}
+.stage .task-row-refused {
+  border-color: var(--refusal-border);
+}
+.stage .task-row-head,
+.stage .task-row-money,
+.stage .task-row-foot {
+  display: flex;
+  align-items: baseline;
+  gap: calc(12 * var(--u));
+  flex-wrap: wrap;
+}
+.stage .task-row-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+  font-size: calc(24 * var(--u));
+  margin: 0;
+}
+.stage .task-row-price {
+  font-size: calc(40 * var(--u));
+}
+.stage .task-row-unit,
+.stage .task-row-paid,
+.stage .task-row-meta,
+.stage .task-row-nomoney {
+  font-size: calc(24 * var(--u));
+}
+.stage .task-row-refusal {
+  font-family: var(--font-mono);
+  font-size: calc(32 * var(--u));
+  color: var(--refusal-500);
+}
