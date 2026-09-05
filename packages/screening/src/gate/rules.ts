@@ -41,6 +41,24 @@ if (CALL_CONFIRM_DENYLIST.length !== 24) {
   );
 }
 
+/**
+ * The length check above catches a resize but not a reorder, which would silently retag every
+ * term with the wrong class. One sentinel per slice boundary makes a reorder throw the same
+ * way. These four are assertions about the frozen list, not a second copy of the rule data.
+ */
+for (const [index, term] of [
+  [0, 'code'],
+  [12, 'confirm my identity'],
+  [18, 'account'],
+  [22, 'referral'],
+] as const) {
+  if ((CALL_CONFIRM_DENYLIST as readonly string[])[index] !== term) {
+    throw new Error(
+      `CALL_CONFIRM_DENYLIST[${index}] is no longer "${term}"; re-slice DENY_GROUPS in gate/rules.ts`,
+    );
+  }
+}
+
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 
 export type DenyRule = { rule_id: string; class: AbuseClass; re: RegExp };
