@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { ABUSE_CLASSES, TASK_TYPES } from '../enums.js';
-import { NO_RETRY_SENTENCE } from '../constants.js';
+import { ABUSE_CLASSES, TASK_TYPES } from '../enums';
+import { NO_RETRY_SENTENCE } from '../constants';
 
 /**
  * A refusal in one of the six abuse classes. The only shape that ever marks an agent.

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ABUSE_CLASSES, TASK_TYPES } from '../enums.js';
+import { ABUSE_CLASSES, TASK_TYPES } from '../enums';
 
 /**
  * Shape of `demo-data.json`. Drives dev/CI screenshots only and renders a visible

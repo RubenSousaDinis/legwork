@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { ABUSE_CLASSES, TASK_TYPES } from './enums.js';
-import { LONGPOLL_MAX_S } from './constants.js';
-import { Envelope } from './schemas/envelope.js';
-import { InvalidRequest, RefusalPayload } from './schemas/refusal.js';
-import { WorkerAnswer } from './schemas/worker-answer.js';
-import { PublicObservation } from './schemas/observation.js';
+import { ABUSE_CLASSES, TASK_TYPES } from './enums';
+import { LONGPOLL_MAX_S } from './constants';
+import { Envelope } from './schemas/envelope';
+import { InvalidRequest, RefusalPayload } from './schemas/refusal';
+import { WorkerAnswer } from './schemas/worker-answer';
+import { PublicObservation } from './schemas/observation';
 
 /**
  * The frozen HTTP contract. Every route T-08 … T-19 implements is declared here with its auth

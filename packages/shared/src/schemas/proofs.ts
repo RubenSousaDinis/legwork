@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { NOTE_MAX_CHARS } from '../constants.js';
-import { CALL_CONFIRM_TEMPLATES } from './specs.js';
+import { NOTE_MAX_CHARS } from '../constants';
+import { CALL_CONFIRM_TEMPLATES } from './specs';
 
 export const Gps = z.object({
   lat: z.number().min(-90).max(90),
