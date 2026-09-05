@@ -24,9 +24,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "jsdom": "catalog:",
     "msw": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",

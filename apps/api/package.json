@@ -12,9 +12,11 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@legwork/chain": "workspace:*",
     "@legwork/shared": "workspace:*",
     "@supabase/supabase-js": "catalog:",
     "@worldcoin/idkit-core": "catalog:",
+    "@worldcoin/minikit-js": "catalog:",
     "drizzle-orm": "catalog:",
     "exifr": "catalog:",
     "fast-json-stable-stringify": "catalog:",

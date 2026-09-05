@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "catalog:",
-    "@graphprotocol/graph-ts": "catalog:"
+    "@graphprotocol/graph-ts": "catalog:",
+    "assemblyscript": "catalog:",
+    "matchstick-as": "catalog:"
   }
 }

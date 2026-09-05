@@ -66,10 +66,18 @@ catalog:
   # -- test --
   msw: ^2.7.0
   "@playwright/test": ^1.49.1
+  # jsdom stays on 26: 27+ wants node ^22.12 and .nvmrc pins 22.11.0.
+  jsdom: ^26.1.0
+  "@testing-library/react": ^16.3.3
+  "@testing-library/dom": ^10.4.1
 
   # -- subgraph --
   "@graphprotocol/graph-cli": ^0.98.1
   "@graphprotocol/graph-ts": ^0.38.2
+  # matchstick shells out to subgraph/node_modules/assemblyscript/bin/asc; graph-ts 0.38
+  # compiles with the 0.19 line, and pnpm's isolated layout does not hoist graph-cli's copy.
+  matchstick-as: ^0.6.0
+  assemblyscript: 0.19.23
 
   # -- docs --
   # zod 4 emits JSON Schema natively via z.toJSONSchema(); @asteasolutions/zod-to-openapi
