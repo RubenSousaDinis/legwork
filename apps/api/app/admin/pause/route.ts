@@ -1,8 +1,11 @@
-// OWNER: T-19 — replace this file; do not edit from any other task
-import { route } from '@/src/http/route';
-import { ApiError } from '@/src/errors';
+// OWNER: T-19
+/** Stop `post` and `claim`. Never `approve`, `autoRelease` or `expire`: a stop must not trap money. */
+import { getChain } from '@/src/chain';
+import { audited, ownerWrite, preflight } from '../_shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export const POST = route(async () => { throw new ApiError(501, 'not_implemented') })
+export const POST = audited('/admin/pause', () => ownerWrite(() => getChain().pause()));
+
+export const OPTIONS = preflight;
