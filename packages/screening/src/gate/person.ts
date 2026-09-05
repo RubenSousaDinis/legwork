@@ -37,7 +37,13 @@ export const IDENTIFIER_RULES = [
     // Portuguese plates across the four historical layouts. Uppercase by definition.
     re: /(?<![\p{L}\p{N}])(?:\d{2}-[A-Z]{2}-\d{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-[A-Z]{2})(?![\p{L}\p{N}])/u,
   },
-  { kind: 'phone', re: /(?:\+?351)?\s?9\d{2}\s?\d{3}\s?\d{3}|\+\d{9,14}/u },
+  // Bounded like every other rule: without the lookarounds a 64-hex `sha256` containing any
+  // nine-digit run starting with 9 reads as a phone number, and an honest compare-two gets
+  // refused with a class — which marks the agent.
+  {
+    kind: 'phone',
+    re: /(?<![\p{L}\p{N}])(?:(?:\+?351)?\s?9\d{2}\s?\d{3}\s?\d{3}|\+\d{9,14})(?![\p{L}\p{N}])/u,
+  },
   { kind: 'email', re: /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u },
   {
     kind: 'document',

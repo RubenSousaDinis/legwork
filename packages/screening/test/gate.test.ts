@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { AbuseClass } from '@legwork/shared';
+import { CompareTwoSpec, type AbuseClass } from '@legwork/shared';
 import { FakeClassifier } from '../src/classifier/types.js';
 import { JsonPlaceIndex } from '../src/gate/place-index.js';
 import { screen } from '../src/pipeline.js';
@@ -35,6 +35,29 @@ describe('gate', () => {
     expect(offPath.payload.class).toBe('authentication circumvention');
     expect(offPath.payload.rule_id.startsWith('kw.authentication-circumvention.')).toBe(true);
     expect(freeText.calls).toHaveLength(1);
+  });
+
+  it('hashLeavesAreNotIdentifiers', async () => {
+    // A hash is never an identifier, a phone still is. `sha256` is a mandatory string leaf on
+    // every CompareItem, so an unbounded phone regex would refuse — and mark — roughly one
+    // honest compare-two in seven, purely on the digits its hashes happened to land on.
+    const hashed = structuredClone(rowOf(13).envelope) as {
+      spec: { a: { sha256: string } };
+    };
+    hashed.spec.a.sha256 = 'c4e1912345678a1b2c3d4e5f6a7b1a1b2c3d4e5f6a7b1a1b2c3d4e5f6a7b1a1b';
+    expect(CompareTwoSpec.safeParse(hashed.spec).success).toBe(true);
+    const accepted = await screen(hashed, { places, classifier: new FakeClassifier(), now, timeoutMs: 20 });
+    expect(accepted).toMatchObject({ ok: true });
+
+    const spoken = structuredClone(rowOf(3).envelope) as {
+      spec: { subject_detail?: string };
+    };
+    spoken.spec.subject_detail = 'call 912 345 678 first';
+    const refused = await screen(spoken, { places, classifier: new FakeClassifier(), now, timeoutMs: 20 });
+    expect(refused.ok).toBe(false);
+    if (refused.ok || refused.kind !== 'refusal') throw new Error('a phone number in a note was not refused');
+    expect(refused.payload.rule_id).toBe('ident.phone');
+    expect(refused.payload.class).toBe('automated reconnaissance');
   });
 
   it('fuzzyMatchTolerantOfAccentsNotOfPeople', () => {
