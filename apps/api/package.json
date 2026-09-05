@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint app",
+    "lint": "eslint app src test --no-error-on-unmatched-pattern",
     "test": "vitest run --passWithNoTests",
-    "db:push": "drizzle-kit push"
+    "db:push": "NODE_OPTIONS='--require ./scripts/drizzle-bigint-json.cjs' drizzle-kit push",
+    "drizzle:generate": "NODE_OPTIONS='--require ./scripts/drizzle-bigint-json.cjs' drizzle-kit generate",
+    "drizzle:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
     "@legwork/chain": "workspace:*",
