@@ -45,6 +45,9 @@ for g in "${GLOBS[@]}"; do
   neg=""
   if [[ $g == \!* ]]; then neg='!'; g="${g#\!}"; fi
   while IFS= read -r e; do
+    # A body that escaped its own brackets (`\[id\]`) means the same path; unescape first
+    # so the escape below is applied exactly once either way.
+    e="${e//"\\["/[}"; e="${e//"\\]"/]}"
     e="${e//\[/\\[}"; e="${e//\]/\\]}"
     PATTERNS+=("$neg$e")
   done < <(expand_braces "$g")
