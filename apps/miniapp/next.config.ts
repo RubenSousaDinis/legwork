@@ -9,6 +9,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['@legwork/shared'],
   async rewrites() {
     return {
       beforeFiles: [],

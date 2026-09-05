@@ -1,5 +1,6 @@
 'use client';
 
+import { PUBLIC_COORD_DECIMALS } from '@legwork/shared';
 import { IDKitRequestWidget, type IDKitResult } from '@worldcoin/idkit';
 import { MiniKit } from '@worldcoin/minikit-js';
 import type { RpContext } from '@worldcoin/idkit-core';
@@ -17,14 +18,6 @@ import {
   type VerifyResponse,
 } from '../../lib/probeApi';
 import { ProbeReadouts } from './ProbeReadouts';
-
-/**
- * `PUBLIC_COORD_DECIMALS` in packages/shared/src/constants.ts — 3 decimals, ≈100 m. Typed here
- * rather than imported: `@legwork/shared`'s entry point re-exports `./constants.js` over
- * `constants.ts`, which Turbopack will not resolve, so importing it fails `next build`.
- * See the PR for the fix that belongs in packages/shared.
- */
-const PUBLIC_COORD_DECIMALS = 3;
 
 const GEO_TIMEOUT_MS = 10_000;
 const WALLET_AUTH_TTL_MS = 10 * 60 * 1000;
