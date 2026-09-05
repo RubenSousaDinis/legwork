@@ -1,0 +1,116 @@
+{
+  "region": "leiria",
+  "generated_at": "2026-09-01T00:00:00Z",
+  "attribution": "© OpenStreetMap contributors, ODbL",
+  "synthetic_ids": true,
+  "pois": [
+    {
+      "id": "node/900000001",
+      "name": "Farmácia Central",
+      "tags": { "amenity": "pharmacy" },
+      "addr": { "street": "Rua Direita", "housenumber": "12", "city": "Leiria" },
+      "phone": "+351 244 000 000",
+      "lat": 39.7436,
+      "lon": -8.8071
+    },
+    {
+      "id": "node/900000002",
+      "name": "Mercado Municipal de Leiria",
+      "tags": { "amenity": "marketplace" },
+      "addr": { "street": "Largo do Mercado", "housenumber": "1", "city": "Leiria" },
+      "lat": 39.7441,
+      "lon": -8.8065
+    },
+    {
+      "id": "node/900000003",
+      "name": "Café da Praça",
+      "tags": { "amenity": "cafe" },
+      "addr": { "street": "Praça Rodrigues Lobo", "housenumber": "8", "city": "Leiria" },
+      "lat": 39.7449,
+      "lon": -8.8072
+    },
+    {
+      "id": "node/900000004",
+      "name": "Restaurante O Cantinho",
+      "tags": { "amenity": "restaurant" },
+      "addr": { "street": "Rua Nova", "housenumber": "5", "city": "Leiria" },
+      "phone": "+351 244 000 004",
+      "lat": 39.7452,
+      "lon": -8.8069
+    },
+    {
+      "id": "node/900000005",
+      "name": "Padaria Pão Quente",
+      "tags": { "shop": "bakery" },
+      "addr": { "street": "Rua do Comércio", "housenumber": "22", "city": "Leiria" },
+      "lat": 39.7428,
+      "lon": -8.8058
+    },
+    {
+      "id": "node/900000006",
+      "name": "Casa das Ferragens",
+      "tags": { "shop": "hardware", "contact:phone": "244 000 006" },
+      "addr": { "street": "Rua dos Mártires", "housenumber": "3", "city": "Leiria" },
+      "lat": 39.7419,
+      "lon": -8.8083
+    },
+    {
+      "id": "node/900000007",
+      "name": "Clínica Médica de Leiria",
+      "tags": { "healthcare": "clinic" },
+      "addr": { "street": "Rua de Tomar", "housenumber": "40", "city": "Leiria" },
+      "phone": "+351 244 000 007",
+      "lat": 39.7466,
+      "lon": -8.8044
+    },
+    {
+      "id": "node/900000008",
+      "name": "Caixa Geral de Depósitos",
+      "tags": { "amenity": "bank" },
+      "addr": { "street": "Largo Cândido dos Reis", "housenumber": "2", "city": "Leiria" },
+      "lat": 39.7444,
+      "lon": -8.8079
+    },
+    {
+      "id": "node/900000009",
+      "name": "Livraria Arquivo",
+      "tags": { "shop": "books" },
+      "addr": { "street": "Rua do Arco", "housenumber": "9", "city": "Leiria" },
+      "lat": 39.7431,
+      "lon": -8.8088
+    },
+    {
+      "id": "node/900000010",
+      "name": "Hotel Eurosol",
+      "tags": { "tourism": "hotel" },
+      "addr": { "street": "Rua das Olarias", "housenumber": "1", "city": "Leiria" },
+      "lat": 39.7472,
+      "lon": -8.8036
+    },
+    {
+      "id": "node/900000011",
+      "name": "Oficina Auto Lis",
+      "tags": { "craft": "car_repair" },
+      "addr": { "street": "Rua da Cooperativa", "housenumber": "14", "city": "Leiria" },
+      "lat": 39.7405,
+      "lon": -8.8097
+    },
+    {
+      "id": "way/900000012",
+      "tags": { "building": "house" },
+      "addr": { "street": "Rua das Oliveiras", "housenumber": "7", "city": "Leiria" },
+      "lat": 39.7398,
+      "lon": -8.8102
+    }
+  ],
+  "not_indexed": [
+    {
+      "id": "node/900000099",
+      "name": "Farmácia da Boavista",
+      "tags": { "amenity": "pharmacy" },
+      "addr": { "street": "Rua da Boavista", "housenumber": "100", "city": "Porto" },
+      "lat": 41.1496,
+      "lon": -8.6109
+    }
+  ]
+}
