@@ -18,9 +18,6 @@
  *
  * Vercel Hobby kills a function at 60 seconds, so the long poll waits at most 50 and says
  * `changed: false, poll_after_seconds: 1` when it gives up. It never pretends the row moved.
- *
- * `task_status` and the proof card re-hash the served file and show "hash matches onchain ✓" —
- * an anchor nobody checks is decoration.
  */
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { eq } from 'drizzle-orm';
@@ -75,9 +72,12 @@ export const proofDeps = {
   store: new Map<string, Uint8Array>(),
 
   /**
-   * Re-hash the bytes we would serve and compare them with the hash the chain anchored.
-   * Computed at response time on every request and never written back to a column: a
-   * `hash_ok` that was cached as `true` is a claim about the past, not a check.
+   * `hash_ok`: re-hash the bytes we would serve and compare them with the hash the chain
+   * anchored. Computed at response time on every request and never written back to a column —
+   * a `hash_ok` cached as `true` is a claim about the past, not a check.
+   *
+   * `task_status` and the proof card re-hash the served file and show "hash matches onchain ✓" —
+   * an anchor nobody checks is decoration.
    */
   async rehash(hash: string): Promise<boolean> {
     const bytes = proofDeps.store.get(hash);
