@@ -3,10 +3,11 @@
  * What a stranger is allowed to see.
  *
  * Every object here is assembled field by field. Spreading a task row would be one keystroke
- * and would publish `spec_json`, `exact_lat/lon`, `buyer_token_hash`, `payer`, `agent_id` and
- * `auth_nonce` — so the allowlist is not a style preference, it is the privacy control.
- * A public coordinate is always the rounded one; a public answer is the enum, never the
- * worker's note; a public proof never carries a URL.
+ * and would publish every private column the schema marks as such — the raw spec, the exact
+ * coordinate, the buyer token digest, the payer, the agent id and the payment nonce — so the
+ * allowlist is not a style preference, it is the privacy control. A public coordinate is
+ * always the rounded one; a public answer is the enum, never the worker's note; a public
+ * proof never carries a URL.
  */
 import { getConfig } from '@/src/config';
 import {

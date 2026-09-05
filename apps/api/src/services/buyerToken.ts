@@ -2,10 +2,10 @@
  * The buyer's capability for one task.
  *
  * The token is issued once by `POST /tasks` (T-16) and never stored: the row keeps only
- * `sha256(token)`, so a database dump cannot approve anybody's task. Nothing in this file
- * compares a token or a digest with `===` — a byte-by-byte comparison that returns early is
- * a timing oracle, and the whole point of hashing both sides first is that
- * `timingSafeEqual` then always sees two 32-byte buffers.
+ * `sha256(token)`, so a database dump cannot approve anybody's task. No token and no digest
+ * in this file is ever compared with JavaScript's strict equality operator — a comparison
+ * that returns on the first differing byte is a timing oracle, and the whole point of
+ * hashing both sides first is that `timingSafeEqual` then always sees two 32-byte buffers.
  *
  * A missing header and a wrong header are the same answer: 401 `{error:'unauthorized'}`,
  * the same log line, and never the value that was presented.
