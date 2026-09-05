@@ -8,7 +8,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia, foundry } from 'viem/chains';
-import type { ChainEnv } from './env.js';
+import type { ChainEnv } from './env';
 
 /** The three keys this package can send from. One job per key; see `docs/keys.md`. */
 export type Role = 'relayer' | 'signer' | 'owner';

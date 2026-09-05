@@ -1,7 +1,7 @@
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import { pausableAbi, taskEscrowAbi } from '../abi.js';
-import type { DirectSender, PostParams, Task } from '../adapter.js';
-import { ContractClient } from './base.js';
+import { pausableAbi, taskEscrowAbi } from '../abi';
+import type { DirectSender, PostParams, Task } from '../adapter';
+import { ContractClient } from './base';
 
 /** `ITaskEscrow`. Method names are the Solidity ones; the role each write needs is the contract's. */
 export class EscrowClient extends ContractClient {

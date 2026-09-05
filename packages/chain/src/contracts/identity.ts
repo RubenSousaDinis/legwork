@@ -1,6 +1,6 @@
 import type { Address } from 'viem';
-import { erc8004IdentityAbi } from '../abi.js';
-import { ContractClient } from './base.js';
+import { erc8004IdentityAbi } from '../abi';
+import { ContractClient } from './base';
 
 /**
  * The ERC-8004 IdentityRegistry, read-only.

@@ -1,6 +1,6 @@
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import { reputationAbi } from '../abi.js';
-import { ContractClient } from './base.js';
+import { reputationAbi } from '../abi';
+import { ContractClient } from './base';
 
 /**
  * `IReputation`, keyed by nullifier so a worker rotating their payout address keeps their

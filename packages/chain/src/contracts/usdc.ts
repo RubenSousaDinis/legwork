@@ -1,8 +1,8 @@
 import type { Address, TransactionReceipt } from 'viem';
-import { erc20Abi } from '../abi.js';
-import type { DirectSender } from '../adapter.js';
-import type { Role } from '../clients.js';
-import { ContractClient } from './base.js';
+import { erc20Abi } from '../abi';
+import type { DirectSender } from '../adapter';
+import type { Role } from '../clients';
+import { ContractClient } from './base';
 
 /**
  * The USDC slice this package needs. Testnet USDC, six decimals, not spendable anywhere.

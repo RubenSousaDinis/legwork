@@ -6,8 +6,8 @@ import type {
   PostParams,
   Task,
   TxResult,
-} from './adapter.js';
-import { createClients, type Clients, type Role } from './clients.js';
+} from './adapter';
+import { createClients, type Clients, type Role } from './clients';
 import {
   AbuseMarkClient,
   EscrowClient,
@@ -15,12 +15,12 @@ import {
   RegistryClient,
   ReputationClient,
   UsdcClient,
-} from './contracts/index.js';
-import type { ChainEnv } from './env.js';
-import { decodeEvents, taskIdFromReceipt } from './events.js';
-import type { NonceLock } from './nonce-lock.js';
-import { rethrowAsChainRevert } from './reverts.js';
-import { TxQueue } from './tx-queue.js';
+} from './contracts/index';
+import type { ChainEnv } from './env';
+import { decodeEvents, taskIdFromReceipt } from './events';
+import type { NonceLock } from './nonce-lock';
+import { rethrowAsChainRevert } from './reverts';
+import { TxQueue } from './tx-queue';
 
 export interface LiveChainOptions {
   env: ChainEnv;

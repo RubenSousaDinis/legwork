@@ -1,8 +1,8 @@
 import { hexToBigInt, numberToHex } from 'viem';
 import type { Account, Address, Hex, PublicClient, TransactionReceipt, WalletClient } from 'viem';
 import type { Logger } from 'pino';
-import type { Role } from './clients.js';
-import type { NonceLock } from './nonce-lock.js';
+import type { Role } from './clients';
+import type { NonceLock } from './nonce-lock';
 
 export interface TxRequest {
   to: Address;

@@ -1,6 +1,6 @@
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import { workerRegistryAbi } from '../abi.js';
-import { ContractClient } from './base.js';
+import { workerRegistryAbi } from '../abi';
+import { ContractClient } from './base';
 
 /** `IWorkerRegistry`. Method names are the Solidity ones. */
 export class RegistryClient extends ContractClient {
