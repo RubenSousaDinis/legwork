@@ -1,4 +1,4 @@
-import type { PreflightCounts, PreflightSource, TaskRow, WorkerRow } from './types.js';
+import type { PreflightCounts, PreflightSource, TaskRow, WorkerRow } from './types';
 
 /** Seven days, in seconds. "Active" means "completed a task inside this window". */
 export const ACTIVE_WINDOW_S = 604800;

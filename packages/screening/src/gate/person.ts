@@ -1,5 +1,5 @@
 import type { AbuseClass } from '@legwork/shared';
-import type { Leaf } from './leaves.js';
+import type { Leaf } from './leaves';
 
 /**
  * A small PT + EN first-name list. It exists to catch "photograph João Silva", not to be a

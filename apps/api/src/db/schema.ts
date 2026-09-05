@@ -5,6 +5,7 @@
  * Privacy split: the exact coordinate, the raw spec, the buyer token hash, the payer and the
  * agent id live only in the columns marked private and are never selected into a public view.
  */
+import { sql } from 'drizzle-orm';
 import {
   bigint, boolean, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -116,7 +117,7 @@ export const capsLedger = pgTable('caps_ledger', {
   payer: text('payer').notNull(),
   day: text('day').notNull(), // YYYY-MM-DD UTC
   openTasks: integer('open_tasks').notNull().default(0),
-  dailyUnits: bigint('daily_units', { mode: 'bigint' }).notNull().default(0n),
+  dailyUnits: bigint('daily_units', { mode: 'bigint' }).notNull().default(sql`0`),
 }, (t) => [primaryKey({ columns: [t.payer, t.day] })]);
 
 export const marksLog = pgTable('marks_log', {

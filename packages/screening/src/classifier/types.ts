@@ -1,5 +1,5 @@
 import type { AbuseClass } from '@legwork/shared';
-import { matchKeywordRules } from '../gate/rules.js';
+import { matchKeywordRules } from '../gate/rules';
 
 /**
  * What a classifier returns. `source` says where the answer came from, so the dashboard can

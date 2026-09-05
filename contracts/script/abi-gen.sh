@@ -28,4 +28,11 @@ for i in IWorkerRegistry ITaskEscrow IReputation IAbuseMark; do
   [ -f "$f" ] || continue
   jq -S '.abi' "$f" > "$TS_OUT/$i.json"
   echo "wrote $i.json"
+  # The subgraph needs all four ABIs to codegen. Until the implementation lands, the
+  # interface's events are the contract's events, so it stands in under the impl's name.
+  c="${i#I}"
+  if [ ! -f "out/$c.sol/$c.json" ]; then
+    jq -S '.abi' "$f" > "$SG_OUT/$c.json"
+    echo "wrote subgraph/abis/$c.json from $i (implementation pending)"
+  fi
 done

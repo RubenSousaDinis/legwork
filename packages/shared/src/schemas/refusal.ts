@@ -25,5 +25,8 @@ export const InvalidRequest = z.object({
   error: z.literal('invalid_request'),
   field: z.string().max(120),
   reason: z.string().max(300),
+  /** Type-gate results only (T-06): the four types that exist, and the one the text probably meant. */
+  allowed_task_types: z.array(z.enum(TASK_TYPES)).optional(),
+  suggested_task_type: z.enum(TASK_TYPES).optional(),
 });
 export type InvalidRequest = z.infer<typeof InvalidRequest>;

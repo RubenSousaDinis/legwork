@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { levenshtein } from './levenshtein.js';
+import { levenshtein } from './levenshtein';
 
 /** One point of interest out of the cached OpenStreetMap extract. */
 export type Poi = {

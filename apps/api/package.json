@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint app src test --no-error-on-unmatched-pattern",
     "test": "vitest run --passWithNoTests",
-    "db:push": "NODE_OPTIONS='--require ./scripts/drizzle-bigint-json.cjs' drizzle-kit push",
-    "drizzle:generate": "NODE_OPTIONS='--require ./scripts/drizzle-bigint-json.cjs' drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "drizzle:generate": "drizzle-kit generate",
     "drizzle:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
