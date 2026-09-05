@@ -63,7 +63,7 @@ export type TxQuery = (text: string, params?: unknown[]) => Promise<Record<strin
 
 /**
  * One transaction, with the same `$1` binding as `rawQuery`. Shaped to satisfy
- * `@legwork/chain`'s `SqlExecutor` structurally, so this file still imports nothing from it.
+ * the chain package's `SqlExecutor` structurally, so this file still imports nothing from it.
  */
 export function transaction<T>(fn: (query: TxQuery) => Promise<T>): Promise<T> {
   return getDb().transaction(async (tx) =>
