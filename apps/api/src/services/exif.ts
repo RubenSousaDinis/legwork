@@ -2,11 +2,11 @@
  * Re-encoding, which is how the metadata is removed.
  *
  * An untreated phone photo carries a device id and a GPS fix good to about five metres.
- * Nothing here parses the EXIF block to delete fields from it: sharp writes no metadata
- * onto its output unless `.withMetadata()` is called, so decoding the pixels and encoding
- * a fresh JPEG leaves nothing to strip. `rotate()` with no argument is the one thing the
- * EXIF is read *for* — it bakes the orientation flag into the pixels before it is dropped,
- * so the stripped copy is the right way up.
+ * Nothing here parses the EXIF block to delete fields from it: sharp carries no metadata
+ * onto its output unless it is explicitly told to, and this pipeline never tells it to, so
+ * decoding the pixels and encoding a fresh JPEG leaves nothing to strip. `rotate()` with no
+ * argument is the one thing the EXIF is read *for* — it bakes the orientation flag into the
+ * pixels before it is dropped, so the stripped copy is the right way up.
  *
  * The bytes hashed onchain are the ones that arrived, not these. This function runs after
  * the hash, never before it.
