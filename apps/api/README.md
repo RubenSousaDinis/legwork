@@ -68,10 +68,8 @@ pnpm --filter @legwork/api drizzle:generate # regenerate drizzle/ from the froze
 pnpm --filter @legwork/api drizzle:migrate  # apply drizzle/ to DATABASE_URL
 ```
 
-`build` and `dev` pass `--webpack`. `@legwork/chain` imports its own modules as `./env.js` —
-the extension TypeScript's NodeNext convention writes and the file on disk does not have —
-and webpack maps it back with `resolve.extensionAlias`, which Turbopack has no equivalent
-for. `next.config.ts` says so at the line that does it.
+`next.config.ts` lists `@legwork/chain` and `@legwork/shared` under `transpilePackages`: they
+ship TypeScript sources rather than a build output, so the bundler compiles them here.
 
 `drizzle:generate` runs behind a small `NODE_OPTIONS` preload
 (`scripts/drizzle-bigint-json.cjs`). The frozen `src/db/schema.ts` declares
