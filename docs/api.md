@@ -19,7 +19,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | POST | `/idkit/request` | public | RP-signed rp_context for IDKit v4 | 200 |
 | POST | `/idkit/verify` | public | Forward the IDKit result to World v4 verify; sets idkit-session cookie | 200, 409 |
 | GET | `/session/nonce` | public | SIWE nonce | 200 |
-| POST | `/session` | idkit-session | walletAuth (verifySiweMessage) or idkit mode → worker-session cookie; dev path for seeded workers only | 200, 401 |
+| POST | `/session` | public | walletAuth (verifySiweMessage over a single-use nonce + the stored nullifier binding; no cookie needed) or idkit mode (requires the idkit-session cookie) → worker-session cookie + the same JWT as `token`; isWorker checked onchain in both modes; dev path for seeded workers only | 200, 401, 403 |
 | POST | `/register` | idkit-session | EIP-712 attestation (deadline now+600) then relayed registerFor | 200, 409, 500 |
 | GET | `/tasks` | worker-session | Open + lazily-expirable tasks near the worker | 200 |
 | POST | `/tasks/:id/claim` | worker-session | Relayed claimFor | 200, 409 |
@@ -44,7 +44,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | POST | `/admin/sweep` | admin-key | Expire + autoRelease pass (GitHub Actions cron every 5 min) | 200 |
 | POST | `/admin/seed-demo` | admin-key | Seed demo rows | 200 |
 | GET | `/openapi.json` | public | OpenAPI 3.1 rendered from this contract (T-35) | 200 |
-| GET | `/healthz` | public | Liveness | 200 |
+| GET | `/healthz` | public | Liveness plus the four facts an operator asks first; never an address derived from a key | 200 |
 | POST | `/tasks` | signed-header | Direct mode: X-Buyer-Signature (EIP-191 over `${spec_hash}:${timestamp}`) + X-Buyer-Timestamp (±300 s) → quote | 202 |
 | POST | `/tasks/:id/confirm` | signed-header | Direct mode: after TaskPosted with that spec_hash is observed | 200 |
 
@@ -674,6 +674,27 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
     "reason": {
       "type": "string",
       "maxLength": 300
+    },
+    "allowed_task_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verify-open",
+          "photo-of",
+          "call-confirm",
+          "compare-two"
+        ]
+      }
+    },
+    "suggested_task_type": {
+      "type": "string",
+      "enum": [
+        "verify-open",
+        "photo-of",
+        "call-confirm",
+        "compare-two"
+      ]
     }
   },
   "required": [
@@ -1111,6 +1132,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -1281,6 +1326,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -1469,6 +1538,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -1639,6 +1732,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -2308,6 +2425,27 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
     "reason": {
       "type": "string",
       "maxLength": 300
+    },
+    "allowed_task_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verify-open",
+          "photo-of",
+          "call-confirm",
+          "compare-two"
+        ]
+      }
+    },
+    "suggested_task_type": {
+      "type": "string",
+      "enum": [
+        "verify-open",
+        "photo-of",
+        "call-confirm",
+        "compare-two"
+      ]
     }
   },
   "required": [
@@ -2563,6 +2701,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -2729,12 +2891,16 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "idkit",
         "dev"
       ]
+    },
+    "token": {
+      "type": "string"
     }
   },
   "required": [
     "worker",
     "nullifier",
-    "mode"
+    "mode",
+    "token"
   ]
 }
 ```
@@ -2799,6 +2965,185 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "enum": [
+            "bad_state",
+            "not_eligible",
+            "dispute_window_closed",
+            "chain_revert",
+            "worker_already_bound",
+            "nullifier_already_registered",
+            "InCooldown",
+            "AlreadyClaimed",
+            "SeededCannotClaimExternal"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
+**403**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -2993,6 +3338,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -3124,6 +3493,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -3387,6 +3780,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -3539,6 +3956,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -3702,6 +4143,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -3892,6 +4357,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -4139,6 +4628,30 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "error": {
           "type": "string",
           "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered"
+          ]
         }
       },
       "required": [
@@ -5225,13 +5738,42 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
       "type": "boolean",
       "const": true
     },
-    "service": {
+    "db": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "error"
+      ]
+    },
+    "chain_id": {
+      "type": "number",
+      "const": 84532
+    },
+    "payment_mode": {
+      "type": "string",
+      "enum": [
+        "x402",
+        "direct"
+      ]
+    },
+    "data_mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "demo"
+      ]
+    },
+    "version": {
       "type": "string"
     }
   },
   "required": [
     "ok",
-    "service"
+    "db",
+    "chain_id",
+    "payment_mode",
+    "data_mode",
+    "version"
   ]
 }
 ```
