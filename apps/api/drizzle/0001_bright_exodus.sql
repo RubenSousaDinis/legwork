@@ -1,0 +1,1 @@
+ALTER TABLE "nullifiers" ALTER COLUMN "worker" DROP NOT NULL;
