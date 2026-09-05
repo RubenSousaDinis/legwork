@@ -46,7 +46,7 @@ Day 1 night → Day 2 morning. Everything in lane B (T-15 … T-20, T-27, T-30, 
 
 ## 3. Out of scope
 - Any route body beyond `/healthz`, `/session/nonce`, `/session`. All other routes are 501 stubs — **T-16, T-17, T-18, T-19, T-20, T-27, T-30, T-35** own them from merge.
-- `apps/api/src/db/schema.ts` and its generated migration — **T-01** (frozen). If a table lacks a column you need, `INTERFACE REQUEST:`.
+- `apps/api/src/db/schema.ts` — **T-01** (frozen). The migration generated from it under `apps/api/drizzle/` is this task's (§2, §4, §8). If a table lacks a column you need, `INTERFACE REQUEST:`.
 - Payments (**T-15**), screening (**T-06**), the chain package (**T-07**).
 - Do not touch: `packages/**`, `contracts/**`, `subgraph/**`, `.env.example`, `docs/api.md`.
 
