@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "codegen": "graph codegen",
-    "build": "graph build",
+    "build": "graph codegen && graph build",
     "typecheck": "echo 'subgraph typechecks via graph build'",
     "lint": "echo 'no lint for subgraph'",
     "test": "echo 'mapping tests run under matchstick: cd subgraph && pnpm graph test'"
