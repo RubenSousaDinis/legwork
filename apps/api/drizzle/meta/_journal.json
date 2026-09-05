@@ -8,6 +8,13 @@
       "when": 1788565887599,
       "tag": "0000_puzzling_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788644616519,
+      "tag": "0001_bright_exodus",
+      "breakpoints": true
     }
   ]
 }
