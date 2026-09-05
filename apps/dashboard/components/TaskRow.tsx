@@ -9,6 +9,19 @@ export interface TaskRowProps {
   present?: boolean;
 }
 
+/** A phone call can only ever be a self-report, and every surface has to say so. */
+const CALL_CONFIRM_DISCLOSURE = 'self-reported answer + timestamp (unverified)';
+
+/**
+ * The component guarantees the disclosure rather than trusting the adapter to add it,
+ * so a live row cannot lose it. Appended once: a meta that already ends with it is
+ * left alone.
+ */
+export function metaWithDisclosure(row: TaskRowData): string {
+  if (row.type !== 'call-confirm' || row.meta.endsWith(CALL_CONFIRM_DISCLOSURE)) return row.meta;
+  return row.meta ? `${row.meta} · ${CALL_CONFIRM_DISCLOSURE}` : CALL_CONFIRM_DISCLOSURE;
+}
+
 export function TaskRow({ row, present = false }: TaskRowProps) {
   const refused = row.state === 'refused';
   return (
@@ -23,7 +36,7 @@ export function TaskRow({ row, present = false }: TaskRowProps) {
         <h3 className="task-row-title" data-floor="24">
           {row.title}
         </h3>
-        <StatusBadge status={row.state} />
+        <StatusBadge status={row.state} floor={24} />
       </div>
 
       {/*
@@ -57,7 +70,7 @@ export function TaskRow({ row, present = false }: TaskRowProps) {
 
       <div className="task-row-foot">
         <span className="mono task-row-meta" data-floor="24">
-          {row.meta}
+          {metaWithDisclosure(row)}
         </span>
         {row.seeded ? <Chip tone="seeded">seeded</Chip> : null}
         {row.tx ? <Chip tone="neutral">tx ↗</Chip> : null}

@@ -78,13 +78,13 @@ function moneyFor(status: string, amountUsdc: number): { price: number; agentPay
   return { price: amountUsdc, agentPays: agentPaysFor(amountUsdc) };
 }
 
-function metaFor(type: TaskType, status: string, via: string | undefined, seeded: boolean): string {
+function metaFor(status: string, via: string | undefined, seeded: boolean): string {
   const parts: string[] = [];
   if (via) parts.push(`via ${via}`);
   if (seeded) parts.push('seeded demo row');
   if (status === 'refused') parts.push('no money moved');
-  // `call-confirm` can only ever be a self-report, and says so on every surface.
-  if (type === 'call-confirm') parts.push('self-reported answer + timestamp (unverified)');
+  // The `call-confirm` disclosure is not appended here: `TaskRow` guarantees it for
+  // every adapter, so the live rows T-26 builds cannot forget it.
   return parts.join(' · ');
 }
 
@@ -105,7 +105,7 @@ export function demoDashboardData(
       priceUsdc: price,
       agentPaysUsdc: agentPays,
       state: rowState,
-      meta: metaFor(row.task_type, row.status, row.via, row.seeded),
+      meta: metaFor(row.status, row.via, row.seeded),
       seeded: row.seeded,
     };
     if (row.status === 'refused') {

@@ -47,7 +47,9 @@ export function EscrowMeter({ featured, totals, present = false }: EscrowMeterPr
   // Without a proof it stays on the submitted wording.
   const showsRelease = state === 'released' && featured?.proofPresent === true;
   const displayState: FeaturedState = state === 'released' && !showsRelease ? 'submitted' : state;
-  const progress = PROGRESS[displayState];
+  // With no featured funded task there is no money on the meter, so the route reads
+  // empty: `LOCKED 0.00` at progress 0, not the resting half-fill of a locked task.
+  const progress = featured ? PROGRESS[displayState] : 0;
 
   const locked = featured ? featured.escrowLocked : 0;
   const toWorker = featured ? featured.workerReceives : 0;

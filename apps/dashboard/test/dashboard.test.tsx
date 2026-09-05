@@ -4,6 +4,7 @@ import { afterEach } from 'vitest';
 import { PresentCanvas } from '../app/(present)/PresentCanvas';
 import { MissionControl } from '../app/MissionControl';
 import { TaskRow } from '../components/TaskRow';
+import { EscrowMeter } from '../components/EscrowMeter';
 import { WorkerPool } from '../components/WorkerPool';
 import { PreflightTrio } from '../components/PreflightTrio';
 import { poolString } from '../lib/format';
@@ -66,6 +67,57 @@ describe('dashboard shell', () => {
     expect(meterAfter).toBe(meterBefore);
     expect(meterAfter).toContain('data-state="locked"');
     expect(meterAfter).toContain('data-progress="0.5"');
+  });
+
+  it('emptyMeterRendersZero', () => {
+    // What the live dashboard shows from the day T-26 lands until it has a task:
+    // no featured funded task means no money on the meter.
+    const { container } = render(
+      <EscrowMeter featured={null} totals={{ lockedUsdc: 0, releasedTodayUsdc: 0, refundedUsdc: 0 }} />,
+    );
+    const meter = container.querySelector('[data-testid="escrow-meter"]')!;
+    expect(meter.getAttribute('data-progress')).toBe('0');
+    expect(meter.getAttribute('data-state')).toBe('locked');
+    expect(meter.textContent).toContain('LOCKED');
+    expect(meter.textContent).toContain('0.00');
+  });
+
+  it('callConfirmDisclosureFromComponent', () => {
+    // The component guarantees the line, so a live adapter cannot lose it.
+    const base = {
+      taskId: 'row-1',
+      title: 'Confirm by phone — Leiria',
+      priceUsdc: 3,
+      agentPaysUsdc: 3.45,
+      state: 'submitted',
+      meta: 'via hire_human',
+      seeded: false,
+    } as const;
+    const disclosure = 'self-reported answer + timestamp (unverified)';
+
+    const call = render(<TaskRow row={{ ...base, type: 'call-confirm' }} />);
+    const callText = call.container.textContent ?? '';
+    expect(callText).toContain(disclosure);
+    expect(callText.split(disclosure)).toHaveLength(2); // exactly once
+    cleanup();
+
+    // A meta that already ends with it is not doubled.
+    const already = render(
+      <TaskRow row={{ ...base, type: 'call-confirm', meta: `via hire_human · ${disclosure}` }} />,
+    );
+    expect((already.container.textContent ?? '').split(disclosure)).toHaveLength(2);
+    cleanup();
+
+    // Any other type renders none.
+    const other = render(<TaskRow row={{ ...base, type: 'verify-open' }} />);
+    expect(other.container.textContent ?? '').not.toContain(disclosure);
+    cleanup();
+
+    // The demo adapter no longer supplies it; the component still shows it once.
+    const demoCall = demo().feed.find((r) => r.type === 'call-confirm')!;
+    expect(demoCall.meta).not.toContain(disclosure);
+    const fromDemo = render(<TaskRow row={demoCall} />);
+    expect((fromDemo.container.textContent ?? '').split(disclosure)).toHaveLength(2);
   });
 
   it('seededRowsAlwaysChipped', () => {
@@ -166,10 +218,10 @@ describe('dashboard shell', () => {
     expect(at24.length).toBeGreaterThan(0);
     for (const el of at24) expect(floorOf(el)).toBe('24');
 
-    // Status badges are part of the narrated task row.
-    for (const badge of stage!.querySelectorAll('.task-row .badge')) {
-      expect(floorOf(badge.closest('.task-row')!)).toBe(null);
-    }
+    // Status badges are part of the narrated task row, so each declares its own floor.
+    const badges = [...stage!.querySelectorAll('.task-row .badge')];
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) expect(floorOf(badge)).toBe('24');
 
     // Nothing inside the stage carries an inline px length: present mode sizes
     // everything with calc(<design px> * var(--u)) in present.css.
