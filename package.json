@@ -14,22 +14,26 @@
     "db:push": "pnpm --filter @legwork/api db:push",
     "abi:gen": "bash contracts/script/abi-gen.sh",
     "osm:extract": "tsx scripts/osm-extract.ts",
-    "demo:run": "echo 'not yet — T-29' && exit 1",
-    "demo:reset": "echo 'not yet — T-29' && exit 1",
-    "inserts": "echo 'not yet — T-44' && exit 1",
-    "e2e:anvil": "echo 'not yet — T-36' && exit 1",
+    "demo:run": "echo 'not yet \u2014 T-29' && exit 1",
+    "demo:reset": "echo 'not yet \u2014 T-29' && exit 1",
+    "inserts": "echo 'not yet \u2014 T-44' && exit 1",
+    "e2e:anvil": "echo 'not yet \u2014 T-36' && exit 1",
     "claim": "bash scripts/claim.sh",
     "release": "bash scripts/release.sh",
     "claims": "bash scripts/claims.sh",
     "docs:gen": "pnpm --filter @legwork/shared exec tsx scripts/gen-docs.ts"
   },
   "devDependencies": {
-    "typescript": "catalog:",
-    "tsx": "catalog:",
-    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@x402/core": "catalog:",
+    "@x402/evm": "catalog:",
+    "@x402/fetch": "catalog:",
     "eslint": "catalog:",
-    "typescript-eslint": "catalog:",
     "prettier": "catalog:",
-    "@types/node": "catalog:"
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "viem": "catalog:",
+    "vitest": "catalog:"
   }
 }
