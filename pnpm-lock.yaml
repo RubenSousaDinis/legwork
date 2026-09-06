@@ -264,6 +264,9 @@ importers:
       '@legwork/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@legwork/subgraph-client':
+        specifier: workspace:*
+        version: link:../../packages/subgraph-client
       next:
         specifier: 'catalog:'
         version: 16.3.4(@playwright/test@1.62.1)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
