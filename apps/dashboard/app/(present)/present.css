@@ -4,9 +4,17 @@
  * Every length inside `.stage` is `calc(<design px> * var(--u))`. There is no bare
  * px, no `transform: scale()` and no `zoom` anywhere below, because T-39 measures
  * `getComputedStyle().fontSize` and that has to equal the size actually rendered.
+ *
+ * Two things T-39's Day-5 gate measured and this file answers:
+ *   - the header could not hold the time group and three 32-px honesty chips on one
+ *     line at 1800 px, so it is two rows inside T-10's 96;
+ *   - each column is a grid of fixed rows, so a `?hide=` cut leaves an empty row and
+ *     nothing below it moves between takes.
  */
 .stage {
   --u: min(100vw / 1920, 100vh / 1080);
+  /* The one movement, beat 7. Hard cap 800; reduced motion drops it to 0 below. */
+  --meter-ms: 700ms;
   width: calc(1920 * var(--u));
   height: calc(1080 * var(--u));
   margin: 0 auto;
@@ -18,28 +26,66 @@
   font-family: var(--font-body);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    --meter-ms: 0ms;
+  }
+}
+
 /* ------------------------------------------------------------------- header */
+
+/*
+ * Two rows in T-10's 96, not one. One row cannot work: the wordmark, the time group
+ * and the three chips want about 2075 px of the 1800 available, and the chips are
+ * honesty chips at a 32-px floor that may never be shrunk. 41.6 + 4 + 48.4 = 94.
+ */
 .stage .present-header {
   height: calc(96 * var(--u));
   flex: 0 0 calc(96 * var(--u));
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(4 * var(--u));
+  border-bottom: calc(1 * var(--u)) solid var(--hairline-1);
+}
+.stage .present-header-top {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: calc(40 * var(--u));
-  border-bottom: calc(1 * var(--u)) solid var(--hairline-1);
 }
 .stage .present-wordmark {
   font-size: calc(36 * var(--u));
+  line-height: 1.1;
 }
 .stage .present-time {
   display: flex;
   align-items: baseline;
   gap: calc(24 * var(--u));
+  /* Never squeezed: this is the continuity proof across the labeled cut. */
+  flex: 0 0 auto;
 }
-.stage .present-clock,
-.stage .present-elapsed {
+.stage .present-clock-group {
+  display: flex;
+  align-items: baseline;
+  gap: calc(8 * var(--u));
+}
+/*
+ * Three classes, not two: `.stage .mono` sets 24 px later in this file and would
+ * otherwise win the tie on source order alone.
+ */
+.stage .present-time .present-clock,
+.stage .present-time .present-elapsed {
   font-size: calc(32 * var(--u));
+  line-height: 1.3;
   color: var(--fg-1);
+  white-space: nowrap;
+}
+.stage .present-time .present-clock-source {
+  font-size: calc(24 * var(--u));
+  line-height: 1.3;
+  color: var(--fg-4);
+  white-space: nowrap;
 }
 .stage .present-chips {
   display: flex;
@@ -53,21 +99,98 @@
  * 60 + 580 + 40 + 560 + 40 + 580 + 60 = 1920.
  * The centre column runs x 680 to 1240, inside the 656-1264 band that a 9:16
  * crop keeps, so the escrow meter and the first feed row survive the crop.
+ *
+ * Vertically: 1080 - 96 header - 2 x 8 = 968 per column, and the right column —
+ * the screening log and two feed rows — spends 953 of them. The row heights below
+ * are that measurement, not a guess.
  */
 .stage .present-columns {
   flex: 1 1 auto;
   display: grid;
   grid-template-columns: calc(580 * var(--u)) calc(560 * var(--u)) calc(580 * var(--u));
   gap: calc(40 * var(--u));
-  padding: calc(28 * var(--u)) 0;
+  padding: calc(8 * var(--u)) 0;
   min-height: 0;
 }
+
+/*
+ * Each column is placed in its own track by name, never by document order. A cut that
+ * empties the left column must not let the centre auto-place into track 1 — that
+ * would slide the escrow meter from x 680-1240 to x 60-640 and straight out of the
+ * 9:16 band, which is the one thing a cut may never do.
+ */
+.stage .present-col-left {
+  grid-column: 1;
+}
+.stage .present-col-centre {
+  grid-column: 2;
+}
+.stage .present-col-right {
+  grid-column: 3;
+}
+
+/*
+ * Fixed rows, and every card placed in one explicitly. A cut renders nothing at all
+ * where its card was, and because the row stays the card below it does not rise —
+ * the meter, row 1, the clock and the timer are at the same y in every take.
+ */
 .stage .present-col {
-  display: flex;
-  flex-direction: column;
-  gap: calc(20 * var(--u));
+  display: grid;
+  gap: calc(14 * var(--u));
+  align-content: start;
   min-height: 0;
   overflow: hidden;
+}
+.stage .present-col-left {
+  grid-template-rows: calc(460 * var(--u)) calc(494 * var(--u));
+}
+.stage .present-col-centre {
+  grid-template-rows: calc(620 * var(--u)) calc(334 * var(--u));
+}
+.stage .present-col-right {
+  grid-template-rows: calc(277 * var(--u)) calc(417 * var(--u)) calc(246 * var(--u));
+}
+.stage .present-col-left > .agent-card {
+  grid-row: 1;
+}
+.stage .present-col-left > .preflight {
+  grid-row: 2;
+}
+.stage .present-col-centre > .meter {
+  grid-row: 1;
+}
+.stage .present-col-centre > .present-row {
+  grid-row: 2;
+}
+.stage .present-col-right > .screening {
+  grid-row: 1;
+}
+.stage .present-col-right > .present-row[data-row='2'] {
+  grid-row: 2;
+}
+.stage .present-col-right > .present-row[data-row='3'] {
+  grid-row: 3;
+}
+.stage .present-row {
+  display: flex;
+  min-height: 0;
+}
+.stage .present-row > .task-row {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------- cuts */
+
+/*
+ * `data-hidden` is the record of what this take dropped, in a fixed order so two takes
+ * that cut the same cards write the same attribute. It drives no layout at all, and
+ * that is deliberate: the tracks and the rows are fixed above, so a cut card leaves an
+ * empty box where it was and every card that is still on screen keeps its x and its y.
+ * A rule here that removed an emptied column would move the two beside it.
+ */
+.stage[data-hidden] .present-col {
+  align-content: start;
 }
 
 /* ------------------------------------------------------------------- cards */
@@ -75,10 +198,10 @@
   background: var(--ink-800);
   border: calc(1 * var(--u)) solid var(--border-1);
   border-radius: calc(12 * var(--u));
-  padding: calc(20 * var(--u));
+  padding: calc(16 * var(--u));
   display: flex;
   flex-direction: column;
-  gap: calc(12 * var(--u));
+  gap: calc(10 * var(--u));
   min-height: 0;
   overflow: hidden;
 }
@@ -98,12 +221,12 @@
 }
 .stage .mono-tag {
   font-size: calc(24 * var(--u));
-  padding: calc(4 * var(--u)) calc(10 * var(--u));
+  padding: calc(2 * var(--u)) calc(8 * var(--u));
   border-radius: calc(6 * var(--u));
 }
 .stage .badge {
   font-size: calc(24 * var(--u));
-  padding: calc(4 * var(--u)) calc(10 * var(--u));
+  padding: calc(3 * var(--u)) calc(9 * var(--u));
   border-width: calc(1 * var(--u));
   border-radius: calc(8 * var(--u));
 }
@@ -116,6 +239,29 @@
 }
 .stage p {
   margin: 0;
+}
+
+/*
+ * JetBrains Mono's content box is about 1.22em, so a 1.1 line clips its own glyphs —
+ * which is exactly what T-39 caught on the released beat's `→ worker · +0.45 fee`.
+ * 1.28 clears the glyphs and still fits four wrapped lines in a card.
+ */
+.stage .meter-tail,
+.stage .meter-proof,
+.stage .meter-totals,
+.stage .meter-note,
+.stage .screening-reason,
+.stage .screening-reason-passed,
+.stage .task-row-refusal,
+.stage .task-row-meta,
+.stage .task-row-nomoney,
+.stage .preflight-meta,
+.stage .agent-mark-class,
+.stage .pool-highlight {
+  line-height: 1.28;
+}
+.stage .task-row-title {
+  line-height: 1.28;
 }
 
 /* ------------------------------------------------------------ escrow meter */
@@ -141,6 +287,12 @@
   border-top: calc(2 * var(--u)) dashed var(--hairline-1);
   overflow: hidden;
 }
+
+/*
+ * The movement, and the only one. The fill travels and the footprint lights; the
+ * numerals are plain text swapped in the same render, so no intermediate figure
+ * exists in any frame. `ease-out`, one change, never a count.
+ */
 .stage .meter-fill {
   position: absolute;
   inset-block: 0;
@@ -148,11 +300,13 @@
   width: calc(var(--fill, 0) * 100%);
   background: var(--verified-500);
   display: block;
+  transition: width var(--meter-ms) ease-out;
 }
 .stage .meter-footprint {
   width: calc(34 * var(--u));
   height: calc(48 * var(--u));
   flex: 0 0 auto;
+  transition: color var(--meter-ms) ease-out;
 }
 .stage .meter-line {
   display: flex;
@@ -251,6 +405,17 @@
   flex-wrap: wrap;
 }
 
+/*
+ * Rule (9): `1 real · +20 seeded (demo data)` is one locked string and is never
+ * shortened. At its 32-px floor it is 625 px wide and the Supply card's content box
+ * is 538, so the chip wraps instead of being cut by `.card { overflow: hidden }`.
+ */
+.stage .pool-headline .chip {
+  white-space: normal;
+  text-align: center;
+  border-radius: calc(28 * var(--u));
+}
+
 /* ------------------------------------------------------------ screening log */
 .stage .screening-lines {
   list-style: none;
@@ -269,6 +434,11 @@
   padding-bottom: calc(10 * var(--u));
   border-bottom: calc(1 * var(--u)) solid var(--hairline-2);
 }
+/* A divider under the last entry is a rule with nothing under it. */
+.stage .screening-line:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
 .stage .screening-reason {
   font-size: calc(32 * var(--u));
   color: var(--refusal-500);
@@ -282,15 +452,27 @@
   color: var(--fg-2);
 }
 
+/*
+ * Present mode is the sparse canvas, not mission control: a log line is the time,
+ * the outcome, the task type and the classifier's class + reason. The spec hash and
+ * the mark reference are mission-control detail — the mark itself is already on the
+ * agent card, as the counter and as `task-refused:<class>`.
+ */
+.stage .screening-spec,
+.stage .screening-mark {
+  display: none;
+}
+
 /* ------------------------------------------------------------------ task row */
 .stage .task-row {
   border: calc(1 * var(--u)) solid var(--border-1);
   border-radius: calc(12 * var(--u));
   background: var(--ink-800);
-  padding: calc(16 * var(--u));
+  padding: calc(12 * var(--u));
   display: flex;
   flex-direction: column;
-  gap: calc(8 * var(--u));
+  gap: calc(6 * var(--u));
+  overflow: hidden;
 }
 .stage .task-row-refused {
   border-color: var(--refusal-border);
@@ -303,6 +485,10 @@
   gap: calc(12 * var(--u));
   flex-wrap: wrap;
 }
+/*
+ * The title wraps inside its own line rather than pushing the status badge onto a
+ * third one: a row's head is two lines, never three.
+ */
 .stage .task-row-title {
   font-family: var(--font-display);
   font-weight: 700;
@@ -310,6 +496,8 @@
   color: var(--fg-1);
   font-size: calc(24 * var(--u));
   margin: 0;
+  flex: 1 1 calc(300 * var(--u));
+  min-width: 0;
 }
 .stage .task-row-price {
   font-size: calc(40 * var(--u));
@@ -324,4 +512,42 @@
   font-family: var(--font-mono);
   font-size: calc(32 * var(--u));
   color: var(--refusal-500);
+}
+
+/* ------------------------------------------------------------- crop guide */
+
+/*
+ * `?crop=1` only. A rehearsal aid: the two edges of the 9:16 window the vertical cut
+ * keeps, drawn in hairline-1 so it is visible to someone looking for it and to
+ * nobody else. It is never in the filmed frame.
+ */
+.crop-guide {
+  --u: min(100vw / 1920, 100vh / 1080);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.crop-guide-band {
+  position: relative;
+  width: calc(1920 * var(--u));
+  height: calc(1080 * var(--u));
+}
+.crop-guide-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(2 * var(--u));
+  background: var(--hairline-1);
+}
+.crop-guide-label {
+  position: absolute;
+  bottom: calc(8 * var(--u));
+  font-family: var(--font-mono);
+  font-size: calc(16 * var(--u));
+  color: var(--fg-4);
+  padding-left: calc(8 * var(--u));
+  white-space: nowrap;
 }
