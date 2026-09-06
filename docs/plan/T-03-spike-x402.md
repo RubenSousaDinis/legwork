@@ -93,7 +93,7 @@ pnpm tsx scripts/spikes/s3-x402/server.ts &            # leave running
 pnpm tsx scripts/spikes/s3-x402/buyer.ts
 pnpm tsx scripts/spikes/s3-x402/check-balance.ts
 grep -n "^## S3" docs/spikes/RESULTS.md
-git diff --cached | grep -E "0x[0-9a-fA-F]{64}" ; echo "exit=$? (must be 1: no 64-hex value staged)"
+git diff --cached | grep -E "^\+.*_(PRIVATE_KEY|SECRET|KEY)\s*=\s*['\"]?0x[0-9a-fA-F]{64}" ; echo "exit=$? (must be 1: no key-named variable assigned a 64-hex value; tx hashes are fine)"
 ```
 Expected: the balance deltas above; the six server lines with `settle ok` after `post stub`; the replay line; the `## S3` heading present; the final grep prints nothing (exit 1).
 
@@ -138,4 +138,4 @@ Known gaps to raise as written:
 Open `docs/spikes/RESULTS.md#s3` first: are `Payer path`, `Nonce path`, `Header names` and `402 JSON body` concrete enough that T-15 can code without opening the library? Then `server.ts`: `verify` before the stubbed work, `settle` after it, the nonce map consulted before `settle`. Then the balance deltas in the PR (`3450000`, not a rounded float). Most likely wrong: `amount * 1.15` in floats; settle called from a middleware before the handler; the replay re-signing a fresh authorization instead of re-sending the captured header (which would prove nothing); a key printed in a debug line.
 
 ## 15. Round 2+
-—
+Merged (Sept 6, #105): PASS in 11 minutes, `PAYMENT_MODE: x402`. §9's last grep used to match the settle tx hashes §2 asks for; it now looks for a key-named variable assigned a 64-hex value, the same line CI's `secrets` job draws. The nonce-before-settle finding is already T-16's §2 step 3 (`idem.reserve(nonce)` before the work).

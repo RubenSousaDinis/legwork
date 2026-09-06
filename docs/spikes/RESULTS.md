@@ -113,5 +113,5 @@ decision: pending
 
 - credential level: selfie | orb → narration variant: A | B — _pending_
 - GPS: available | downgraded (photo + server timestamp + tapped confirmation) — _pending_
-- payment: x402 | direct funding (PAYMENT_MODE) — _pending_
+- payment: x402 — S3 PASS (Sept 6): exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas
 - ERC-8004: live registries | self-deployed reference instance — _pending_
