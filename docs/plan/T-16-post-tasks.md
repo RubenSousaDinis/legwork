@@ -35,7 +35,7 @@ This is the route the whole product is sold on: an agent pays 3.45 USDC through 
 - `hire()` runs the frozen order, exactly:
   1. parse JSON (failure → 400 `invalid_request`, field `body`); `Envelope.pick({task_type, amount_usdc})` parse — the only pre-payment schema read, needed to price the 402; failure → 400, **no mark**; `quote = gateway.price(...)`.
   2. `remaining = caps.remaining(hintPayer)` where `hintPayer` = a valid address in the optional, unauthenticated `X-Payer` header, else `null` (defaults `{open_tasks: 5, daily_usdc: 25}`); `gateway.requirePayment(req, quote, {remaining_budget: remaining, resource})` → 402 passthrough or `ctx`. Nothing before this point touches the DB beyond the caps read.
-  3. `payer = gateway.payerOf(ctx)`, `nonce = gateway.authNonceOf(ctx)`; `idem.reserve(nonce)`: `done` → return the stored task as **201** (re-read the `tasks` row; `buyer_token` is **not** re-issued — the replay body carries `buyer_token: null` and `replay: true`); `in_progress` → 409 `{error:'conflict', reason:'in_progress', retry_after_seconds: 2}`.
+  3. `payer = gateway.payerOf(ctx)`, `nonce = gateway.authNonceOf(ctx)`; `idem.reserve(nonce)`: `done` → return the stored task as **201** (re-read the `tasks` row; `buyer_token` is **not** re-issued — the replay body carries `buyer_token: null` and `replay: true`); `in_progress` → 409 `{error:'conflict', reason:'in_progress', retry_after_s: 2}`.
   4. `screen(body, {classifier})` (T-06) → `invalid` → `idem.release(nonce)`, 400 `invalid_request`, **no mark**, `screening_log` row with `marked=false`; `refused` → `resolveAgentId(payer, body.agent_id)` → `markIfIdentified({agentId, verified, classId, specHash, payer})` → `idem.release(nonce)`, `screening_log` row (`class, reason, rule_id, spec_hash, marked, mark_tx, agent_id, payer` — never the spec), **422** `RefusalPayload` with `message: NO_RETRY_SENTENCE` and `mark_tx` when marked; `accepted` → `{envelope, spec_hash, place}` continues.
   5. `caps.check(payer, quote.price_units)` → over either cap → `idem.release(nonce)`, **429** `{error:'cap_exceeded', open_tasks, daily_usdc}` (remaining values), **no mark**, no post, no settle.
   6. `{agentId, verified} = resolveAgentId(payer, body.agent_id)`; `buyerAgentId = verified ? agentId : 0n`. The body's `agent_id` is a hint to look up, never a value to store unverified.
@@ -100,8 +100,8 @@ apps/api/src/services/hire.test.ts
 ## 9. Verification commands
 ```bash
 # run before opening the PR; paste the output into the PR body
-pnpm --filter @legwork/api typecheck && pnpm --filter @legwork/api test -t "settleAfterPost|capsEchoedIn402|sixthOpenTaskRefusedNoMark|schemaErrorNoMark|checkNeverPostsNeverMarks"
-pnpm --filter @legwork/api test -t settleAfterPost
+pnpm --filter @legwork/api typecheck && pnpm --filter @legwork/api test -- -t "settleAfterPost|capsEchoedIn402|sixthOpenTaskRefusedNoMark|schemaErrorNoMark|checkNeverPostsNeverMarks"
+pnpm --filter @legwork/api test -- -t settleAfterPost
 grep -n "export const GET" apps/api/app/tasks/route.ts            # must print nothing
 grep -rn "agent_id" apps/api/src/services/hire.ts | grep -v resolveAgentId | grep -vi "log\|screening_log\|posters\|tasks"   # body agent_id only ever reaches resolveAgentId
 scripts/ci/banned-words.sh apps/api

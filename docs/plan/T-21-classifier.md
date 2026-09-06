@@ -146,7 +146,7 @@ packages/screening/test/classifier*.test.ts
 pnpm --filter @legwork/screening typecheck
 pnpm --filter @legwork/screening lint
 pnpm --filter @legwork/screening test
-pnpm --filter @legwork/screening test -t classifierTimeoutFallsBackToKeyword
+pnpm --filter @legwork/screening test -- -t classifierTimeoutFallsBackToKeyword
 grep -rn "ANTHROPIC_API_KEY" packages/screening/src | grep -v "src/classifier/live.ts" ; echo "expect no output above"
 grep -rn "LIVE_LLM" packages/screening | grep -v "test/classifier.live.test.ts" ; echo "expect no output above"
 ```
