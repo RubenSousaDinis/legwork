@@ -39,7 +39,7 @@ const PROOF_CAPTURED_BEFORE_NOW_S = 62;
 const PLACE_LABEL = 'Farmácia Central · Rua Direita 12, Leiria';
 
 /** Leiria as a geohash-5. Public surfaces know the area and never the coordinate. */
-const DEMO_AREA = 'ez5ku';
+const DEMO_AREA = 'ez1dp';
 
 /** Titles are bounded descriptions of the errand — never the raw spec text. */
 const ROW_TITLES: Record<TaskType, string> = {

@@ -1,3 +1,4 @@
+import { fromUsdcUnits, toUsdcUnits } from '@legwork/shared';
 import { ImageResponse } from 'next/og';
 import { getDemoTaskReceipt, getTaskReceipt, resolveDataMode } from '../../../lib/data';
 import { featuredStateOf } from '../../../lib/data/live';
@@ -41,7 +42,7 @@ export default async function TaskOpengraphImage({
   const state = task ? featuredStateOf(task.status, task.tx.release) : 'locked';
   const amount = task?.amount_usdc ?? 0;
   const fee = task?.fee_usdc ?? 0;
-  const agentPays = Number((amount + fee).toFixed(2));
+  const agentPays = fromUsdcUnits(toUsdcUnits(amount) + toUsdcUnits(fee));
   const released = state === 'released';
   const stateWord = released
     ? 'RELEASED'

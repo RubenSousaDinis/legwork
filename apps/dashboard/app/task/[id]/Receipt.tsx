@@ -1,4 +1,4 @@
-import { PUBLIC_COORD_DECIMALS } from '@legwork/shared';
+import { fromUsdcUnits, PUBLIC_COORD_DECIMALS, toUsdcUnits } from '@legwork/shared';
 import { Chip } from '../../../components/Chip';
 import { MonoTag } from '../../../components/MonoTag';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -52,8 +52,10 @@ function answerText(answer: unknown): string | null {
 export function Receipt({ task, seeded, dataMode }: ReceiptProps) {
   const fee = task.fee_usdc;
   const amount = task.amount_usdc;
-  // A sum, never a subtraction: the fee is charged on top of the posted rate.
-  const agentPays = Number((amount + fee).toFixed(2));
+  // A sum, never a subtraction: the fee is charged on top of the posted rate. Summed in
+  // 6-decimal integer units, the same way `lib/data/live.ts` sums it, so the receipt and
+  // the escrow meter cannot disagree by a cent.
+  const agentPays = fromUsdcUnits(toUsdcUnits(amount) + toUsdcUnits(fee));
   const money = featuredStateOf(task.status, task.tx.release);
   const proof = task.proof;
   const answer = answerText(task.answer);

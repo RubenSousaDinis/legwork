@@ -62,9 +62,25 @@ pre-flight and no origin is baked into the client bundle. Every read is `cache: 
 
 Sources: `GET /public/feed`, `/public/refusals`, `/public/posters`,
 `/public/preflight?task_type=&area=`, plus one subgraph round trip for the worker pool and
-one for the agent's paid outcomes. The subgraph goes through
-`@legwork/subgraph-client`'s `client.query` — there is no second GraphQL fetcher in this
-app — and **no API key is ever passed**, so nothing secret can reach a bundle.
+one for the agent card. The subgraph goes through `@legwork/subgraph-client`'s
+`client.query` — there is no second GraphQL fetcher in this app — and **no API key is ever
+passed**, so nothing secret can reach a bundle.
+
+**The agent card is entirely the subgraph's.** A requester identity is not on a public
+surface and is not going to be, so `/public/*` carries neither a `buyer_agent_id` on a feed
+row nor an `agent_id` on a refusal. The id is the featured task's `Task.buyerAgentId`
+rendered as `8004-<id>`; `marks` is the count of `Mark` rows against that id and
+`lastMarkClass` is the newest one's `classId` mapped back through `abuseClassById` from
+`@legwork/shared` — the index stores the integer and this is the only place it becomes
+words. With no subgraph the card reads `—` and `0`: a mark the index cannot confirm is
+never attributed to an agent by guesswork.
+
+`highlighted.level` is the one value the poll has to be handed rather than re-derive.
+`WORLD_CREDENTIAL_LEVEL` is a server var and this mapper also runs in the browser, so
+`useLiveDashboard` passes `initial.pool.highlighted?.level` into
+`getLiveDashboardData({ level })`; the env is read only when no level is given. Without
+that an `orb` deployment would render `sandbox World ID` on load and `sandbox Selfie Check`
+from the first tick.
 
 `lib/live/` polls it every 3 s. The poller never overlaps requests, does nothing at all
 when the response says `changed: false`, calls `onChange` only when the mapped result
