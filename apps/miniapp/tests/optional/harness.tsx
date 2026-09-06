@@ -61,7 +61,11 @@ export function recordRequests(): { log: RequestLog; stop: () => void } {
 }
 
 /** The parsed body of every `POST /tasks/:id/<route>` this test makes, in order. */
-export function recordBodies(route: string, response: unknown, status = 200): unknown[] {
+export function recordBodies(
+  route: string,
+  response: Record<string, unknown>,
+  status = 200,
+): unknown[] {
   const bodies: unknown[] = [];
   server.use(
     http.post(`*/api/tasks/:id/${route}`, async ({ request }) => {
