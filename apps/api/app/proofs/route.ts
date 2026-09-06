@@ -113,13 +113,14 @@ export const POST = route(async (req) => {
   if (!file || typeof file === 'string' || typeof file.arrayBuffer !== 'function') {
     throw ApiError.of('invalid_request', { field: 'file', reason: 'required' });
   }
+  // 413 with the ceiling, the contract's generic error: a client learns the limit from the answer.
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw ApiError.of('invalid_request', { field: 'file', reason: 'too_large' });
+    throw ApiError.of('payload_too_large', { max_bytes: MAX_UPLOAD_BYTES });
   }
 
   const raw = Buffer.from(await file.arrayBuffer());
   if (raw.byteLength > MAX_UPLOAD_BYTES) {
-    throw ApiError.of('invalid_request', { field: 'file', reason: 'too_large' });
+    throw ApiError.of('payload_too_large', { max_bytes: MAX_UPLOAD_BYTES });
   }
   if (sniffImageType(raw) === undefined) {
     throw ApiError.of('invalid_request', { field: 'file', reason: 'unsupported_type' });

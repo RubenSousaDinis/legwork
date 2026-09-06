@@ -84,7 +84,7 @@ describe('rateLimit', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error.status).toBe(429);
     expect(error.body()).toMatchObject({ error: 'rate_limited' });
-    expect(error.extra?.retry_after_seconds).toBeGreaterThan(0);
+    expect(error.extra?.retry_after_s).toBeGreaterThan(0);
   });
 
   it('keys on the first forwarded hop, and on local without a proxy', () => {

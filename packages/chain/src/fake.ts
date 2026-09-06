@@ -40,6 +40,16 @@ export interface FakeChainOptions {
   maxOpenTasksPerBuyer?: number;
 }
 
+/** Which key a write goes out on. `sender` is direct mode: the caller's own wallet. */
+export type FakeChainRole = 'relayer' | 'owner' | 'signer' | 'sender';
+
+/** One recorded write: the adapter method, the role it goes out on, and its decoded args (bigint for uint256). */
+export interface FakeChainCall {
+  fn: string;
+  role: FakeChainRole;
+  args: readonly unknown[];
+}
+
 export interface WorkerRecord {
   nullifier: bigint;
   seeded: boolean;
@@ -99,6 +109,14 @@ export class FakeChain implements ChainAdapter {
   private pending: DecodedEvent[] = [];
   private txHash: Hex = '0x';
 
+  /**
+   * Every write, in order, with its role and decoded args — what a route test asserts on
+   * instead of an explorer. Reads are not recorded; a fake that logged `getTask` would bury
+   * the one `claimFor` a test is looking for.
+   */
+  readonly calls: FakeChainCall[] = [];
+  private armedRevert: string | undefined;
+
   constructor(options: FakeChainOptions = {}) {
     this.relayerAddress = options.relayer ?? '0x0000000000000000000000000000000000004e1a';
     this.treasuryAddress = options.treasury ?? '0x0000000000000000000000000000000000007e00';
@@ -109,6 +127,15 @@ export class FakeChain implements ChainAdapter {
   }
 
   // ---------------------------------------------------------------- test controls
+
+  /**
+   * The next write — whichever it is — rejects with `ChainRevert(name)` before it touches
+   * state, then the fake behaves again. What a route does with `InCooldown` or
+   * `DuplicateNullifier` when the contract, not the pre-check, is the one that says no.
+   */
+  failNextWith(name: string): void {
+    this.armedRevert = name;
+  }
 
   /** Moves the clock. There is no other way time passes here. */
   async warp(seconds: number): Promise<void> {
@@ -219,39 +246,39 @@ export class FakeChain implements ChainAdapter {
   // ---------------------------------------------------------------- escrow writes
 
   post(p: PostParams): Promise<TxResult & { taskId: bigint }> {
-    return this.transaction(() => this.postFrom(p, this.relayerAddress));
+    return this.write('post', 'relayer', [p], () => this.postFrom(p, this.relayerAddress));
   }
 
   /** `p.buyer == msg.sender`, and the money comes from that wallet rather than the float. */
   postAsBuyer(p: PostParams, sender: DirectSender): Promise<TxResult & { taskId: bigint }> {
-    return this.transaction(() => {
+    return this.write('postAsBuyer', 'sender', [p, sender], () => {
       if (lower(p.buyer) !== lower(sender.address)) throw new ChainRevert('NotBuyer');
       return this.postFrom(p, sender.address);
     });
   }
 
   claimFor(taskId: bigint, worker: Address): Promise<TxResult> {
-    return this.transaction(() => this.claimBy(taskId, worker));
+    return this.write('claimFor', 'relayer', [taskId, worker], () => this.claimBy(taskId, worker));
   }
 
   claim(taskId: bigint, sender: DirectSender): Promise<TxResult> {
-    return this.transaction(() => this.claimBy(taskId, sender.address));
+    return this.write('claim', 'sender', [taskId, sender], () => this.claimBy(taskId, sender.address));
   }
 
   releaseClaimFor(taskId: bigint, worker: Address): Promise<TxResult> {
-    return this.transaction(() => this.releaseClaimBy(taskId, worker));
+    return this.write('releaseClaimFor', 'relayer', [taskId, worker], () => this.releaseClaimBy(taskId, worker));
   }
 
   submitFor(taskId: bigint, worker: Address, proofHash: Hex): Promise<TxResult> {
-    return this.transaction(() => this.submitBy(taskId, worker, proofHash));
+    return this.write('submitFor', 'relayer', [taskId, worker, proofHash], () => this.submitBy(taskId, worker, proofHash));
   }
 
   submit(taskId: bigint, proofHash: Hex, sender: DirectSender): Promise<TxResult> {
-    return this.transaction(() => this.submitBy(taskId, sender.address, proofHash));
+    return this.write('submit', 'sender', [taskId, proofHash, sender], () => this.submitBy(taskId, sender.address, proofHash));
   }
 
   approve(taskId: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('approve', 'relayer', [taskId], () => {
       const task = this.mustExist(taskId);
       if (task.state !== TASK_STATE.Submitted) throw new ChainRevert('BadState');
       this.release(taskId, task);
@@ -259,7 +286,7 @@ export class FakeChain implements ChainAdapter {
   }
 
   dispute(taskId: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('dispute', 'relayer', [taskId], () => {
       const task = this.mustExist(taskId);
       if (task.state !== TASK_STATE.Submitted) throw new ChainRevert('BadState');
       if (this.clock >= task.submittedAt + BigInt(task.disputeWindow)) {
@@ -272,7 +299,7 @@ export class FakeChain implements ChainAdapter {
 
   /** Never gated by pause: a stop can never trap a worker's earned funds. */
   autoRelease(taskId: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('autoRelease', 'relayer', [taskId], () => {
       const task = this.mustExist(taskId);
       if (task.state !== TASK_STATE.Submitted) throw new ChainRevert('BadState');
       if (this.clock < task.submittedAt + BigInt(task.disputeWindow)) {
@@ -284,7 +311,7 @@ export class FakeChain implements ChainAdapter {
 
   /** Never gated by pause either. The buyer's deadline passed, so no cooldown for the worker. */
   expire(taskId: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('expire', 'relayer', [taskId], () => {
       const task = this.mustExist(taskId);
       const expiredOpen =
         task.state === TASK_STATE.Open && this.clock > task.postedAt + BigInt(task.claimTTL);
@@ -306,7 +333,7 @@ export class FakeChain implements ChainAdapter {
   }
 
   resolve(taskId: bigint, toBuyer: boolean): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('resolve', 'owner', [taskId, toBuyer], () => {
       const task = this.mustExist(taskId);
       if (task.state !== TASK_STATE.Disputed) throw new ChainRevert('BadState');
 
@@ -333,21 +360,21 @@ export class FakeChain implements ChainAdapter {
   }
 
   pause(): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('pause', 'owner', [], () => {
       this.isPaused = true;
       this.emit('Paused', { account: this.relayerAddress });
     });
   }
 
   unpause(): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('unpause', 'owner', [], () => {
       this.isPaused = false;
       this.emit('Unpaused', { account: this.relayerAddress });
     });
   }
 
   setAllowlistedBuyer(buyer: Address, allowed: boolean): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('setAllowlistedBuyer', 'owner', [buyer, allowed], () => {
       if (allowed) this.allowlist.add(lower(buyer));
       else this.allowlist.delete(lower(buyer));
       this.emit('BuyerAllowlisted', { buyer, allowed });
@@ -364,7 +391,7 @@ export class FakeChain implements ChainAdapter {
     deadline: bigint,
     attestation: Hex,
   ): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('registerFor', 'relayer', [nullifierHash, worker, area, taskTypes, deadline, attestation], () => {
       if (this.workerByNullifier.has(nullifierHash.toString())) {
         throw new ChainRevert('DuplicateNullifier');
       }
@@ -390,7 +417,7 @@ export class FakeChain implements ChainAdapter {
     area: string,
     taskTypes: number,
   ): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('seedWorker', 'owner', [worker, syntheticNullifier, area, taskTypes], () => {
       this.setWorker(worker, { nullifier: syntheticNullifier, seeded: true, area, taskTypes });
       // `WorkerSeeded`, never `WorkerRegistered`: a seeded worker is demo data and every
       // surface that renders one has to be able to tell.
@@ -399,7 +426,7 @@ export class FakeChain implements ChainAdapter {
   }
 
   resetWorker(nullifierHash: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('resetWorker', 'owner', [nullifierHash], () => {
       const worker = this.workerByNullifier.get(nullifierHash.toString());
       if (!worker) throw new ChainRevert('UnknownNullifier');
       this.workerByNullifier.delete(nullifierHash.toString());
@@ -411,7 +438,7 @@ export class FakeChain implements ChainAdapter {
   // ---------------------------------------------------------------- abuse mark
 
   mark(agentId: bigint, classId: number, specHash: Hex): Promise<TxResult & { written: boolean }> {
-    return this.transaction(() => {
+    return this.write('mark', 'signer', [agentId, classId, specHash], () => {
       if (classId < 1 || classId > 6) throw new ChainRevert('BadClass');
 
       // Idempotency is checked before the cooldown on purpose: a repeat of a mark that was
@@ -432,7 +459,7 @@ export class FakeChain implements ChainAdapter {
   }
 
   setMarkCooldown(seconds: bigint): Promise<TxResult> {
-    return this.transaction(() => {
+    return this.write('setMarkCooldown', 'owner', [seconds], () => {
       this.cooldownSeconds = seconds;
     });
   }
@@ -658,6 +685,22 @@ export class FakeChain implements ChainAdapter {
    * One write, one "transaction". A revert leaves nothing behind — every method checks before
    * it mutates — and the events it would have emitted never reach the log.
    */
+  /** Records the call, honours an armed revert, then runs the write as one transaction. */
+  private write<T>(
+    fn: string,
+    role: FakeChainRole,
+    args: readonly unknown[],
+    body: () => T,
+  ): Promise<TxResult & T> {
+    this.calls.push({ fn, role, args });
+    const armed = this.armedRevert;
+    if (armed !== undefined) {
+      this.armedRevert = undefined;
+      return Promise.reject(new ChainRevert(armed));
+    }
+    return this.transaction(body);
+  }
+
   private async transaction<T>(body: () => T): Promise<TxResult & T> {
     this.txCounter += 1;
     this.txHash = keccak256(stringToHex(`legwork-fake-tx-${this.txCounter}`));

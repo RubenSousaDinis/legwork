@@ -261,8 +261,8 @@ describe('/proofs unit test', () => {
   it('sizeAndTypeLimits', async () => {
     const tooLarge = Buffer.alloc(MAX_UPLOAD_BYTES + 1, 0xff);
     const overSize = await upload(tooLarge, { gps_unavailable: 'true', worker_confirmed_at_place: 'true' });
-    expect(overSize.status).toBe(400);
-    expect(await overSize.json()).toMatchObject({ field: 'file', reason: 'too_large' });
+    expect(overSize.status).toBe(413);
+    expect(await overSize.json()).toEqual({ error: 'payload_too_large', max_bytes: MAX_UPLOAD_BYTES });
 
     const text = await upload(Buffer.from('not an image, just words'), {
       gps_unavailable: 'true',

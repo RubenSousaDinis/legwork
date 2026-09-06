@@ -120,7 +120,7 @@ packages/screening/src/osm/README.md
 ## 8. Acceptance tests
 | Test / command | Asserts |
 |---|---|
-| `osm-placeindex.test.ts › placeIndexResolvesDemoShop` | `OsmPlaceIndex.fromExtract(leiria-min)` → `resolve('node/900000001')` is defined, `isBusiness` true, `isResidential` false, `phoneOf` `'+351244000000'`, `coordinateOf` inside the Leiria bbox, `fuzzyMatch('node/900000001', 'Farmacia Central', 'Rua Direita 12')` → `{ ok: true, nameDistance: 1 }` (accents and the house number must not break it); `checkDemoPlace(index, 'node/000000000')` → `{ ok: false, reason: 'region not covered' }` without throwing |
+| `osm-placeindex.test.ts › placeIndexResolvesDemoShop` | `OsmPlaceIndex.fromExtract(leiria-min)` → `resolve('node/900000001')` is defined, `isBusiness` true, `isResidential` false, `phoneOf` `'+351244000000'`, `coordinateOf` inside the Leiria bbox, `fuzzyMatch('node/900000001', 'Farmacia Central', 'Rua Direita 12')` → `{ ok: true, nameDistance: 0 }` (accents and the house number must not break it — T-06's `normalizeForMatch` strips diacritics before the distance is taken, so the two spellings are one string; settled in #79's review); `checkDemoPlace(index, 'node/000000000')` → `{ ok: false, reason: 'region not covered' }` without throwing |
 | `osm-placeindex.test.ts › residentialRefusedAsReconnaissance` | `way/900000012` → `isResidential` true, `isBusiness` false; corpus row 18's envelope through `screen()` with this index → `kind:'refusal'`, `payload.class === 'automated reconnaissance'`, `payload.rule_id === 'place.residential'`; row 19 (`name: "Casa do João Silva"`) → also `automated reconnaissance` — a person's name in a place field is a refusal, not a fuzzy match |
 | `osm-placeindex.test.ts › regionNotCoveredRow17` | `node/900000099` (Porto, in `not_indexed`) → `resolve` undefined, `coordinateOf` undefined; corpus row 17 through `screen()` → `kind:'invalid_request'`, `field:'spec.place.place_id'`, reason `region not covered`, and **no** class (a coverage failure never marks); `not_indexed` entries are never loaded into the index |
 | `osm-placeindex.test.ts › phoneMismatchRow31` | corpus row 31 through `screen()` → `kind:'invalid_request'`, `field:'spec.phone'`, reason `phone does not match the place`; `phoneOf('node/900000002')` (no phone tag) is undefined; `+351 244 000 000`, `244000000` and `244 000 000` all normalise to `+351244000000` |
@@ -131,12 +131,12 @@ packages/screening/src/osm/README.md
 pnpm --filter @legwork/screening typecheck
 pnpm --filter @legwork/screening lint
 pnpm --filter @legwork/screening test
-pnpm --filter @legwork/screening test -t placeIndexResolvesDemoShop
+pnpm --filter @legwork/screening test -- -t placeIndexResolvesDemoShop
 grep -rniE "fetch\(|https?://|axios|undici|overpass" packages/screening/src packages/screening/test | grep -v "openstreetmap.org/copyright" ; echo "expect no output above"
 # network step — operator or a local box only, never CI:
 pnpm osm:extract            # or: pnpm tsx scripts/osm-extract.ts
 ls -l packages/screening/fixtures/osm/leiria-lisbon.json.gz    # must be ≤ 5242880 bytes
-pnpm osm:extract && git diff --stat packages/screening/fixtures/osm/   # re-running must show no diff
+pnpm osm:extract && git diff --stat packages/screening/fixtures/osm/   # identical once `generated_at` (the source database's timestamp) is masked; the source moves between runs, the extract does not
 ```
 Expected: 0 type errors; the five named tests green; the grep silent (no URL and no `fetch` anywhere under `src/` or `test/`); the gzip under 5 MB; the second `osm:extract` produces an empty diff.
 
