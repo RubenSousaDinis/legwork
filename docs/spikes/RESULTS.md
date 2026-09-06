@@ -34,7 +34,7 @@ Result: PASS
 
 PAYMENT_MODE: x402
 
-Time used: 8
+Time used: 11
 
 Packages: @x402/core@2.25.0, @x402/evm@2.25.0, @x402/fetch@2.25.0
 
@@ -50,9 +50,9 @@ Payer path: `decoded.payload.authorization.from` (`decoded` = `decodePaymentSign
 
 Nonce path: `decoded.payload.authorization.nonce` — a `0x…` 32-byte hex string. Lowercase it before using it as a map key. Full authorization shape: `{ from, to, value, validAfter, validBefore, nonce }`.
 
-Settle tx: https://sepolia.basescan.org/tx/0xd5c50269a85efbf6d2931bab4468e95f144122211391e361b33609fffd1c1d83
+Settle tx: https://sepolia.basescan.org/tx/0x77064504cc36f25767635fedb04f37fc663a104bfcebe81f57e199cf1dec8a46 (the run pasted into the PR). Two earlier round-trips settled the same way: `0xd5c50269a85efbf6d2931bab4468e95f144122211391e361b33609fffd1c1d83` and `0x5fcff21422411089499cb81b0a3ec949bc2e2c80b2858f663a008090b581ce8e`.
 
-Replay: settle count stayed 1. The exact `PAYMENT-SIGNATURE` header the paying wrapper sent was re-sent with a plain `fetch`; the server answered `200 {taskId:1, settle_tx: 0xd5c5…}` from the nonce map and logged `replay=true settle_calls=1`. On-chain balances across the paid call **and** the replay moved exactly once: buyer 20000000 → 16550000 (−3450000), payTo 25000000 → 28450000 (+3450000).
+Replay: settle count stayed 1. The exact `PAYMENT-SIGNATURE` header the paying wrapper sent was re-sent with a plain `fetch`; the server answered `200 {taskId:1, settle_tx: 0x7706…}` from the nonce map and logged `replay=true settle_calls=1`. On-chain balances across the paid call **and** the replay moved exactly once: buyer 13100000 → 9650000 (−3450000), payTo 31900000 → 35350000 (+3450000). Three round-trips were run in total and each moved 3450000 exactly once.
 
 Failing step (if FAIL): — none.
 
@@ -63,6 +63,9 @@ Failing step (if FAIL): — none.
 - **Order is free, not imposed.** Nothing in the primitives forces settle-before-handler; the exact EVM scheme's default payment flow is `authorization` (`verifyBeforeHandler`), which is exactly the frozen T-01 order. `settlePayment` takes an optional `phase` argument that defaults to `after-handler`. The framework middlewares were not used and are not needed.
 - **The buyer paid no gas.** The buyer wallet holds no Base Sepolia ETH; the facilitator submitted and paid for the `transferWithAuthorization`. Gasless for the payer, as designed.
 - **Idempotency is ours to build.** Neither the resource server nor the reference facilitator dedupes a repeated settle: the nonce map in front of `settlePayment` is what keeps a replay from charging twice. T-15 must carry that map into `X402Gateway` (durably, not in process memory).
+- **The nonce must be claimed before `settle`, not after it.** §2's design stores `{taskId, settle_tx}` under the nonce only once settle succeeds, and one of the three runs showed what that costs. The facilitator returned `invalid_exact_evm_transaction_failed` on the first settle, so the nonce was never stored; the replay of that same authorization then looked like a fresh payment, ran `stubPost` a second time and settled successfully as `taskId 2`. Money still moved exactly once — but the work ran twice for one payment, which in the real route is a second `TaskEscrow.post` the float has to absorb. T-16 should write the nonce row **before** calling settle and mark its outcome afterwards, so a retry after a failed settle resumes the same task instead of creating another.
+- **The reference facilitator fails transiently.** That `invalid_exact_evm_transaction_failed` was not reproducible: the identical authorization settled successfully seconds later, and both of the other two runs settled first time. Treat a failed settle as retryable rather than as a refusal, and keep the `float_absorbed=true` log line the architecture calls for.
+- **`settle` returns before the RPC catches up.** Reading `balanceOf` immediately after a successful settle showed the pre-transfer balances; the receipt was on chain (status `success`) and the balances were correct a few seconds later. Nothing that asserts on a balance right after settle should do so without a poll.
 
 ## S5
 
