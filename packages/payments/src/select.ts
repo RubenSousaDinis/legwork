@@ -1,6 +1,6 @@
-import type { PaymentGateway } from './gateway.js';
-import { DirectFundingGateway } from './direct/gateway.js';
-import { X402Gateway, type X402GatewayOptions } from './x402/gateway.js';
+import type { PaymentGateway } from './gateway';
+import { DirectFundingGateway } from './direct/gateway';
+import { X402Gateway, type X402GatewayOptions } from './x402/gateway';
 
 export type PaymentMode = 'x402' | 'direct';
 
