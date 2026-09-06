@@ -10,6 +10,7 @@ export const ERROR_CODES = {
   forbidden: 403,
   not_found: 404,
   conflict: 409,
+  payload_too_large: 413,
   rate_limited: 429,
   not_implemented: 501,
   internal: 500,

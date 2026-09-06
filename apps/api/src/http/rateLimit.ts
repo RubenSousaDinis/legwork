@@ -14,7 +14,7 @@ export interface RateLimitOptions {
   windowS: number;
 }
 
-/** Throws `rate_limited` with `retry_after_seconds` once `limit` is reached in the window. */
+/** Throws `rate_limited` with `retry_after_s` (the contract's name) once `limit` is reached in the window. */
 export function rateLimit(key: string, { limit, windowS }: RateLimitOptions): void {
   const now = Date.now();
   const floor = now - windowS * 1000;
@@ -24,7 +24,7 @@ export function rateLimit(key: string, { limit, windowS }: RateLimitOptions): vo
     const oldest = recent[0] ?? now;
     const retryAfter = Math.max(1, Math.ceil((oldest + windowS * 1000 - now) / 1000));
     hits.set(key, recent);
-    throw ApiError.of('rate_limited', { retry_after_seconds: retryAfter });
+    throw ApiError.of('rate_limited', { retry_after_s: retryAfter });
   }
 
   recent.push(now);
