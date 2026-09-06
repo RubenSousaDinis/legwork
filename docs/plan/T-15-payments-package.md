@@ -118,7 +118,7 @@ packages/payments/**
 ```bash
 # run before opening the PR; paste the output into the PR body
 pnpm --filter @legwork/payments typecheck && pnpm --filter @legwork/payments test
-pnpm --filter @legwork/payments test -t priceMathSixDecimals
+pnpm --filter @legwork/payments test -- -t priceMathSixDecimals
 grep -rnE "\* ?1\.15|1\.15 ?\*" packages/payments/src        # must print nothing
 grep -rn "x402.org" packages/payments/src packages/payments/test   # only in a comment or README, never a test call
 scripts/ci/banned-words.sh packages/payments

@@ -86,7 +86,12 @@ export const idkitSessions = pgTable('idkit_sessions', {
 export const nullifiers = pgTable('nullifiers', {
   nullifier: numeric('nullifier', { precision: 78, scale: 0 }).primaryKey(),
   action: text('action').notNull(),
-  worker: text('worker').notNull(),
+  /**
+   * `null` between `/idkit/verify` and `/register`: the human is verified, the row holds the
+   * nullifier, and no address is bound yet. The unique index still allows one address per
+   * human — Postgres treats NULLs as distinct in a unique btree.
+   */
+  worker: text('worker'),
   registeredAt: timestamp('registered_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex('nullifiers_worker_uq').on(t.worker)]);
 

@@ -131,7 +131,10 @@ spec text, the place name or the buyer. The dashboard renders exactly that entry
 ## OSM data
 
 `fixtures/osm/leiria-min.json` is hand-written with **synthetic ids** (`"synthetic_ids": true`)
-in the shape the real extractor produces. The real Leiria + Lisbon extract, its Overpass query
-and the ODbL attribution it must carry land here with T-22.
+in the shape the real extractor produces, and every test in this package runs against it. The
+real Leiria + Lisbon extract (`fixtures/osm/leiria-lisbon.json.gz`, 52 418 business POIs, 1.6 MB
+gzipped), the Overpass query, the keep-listed tag keys and the ODbL attribution are documented in
+[`src/osm/README.md`](src/osm/README.md) (T-22); `pnpm osm:extract` regenerates the file, and
+`getPlaceIndex()` from `src/osm/placeIndex.ts` loads it once at boot.
 
 > © OpenStreetMap contributors, ODbL

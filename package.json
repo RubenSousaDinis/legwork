@@ -13,7 +13,7 @@
     "build": "pnpm -r build",
     "db:push": "pnpm --filter @legwork/api db:push",
     "abi:gen": "bash contracts/script/abi-gen.sh",
-    "osm:extract": "echo 'not yet — T-22' && exit 1",
+    "osm:extract": "tsx scripts/osm-extract.ts",
     "demo:run": "echo 'not yet — T-29' && exit 1",
     "demo:reset": "echo 'not yet — T-29' && exit 1",
     "inserts": "echo 'not yet — T-44' && exit 1",
