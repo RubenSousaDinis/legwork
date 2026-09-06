@@ -111,7 +111,10 @@ export const RATE_LIMITS: RateLimitRule[] = [
   {
     id: 'browse',
     method: 'GET',
-    limits: [{ scope: 'ip', limit: 120 }],
+    // 600, not the brief's 120: the dashboard polls four `/public/*` routes every 3 s (80/min
+    // per viewer) and a receipt tab adds 20/min, so two tabs on one address — the filming rig —
+    // would have hit 120 and rendered `feed unavailable`. Still a brake on a scraper.
+    limits: [{ scope: 'ip', limit: 600 }],
     match: (pathname) =>
       exact('/tasks')(pathname) ||
       oneSegmentUnder('/tasks')(pathname) ||

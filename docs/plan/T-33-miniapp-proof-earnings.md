@@ -42,7 +42,7 @@ This is the beat the whole submission rests on: a real person photographs the do
 
 ## 4. Owned paths
 ```
-apps/miniapp/app/proof/**   apps/miniapp/app/earnings/**   apps/miniapp/lib/gps.ts
+apps/miniapp/app/proof/**   apps/miniapp/app/earnings/**   apps/miniapp/lib/gps.ts   apps/miniapp/tests/proof/**
 ```
 
 ## 5. Interfaces consumed
@@ -122,6 +122,7 @@ owned-paths:
   - apps/miniapp/app/proof/**
   - apps/miniapp/app/earnings/**
   - apps/miniapp/lib/gps.ts
+  - apps/miniapp/tests/proof/**
 Scope confirmed: every §2 bullet done · Out-of-scope respected · §8 tests present by name · §9 output pasted below
 AI-Usage: <one line>
 BLOCKED items resolved: <none | list>

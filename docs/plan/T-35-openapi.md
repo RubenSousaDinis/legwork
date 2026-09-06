@@ -131,4 +131,4 @@ Known gaps to raise as written (do not resolve them yourself):
 Open `openapi.test.ts` first: `everyContractRouteDocumented` must iterate the contract, not a hand-written list. Then `openapi.ts`: admin filtered by default, key sorting applied after conversion, `x-legwork` money example exact. Most likely wrong: `/admin` routes leaking into the served document; `wait`, `area`, `lat`, `lon` query parameters missing on the GET routes; the `x402` scheme modelled as `http bearer` instead of an `apiKey` header named `PAYMENT-SIGNATURE`; a hand-typed `Envelope` copy.
 
 ## 15. Round 2+
-—
+Merged (Sept 6, #88): the two contract routes on `POST /tasks` (x402 and direct-mode signed header) are one operation with `security: [{x402}, {buyerSignature}]` and statuses 201/202/400/402/422/429; cookie scheme names come from `src/session.ts`.

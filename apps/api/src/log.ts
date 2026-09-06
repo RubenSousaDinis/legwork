@@ -6,6 +6,7 @@
  * log call. A route that wants to say *which* task it is looking at logs `spec_hash`.
  */
 import pino, { type Logger } from 'pino';
+import { REDACT_PATHS as GUARD_REDACT_PATHS, headerSerializer } from './middleware/redact';
 
 /**
  * Every key in `.env.example` whose name ends in `_PRIVATE_KEY`.
@@ -29,7 +30,7 @@ const PRIVATE_KEY_NAMES = [
  * alone does not cover `{ task: { spec } }` and `*.spec` alone does not cover a top-level
  * `spec`.
  */
-export const REDACT_PATHS = [
+const OWN_REDACT_PATHS = [
   'req.headers.cookie',
   'req.headers.authorization',
   'req.headers["payment-signature"]',
@@ -51,11 +52,21 @@ export const REDACT_PATHS = [
   '*.privateKey',
 ] as const;
 
+/**
+ * This file's list plus T-38's (`middleware/redact.ts`): the header paths, `*.token`,
+ * `*.secret`, `*.cookie`, `*.privateKey` and friends. One list, deduplicated, so a path
+ * added on either side is censored on both.
+ */
+export const REDACT_PATHS: readonly string[] = [...new Set([...OWN_REDACT_PATHS, ...GUARD_REDACT_PATHS])];
+
 export const REDACTED = '[redacted]';
 
 export const logger: Logger = pino({
   level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
   redact: { paths: [...REDACT_PATHS], censor: REDACTED },
+  // T-38's allowlist: five header names survive a `req` and every other header is dropped
+  // before pino sees it — censoring would still print the header's name.
+  serializers: { req: headerSerializer },
   base: { service: 'legwork-api' },
 });
 

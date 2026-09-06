@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { getDashboardData } from '../lib/data';
+import { loadDashboardData } from '../lib/data';
 import { usdc } from '../lib/format';
 
 export const alt = 'Legwork — escrow meter';
@@ -24,7 +24,7 @@ const REFUSAL = '#e4a33f';
  * this route runs only on the server, so the mode never reaches a client bundle.
  */
 export default async function OpengraphImage() {
-  const data = getDashboardData(process.env.DATA_MODE);
+  const data = await loadDashboardData(process.env.DATA_MODE);
   const featured = data.featured;
   const released = featured?.state === 'released' && featured.proofPresent;
   const stateWord = released

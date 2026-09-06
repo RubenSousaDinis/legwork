@@ -36,7 +36,7 @@ Every other task is written against the names and shapes in this brief so that ~
 
 ### T-01a — contracts side
 
-**Conventions.** Solidity `^0.8.24`, OpenZeppelin 5 (`Ownable`, `Pausable`, `EIP712`, `ECDSA`, `SafeERC20`). USDC has 6 decimals; every amount is a 6-decimal integer (`3.00 USDC = 3_000_000`). Task ids are sequential `uint256` starting at 1. Nullifiers are `uint256` (the World ID `nullifier` hex parsed as a 256-bit integer). Task-type bitmask: `verify-open = 1`, `photo-of = 2`, `call-confirm = 4`, `compare-two = 8`. Area is a geohash-5 string (e.g. `"ez5ku"` — Leiria).
+**Conventions.** Solidity `^0.8.24`, OpenZeppelin 5 (`Ownable`, `Pausable`, `EIP712`, `ECDSA`, `SafeERC20`). USDC has 6 decimals; every amount is a 6-decimal integer (`3.00 USDC = 3_000_000`). Task ids are sequential `uint256` starting at 1. Nullifiers are `uint256` (the World ID `nullifier` hex parsed as a 256-bit integer). Task-type bitmask: `verify-open = 1`, `photo-of = 2`, `call-confirm = 4`, `compare-two = 8`. Area is a geohash-5 string (e.g. `"ez1dp"` — Leiria).
 
 **`IWorkerRegistry`**
 - `registerFor(uint256 nullifierHash, address worker, string area, uint8 taskTypes, uint256 deadline, bytes attestation)` — `onlyRelayer`. Reverts: `NotRelayer`, `DuplicateNullifier` (nullifier already bound), `WorkerAlreadyBound` (address already bound), `AttestationExpired` (`block.timestamp > deadline`), `BadAttestation` (signer ≠ attestation verifier), `AttestationUsed` (digest seen before).

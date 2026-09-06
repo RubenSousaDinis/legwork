@@ -148,7 +148,9 @@ const WorkerTaskRow = z.object({
 export const Preflight = z.object({
   active: z.number().int(), verified: z.number().int(), seeded: z.number().int(),
   median_minutes: z.number().nullable(), median_source: z.enum(['real', 'seeded', 'n/a']),
-  n_real: z.number().int(), score_floor: z.number(), dashboard_url: z.url(),
+  n_real: z.number().int(),
+  /** `min(score)` over verified active workers; falls back to the seeded workers, then 0 (T-27). */
+  score_floor: z.number(), dashboard_url: z.url(),
 });
 
 export const API_ROUTES = {
@@ -213,9 +215,15 @@ export const API_ROUTES = {
     query: z.object({ task_type: TaskTypeSchema, area: Geohash5 }), responses: { 200: Preflight } },
   publicProofVerify: { method: 'GET', path: '/public/proofs/:hash/verify', auth: 'public', summary: 'Re-hash check at request time: hash_ok is keccak256 of the retained original, served_hash of the stripped copy; coordinate only rounded; 60/min',
     responses: { 200: z.object({ hash: TxHash, exists: z.boolean(), hash_ok: z.boolean(), captured_at: Iso.nullable(), coordinate_rounded: CoordinateRounded.optional(), gps_unavailable: z.boolean(), size_bytes: z.number().int(), served_hash: TxHash.nullable() }) } },
-  publicObservations: { method: 'GET', path: '/public/observations', auth: 'public', summary: 'Optional (T-40)',
-    query: z.object({ place_id: z.string() }),
-    responses: { 200: z.object({ observations: z.array(PublicObservation), delta: z.object({ checked: z.number().int(), listing_wrong: z.number().int() }).optional() }) } },
+  publicObservations: { method: 'GET', path: '/public/observations', auth: 'public', summary: 'Completed tasks only (T-40): the verify-open delta sentence over real rows plus the rows behind it; never a nullifier, a coordinate, a note, a spec, a payer or an agent id',
+    query: z.object({ place_id: z.string().optional(), include_seeded: z.enum(['0', '1']).optional() }),
+    responses: { 200: z.object({
+      place_id: z.string().optional(),
+      delta: z.object({ checked_places: z.number().int(), wrong_listings: z.number().int(), by_source: z.record(z.string(), z.object({ checked_places: z.number().int(), wrong_listings: z.number().int() })), sentence: z.string() }),
+      observations: z.array(PublicObservation.extend({ worker_verified: z.boolean() })),
+      /** Rendered beside the sentence, never as fine print: `real observations only; seeded rows excluded`. */
+      disclosure: z.string(),
+    }), 400: InvalidRequest } },
   adminPause: { method: 'POST', path: '/admin/pause', auth: 'admin-key', summary: 'Pause post/claim', responses: { 200: Ok } },
   adminUnpause: { method: 'POST', path: '/admin/unpause', auth: 'admin-key', summary: 'Unpause', responses: { 200: Ok } },
   adminResolve: { method: 'POST', path: '/admin/resolve', auth: 'admin-key', summary: 'Resolve a dispute (owner key); to the buyer 3.45 back, to the worker 3.00 and the 0.45 fee back', request: z.object({ task_id: z.union([TaskId, z.number().int().nonnegative()]), to_buyer: z.boolean() }), responses: { 200: Ok, 404: GenericError, 409: GenericError } },

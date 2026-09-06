@@ -21,7 +21,7 @@ policy table is `RATE_LIMITS` in `src/middleware/rateLimit.ts`:
 | `GET /session/nonce`, `POST /session` | 10 per address |
 | `POST /idkit/*` | 10 per address |
 | `POST /register` | 5 per address |
-| `GET /tasks`, `GET /tasks/:id`, `GET /public/*` | 120 per address |
+| `GET /tasks`, `GET /tasks/:id`, `GET /public/*` | 600 per address — the dashboard polls four `/public/*` routes every 3 s per open tab |
 | `POST /tasks/:id/claim`, `/release-claim`, `/submit`, `/report` | 30 per session |
 
 Over the limit is `429 {"error":"rate_limited","retry_after_s":N}` with a `Retry-After`
