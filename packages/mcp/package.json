@@ -27,6 +27,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@legwork/payments": "workspace:*",
     "@types/node": "catalog:",
     "msw": "catalog:",
     "typescript": "catalog:",
