@@ -38,6 +38,29 @@ jobs:
       - run: pnpm -r test
       - run: pnpm -r build
 
+  # T-39's legibility gate: the present-mode floors and the 9:16 band, measured in Chromium at
+  # 1920x1080 against DATA_MODE=demo. A separate job so a Chromium download that fails cannot take
+  # the ts check down with it; the two 1280x720 frames and floors.json are uploaded either way.
+  e2e-dashboard:
+    runs-on: ubuntu-latest
+    env: { LIVE_LLM: '', LIVE_CHAIN: '', DATA_MODE: demo }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @legwork/dashboard e2e:install
+      - run: pnpm --filter @legwork/dashboard e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: present-mode-frames
+          path: |
+            apps/dashboard/e2e/artifacts/*.png
+            apps/dashboard/e2e/artifacts/floors.json
+            apps/dashboard/e2e/report/**
+          if-no-files-found: ignore
   subgraph-build:
     runs-on: ubuntu-latest
     steps:

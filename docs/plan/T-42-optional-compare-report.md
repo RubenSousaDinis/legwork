@@ -11,7 +11,7 @@ owned_paths:
   - apps/miniapp/app/compare/**
   - apps/miniapp/app/report/**
   - apps/miniapp/components/UnverifiedBanner.tsx
-  - apps/miniapp/test/optional*.test.tsx
+  - apps/miniapp/tests/optional/**
 labels: [area:miniapp, wave:5, size:M, agent:cloud]
 branch: t-42/miniapp-optional
 ---
@@ -40,7 +40,7 @@ Three screens the architecture marks "optional if ahead". `compare-two` is the o
 
 ## 4. Owned paths
 ```
-apps/miniapp/app/compare/**   apps/miniapp/app/report/**   apps/miniapp/components/UnverifiedBanner.tsx   apps/miniapp/test/optional*.test.tsx
+apps/miniapp/app/compare/**   apps/miniapp/app/report/**   apps/miniapp/components/UnverifiedBanner.tsx   apps/miniapp/tests/optional/**
 ```
 
 ## 5. Interfaces consumed
@@ -119,7 +119,7 @@ owned-paths:
   - apps/miniapp/app/compare/**
   - apps/miniapp/app/report/**
   - apps/miniapp/components/UnverifiedBanner.tsx
-  - apps/miniapp/test/optional*.test.tsx
+  - apps/miniapp/tests/optional/**
 Scope confirmed: every §2 bullet done · Out-of-scope respected · §8 tests present by name · §9 output pasted below
 Mount points for the lead: app/tasks/page.tsx → <UnverifiedBanner> when no session · app/proof/[id] header → link "Report task" → /report/<id>
 AI-Usage: <one line>
