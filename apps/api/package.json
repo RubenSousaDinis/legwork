@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@legwork/chain": "workspace:*",
+    "@legwork/mcp": "workspace:*",
     "@legwork/shared": "workspace:*",
+    "@legwork/subgraph-client": "workspace:*",
     "@supabase/supabase-js": "catalog:",
     "@worldcoin/idkit-core": "catalog:",
     "@worldcoin/minikit-js": "catalog:",
@@ -23,6 +25,7 @@
     "exifr": "catalog:",
     "fast-json-stable-stringify": "catalog:",
     "jose": "catalog:",
+    "mcp-handler": "catalog:",
     "next": "catalog:",
     "ngeohash": "catalog:",
     "pino": "catalog:",

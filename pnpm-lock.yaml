@@ -176,9 +176,15 @@ importers:
       '@legwork/chain':
         specifier: workspace:*
         version: link:../../packages/chain
+      '@legwork/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
       '@legwork/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@legwork/subgraph-client':
+        specifier: workspace:*
+        version: link:../../packages/subgraph-client
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.115.0
@@ -200,6 +206,9 @@ importers:
       jose:
         specifier: 'catalog:'
         version: 5.10.0
+      mcp-handler:
+        specifier: 'catalog:'
+        version: 2.1.1(@modelcontextprotocol/server@2.0.0)(next@16.3.4(@playwright/test@1.62.1)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
       next:
         specifier: 'catalog:'
         version: 16.3.4(@playwright/test@1.62.1)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
