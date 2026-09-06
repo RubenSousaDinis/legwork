@@ -1,0 +1,87 @@
+{
+  "tasks": [
+    {
+      "task_id": "7",
+      "state": "released",
+      "task_type": "verify-open",
+      "price_usdc": 3,
+      "fee_usdc": 0.45,
+      "area": "ez5ku",
+      "seeded": false,
+      "posted_at": "2026-09-05T10:40:00.000Z",
+      "claimed_at": "2026-09-05T10:44:00.000Z",
+      "submitted_at": "2026-09-05T10:51:00.000Z",
+      "released_at": "2026-09-05T10:52:00.000Z",
+      "spec_hash": "0x8f2a4b19c07d5e6180b3a2f4c95d1e73aa0846cf2b19d375e6c4081f92a3c41d",
+      "buyer_agent_id": "8004-1207",
+      "answer": "open",
+      "proof": {
+        "hash": "0x3d71c40986ba25ef1c0d4a7b6e39f582cc17b0d4e9a3625f7801c4d3ba95e6f1",
+        "hash_ok": true,
+        "captured_at": "2026-09-05T10:51:00.000Z",
+        "coordinate_rounded": { "lat": 39.744, "lon": -8.807 },
+        "gps_unavailable": false
+      },
+      "tx": {
+        "post": "0x11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900",
+        "claim": "0x22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff778899001122",
+        "submit": "0x33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011223344",
+        "release": "0x44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff778899001122334455aa"
+      },
+      "links": { "post": "https://sepolia.basescan.org/tx/0x11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900" },
+      "dashboard_url": "https://legwork.example/task/7"
+    },
+    {
+      "task_id": "8",
+      "state": "claimed",
+      "task_type": "verify-open",
+      "price_usdc": 3,
+      "fee_usdc": 0.45,
+      "area": "ez5ku",
+      "seeded": false,
+      "posted_at": "2026-09-05T10:35:00.000Z",
+      "claimed_at": "2026-09-05T10:38:00.000Z",
+      "spec_hash": "0x5c1e97b3d0428af6712e3b5904dc86137fa2059be4c1d876302f9ab415ce7d20",
+      "tx": {
+        "post": "0x55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd",
+        "claim": "0x66ff7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee"
+      },
+      "links": { "post": "https://sepolia.basescan.org/tx/0x55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd" },
+      "dashboard_url": "https://legwork.example/task/8"
+    },
+    {
+      "task_id": "6",
+      "state": "submitted",
+      "task_type": "photo-of",
+      "price_usdc": 3,
+      "fee_usdc": 0.45,
+      "area": "ez5ku",
+      "seeded": true,
+      "posted_at": "2026-09-05T10:20:00.000Z",
+      "claimed_at": "2026-09-05T10:24:00.000Z",
+      "submitted_at": "2026-09-05T10:31:00.000Z",
+      "spec_hash": "0x7b904e1cfa3d65820b1e7c4d93a05f6182cd47be09a1352f6d80c4139e7ab562",
+      "tx": {
+        "post": "0x7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff",
+        "claim": "0x88990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77",
+        "submit": "0x990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff7788"
+      },
+      "links": { "post": "https://sepolia.basescan.org/tx/0x7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff" },
+      "dashboard_url": "https://legwork.example/task/6"
+    },
+    {
+      "task_id": "5",
+      "state": "open",
+      "task_type": "compare-two",
+      "price_usdc": 1,
+      "fee_usdc": 0.15,
+      "area": "ez5ku",
+      "seeded": true,
+      "posted_at": "2026-09-05T10:05:00.000Z",
+      "spec_hash": "0x0c3f8ab52d961e7440bd2c8f13a5069e7b4c1d802fae563917c04b8d2e63fa19",
+      "tx": { "post": "0xaa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44" },
+      "links": { "post": "https://sepolia.basescan.org/tx/0xaa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44" },
+      "dashboard_url": "https://legwork.example/task/5"
+    }
+  ]
+}

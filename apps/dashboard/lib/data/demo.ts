@@ -1,13 +1,17 @@
 import {
+  ABUSE_CLASSES,
   DemoData,
+  feeOn,
   fromUsdcUnits,
   priceWithFee,
   specHash,
   toUsdcUnits,
+  wrapWorkerAnswer,
   type AbuseClass,
   type TaskType,
 } from '@legwork/shared';
 import demoJson from '../../../../demo-data.json';
+import type { TaskReceipt, TaskResponse } from './receipt';
 import type {
   DashboardData,
   FeaturedState,
@@ -33,6 +37,9 @@ const ELAPSED_ANCHOR_S = 252;
 const PROOF_CAPTURED_BEFORE_NOW_S = 62;
 
 const PLACE_LABEL = 'Farmácia Central · Rua Direita 12, Leiria';
+
+/** Leiria as a geohash-5. Public surfaces know the area and never the coordinate. */
+const DEMO_AREA = 'ez5ku';
 
 /** Titles are bounded descriptions of the errand — never the raw spec text. */
 const ROW_TITLES: Record<TaskType, string> = {
@@ -243,4 +250,105 @@ export function demoDashboardData(
     posterStats: { distinctExternalBuyers: 0, externalTasks: 0 },
     generatedAt: new Date(nowMs).toISOString(),
   };
+}
+
+// --------------------------------------------------------------- T-26 surfaces
+
+/**
+ * `/task/<id>` and `/refusals` in demo mode read the same `demo-data.json` as the
+ * dashboard, through the same adapter, so the two surfaces cannot disagree. Nothing
+ * below invents a figure: the money comes out of the row and the fee is computed on
+ * top of it in integer units.
+ */
+
+/** The classifier rule the demo refusal fires. `demo-data.json` carries no rule id. */
+const DEMO_RULE_ID = 'kw-otp-readback';
+
+/** Leiria, rounded the way every public surface rounds. Never an exact coordinate. */
+const DEMO_COORDINATE = { lat: 39.744, lon: -8.807 };
+
+function feeFor(amountUsdc: number): number {
+  return fromUsdcUnits(feeOn(toUsdcUnits(amountUsdc)));
+}
+
+/** The four demo rows are `demo-1` … `demo-4`, the ids `demoDashboardData` gives them. */
+export function getDemoTaskReceipt(id: string, nowMs = Date.now()): TaskReceipt | null {
+  const d = DemoData.parse(demoJson);
+  const index = /^demo-(\d+)$/.exec(id);
+  const row = index ? d.feed[Number(index[1]) - 1] : undefined;
+  // A refused task was never posted, so it has no receipt to hand anyone.
+  if (!row || row.status === 'refused') return null;
+
+  const postedAt = isoAt(nowMs, ELAPSED_ANCHOR_S);
+  const hasProof = row.status === 'submitted' || row.status === 'released';
+  const task: TaskResponse = {
+    task_id: id,
+    status: row.status,
+    task_type: row.task_type,
+    amount_usdc: row.amount_usdc,
+    fee_usdc: feeFor(row.amount_usdc),
+    area: DEMO_AREA,
+    posted_at: postedAt,
+    ...(row.status !== 'open' ? { claimed_at: isoAt(nowMs, ELAPSED_ANCHOR_S - 60) } : {}),
+    ...(hasProof ? { submitted_at: isoAt(nowMs, PROOF_CAPTURED_BEFORE_NOW_S) } : {}),
+    ...(row.status === 'released' ? { released_at: isoAt(nowMs, 20) } : {}),
+    ...(hasProof
+      ? {
+          answer: wrapWorkerAnswer(row.task_type === 'verify-open' ? 'open' : 'done'),
+          proof: {
+            hash: demoSpecHash(`proof-${id}`),
+            hash_ok: true,
+            captured_at: isoAt(nowMs, PROOF_CAPTURED_BEFORE_NOW_S),
+            coordinate_rounded: DEMO_COORDINATE,
+            gps_unavailable: false,
+          },
+        }
+      : {}),
+    tx: {
+      post: d.tx_placeholder,
+      ...(row.status !== 'open' ? { claim: d.tx_placeholder } : {}),
+      ...(hasProof ? { submit: d.tx_placeholder } : {}),
+      ...(row.status === 'released' ? { release: d.tx_placeholder } : {}),
+    },
+    dashboard_url: `/task/${id}`,
+    changed: false,
+    poll_after_seconds: 0,
+  } as TaskResponse;
+
+  return { task, seeded: row.seeded };
+}
+
+export interface DemoRefusalExample {
+  taskType: TaskType | 'free-text';
+  class: AbuseClass;
+  reason: string;
+  ruleId: string;
+  specHash: string;
+}
+
+export interface DemoRefusals {
+  counts: Record<AbuseClass, number>;
+  total: number;
+  /** Hand-picked, never a live feed: one example, the one the demo run refuses. */
+  examples: DemoRefusalExample[];
+}
+
+export function getDemoRefusals(): DemoRefusals {
+  const d = DemoData.parse(demoJson);
+  const counts = Object.fromEntries(ABUSE_CLASSES.map((c) => [c, 0])) as Record<AbuseClass, number>;
+  const examples: DemoRefusalExample[] = [];
+
+  for (const row of d.feed) {
+    if (row.status !== 'refused' || !row.refusal_class) continue;
+    counts[row.refusal_class] += 1;
+    examples.push({
+      taskType: row.task_type,
+      class: row.refusal_class,
+      reason: REFUSAL_REASON,
+      ruleId: DEMO_RULE_ID,
+      specHash: demoSpecHash('refused-call-confirm'),
+    });
+  }
+
+  return { counts, total: examples.length, examples };
 }

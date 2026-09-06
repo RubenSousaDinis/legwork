@@ -123,6 +123,13 @@ export interface DashboardData {
   preflight: PreflightData;
   posterStats: PosterStatsData;
   generatedAt: string;
+  /**
+   * Additive to the §6 table, optional so every T-10 consumer is untouched: in live
+   * mode a source that failed contributes its zero or empty value, and this is where
+   * it says which one — `<source> unavailable`. Never a `ScreeningLine`; the log is
+   * the classifier's record, not a transport report. Empty and absent in demo mode.
+   */
+  sourceNotes?: string[];
 }
 
 export interface GetDashboardDataOptions {

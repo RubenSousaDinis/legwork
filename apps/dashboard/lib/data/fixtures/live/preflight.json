@@ -1,0 +1,10 @@
+{
+  "active": 4,
+  "verified": 1,
+  "seeded": 3,
+  "median_minutes": 9,
+  "median_source": "seeded",
+  "n_real": 0,
+  "score_floor": 4.2,
+  "dashboard_url": "https://legwork.example/"
+}

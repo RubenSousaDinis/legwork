@@ -1,0 +1,304 @@
+{
+  "workers": [
+    {
+      "id": "0x9c4b1e77aa30d5f61c8e02b4d7935fa6cd810417",
+      "seeded": false,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 1,
+      "lastCompletedAt": "1788605520",
+      "score": "4600",
+      "distinctRaters": 1,
+      "registeredAt": "1788599400"
+    },
+    {
+      "id": "0x3428b0c5d1c73a48c4593d441f9700fa4cc60a3e",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 7,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x31a4f9c0876c7c729875552dedce53daba3dc358",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 8,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xd703a090aab9dde62ea330cfd41711dedf84b443",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 9,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xec96cb7d2e210226cdaafa158bf81cdb1a9de3e6",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 10,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xe5b04ce9042203363f201d33cfbcd5ba92d84813",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 11,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x4c9b80eab7afe8867644a94d0a469d87a097410b",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 12,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x27e30d079ba7dc83c2acaeaf627f84b1dbdc7c6b",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 13,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x3b34591f89bbd52b8cf54471d91106eb6c5cb312",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 14,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x7797f630cf017542530c1875fb64b6030947c73f",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 15,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x790baaaabc6d8a97a5bc6127feb93cf54a592586",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 16,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xc1dd1af4003bd104dd9f54f9324a2f0c7b9f8765",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 17,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xa209fb0e971f314a370f3dde0ed42720c661f596",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 18,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x891e318fc4ede75776efa24be20c491b50a125fc",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 19,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x46183781f1158d6d3d4f1472471e201747f512e9",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 20,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x71bec16afa50ce23b448aa02cfa397adeadef32f",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 21,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xdac31383c63453f4c4e81d66a5123cf82b5a3ae5",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 22,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x70d2e492551193d1274042fed9df1a11a25a997c",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 23,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xdf7d0434aed00767566c232aaf401eb00b54b641",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 24,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0xae65602387d17afb261b5f4be1e624c92b94a991",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 25,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x7bb4fd9a4705c3ca9e2c57b8ad1ab328247f8e9d",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 26,
+      "lastCompletedAt": "1788544800",
+      "score": "4200",
+      "distinctRaters": 3,
+      "registeredAt": "1788249600"
+    },
+    {
+      "id": "0x24ffdd4b62216e2c93a49532e76c54b06bb9444e",
+      "seeded": false,
+      "reset": true,
+      "area": "ez5ku",
+      "taskTypes": 1,
+      "completed": 0,
+      "lastCompletedAt": null,
+      "score": "0",
+      "distinctRaters": 0,
+      "registeredAt": "1788336000"
+    }
+  ],
+  "released": [
+    {
+      "id": "7",
+      "worker": {
+        "id": "0x9c4b1e77aa30d5f61c8e02b4d7935fa6cd810417"
+      },
+      "postedAt": "1788604800",
+      "releasedAt": "1788605520"
+    },
+    {
+      "id": "3",
+      "worker": {
+        "id": "0x3428b0c5d1c73a48c4593d441f9700fa4cc60a3e"
+      },
+      "postedAt": "1788544260",
+      "releasedAt": "1788544800"
+    }
+  ],
+  "recent": [
+    {
+      "id": "7",
+      "specHash": "0x8f2a4b19c07d5e6180b3a2f4c95d1e73aa0846cf2b19d375e6c4081f92a3c41d"
+    },
+    {
+      "id": "8",
+      "specHash": "0x5c1e97b3d0428af6712e3b5904dc86137fa2059be4c1d876302f9ab415ce7d20"
+    },
+    {
+      "id": "6",
+      "specHash": "0x7b904e1cfa3d65820b1e7c4d93a05f6182cd47be09a1352f6d80c4139e7ab562"
+    },
+    {
+      "id": "5",
+      "specHash": "0x0c3f8ab52d961e7440bd2c8f13a5069e7b4c1d802fae563917c04b8d2e63fa19"
+    }
+  ]
+}

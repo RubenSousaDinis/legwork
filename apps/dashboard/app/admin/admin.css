@@ -1,0 +1,101 @@
+/* Operator controls on the same ink ground. Every hit target is at least 44 px. */
+
+.admin {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-5) var(--sp-9);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.admin-note {
+  color: var(--fg-3);
+  font-size: var(--text-body-sm);
+  margin: var(--sp-2) 0 0;
+}
+
+.admin-input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--sp-3);
+  padding: 0 var(--sp-3);
+  background: var(--ink-700);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-tag);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
+
+.admin-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 44px;
+  margin-top: var(--sp-3);
+  color: var(--fg-3);
+}
+
+.admin-field .admin-input {
+  margin-top: 0;
+  max-width: 60%;
+}
+
+.admin-toggle {
+  width: 44px;
+  height: 44px;
+  accent-color: var(--verified-500);
+}
+
+.admin-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.admin-button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--sp-4);
+  background: var(--ink-700);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-badge);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-chip);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-button:disabled {
+  color: var(--fg-4);
+  cursor: not-allowed;
+}
+
+.admin-button[data-armed='true'] {
+  border-color: var(--refusal-border);
+  color: var(--refusal-500);
+}
+
+.admin-armed,
+.admin-result {
+  color: var(--refusal-500);
+  font-size: var(--text-body-sm);
+  margin: var(--sp-3) 0 0;
+}
+
+.admin-result[data-ok='true'] {
+  color: var(--verified-500);
+}
+
+.admin-result a {
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
