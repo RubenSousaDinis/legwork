@@ -1,5 +1,5 @@
 import { HEADERS, type TaskView } from '@legwork/shared';
-import { apiBase, subgraphClient } from './live';
+import { resolveUrl, subgraphClient } from './live';
 
 /**
  * The receipt an external builder's agent is handed through `dashboard_url`. One
@@ -43,7 +43,7 @@ export async function getTaskReceipt(
 
   let task: TaskResponse;
   try {
-    const response = await fetch(`${apiBase()}/tasks/${encodeURIComponent(id)}`, {
+    const response = await fetch(resolveUrl(`/tasks/${encodeURIComponent(id)}`), {
       cache: 'no-store',
       ...(Object.keys(headers).length > 0 ? { headers } : {}),
     });

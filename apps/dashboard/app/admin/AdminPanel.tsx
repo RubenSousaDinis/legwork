@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { apiBase } from '../../lib/data/live';
+import { resolveUrl } from '../../lib/data/live';
 import { basescanTx, shortHash } from '../../lib/format';
 import './admin.css';
 
@@ -71,7 +71,7 @@ export function AdminPanel() {
     setOutcome(null);
 
     try {
-      const response = await fetch(`${apiBase()}/admin/${action}`, {
+      const response = await fetch(resolveUrl(`/admin/${action}`), {
         method: 'POST',
         cache: 'no-store',
         headers: { 'content-type': 'application/json', 'X-Admin-Key': key },
@@ -105,6 +105,14 @@ export function AdminPanel() {
         <label className="section-label" htmlFor="admin-key">
           admin key
         </label>
+        {/*
+          Uncontrolled on purpose. The key lives in React state — that is what enables
+          the buttons and what becomes the header — but a *controlled* input makes
+          React write the current value into the `value` **attribute**, which puts the
+          admin key straight into `document.body.innerHTML`. With `defaultValue` the
+          attribute stays empty and only the DOM node's property carries the text, the
+          same as any password field a browser has ever rendered.
+        */}
         <input
           id="admin-key"
           className="mono admin-input"
@@ -113,7 +121,7 @@ export function AdminPanel() {
           type="password"
           autoComplete="off"
           spellCheck={false}
-          value={key}
+          defaultValue=""
           onChange={(e) => setKey(e.target.value)}
           placeholder="pasted, never stored"
         />
@@ -130,6 +138,7 @@ export function AdminPanel() {
             data-testid="admin-task-id"
             value={taskId}
             onChange={(e) => setTaskId(e.target.value)}
+            placeholder="task id"
           />
         </label>
         <label className="admin-field">

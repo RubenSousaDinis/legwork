@@ -49,13 +49,24 @@ export interface FetchedJson<T> {
   headers: Headers;
 }
 
+/**
+ * `/api/public/feed` is what the browser asks for and what `next.config.ts` rewrites.
+ * The origin is spelled out because `fetch` outside a document needs an absolute URL —
+ * it is the page's own origin, which is what a browser would resolve it to anyway.
+ */
+export function resolveUrl(path: string): string {
+  const url = `${apiBase()}${path}`;
+  if (typeof window === 'undefined') return url;
+  return new URL(url, window.location.origin).toString();
+}
+
 /** Every read is `no-store`: a dashboard that caches is a dashboard that lies. */
 export async function fetchJson<T>(
   path: string,
   init?: RequestInit,
 ): Promise<FetchedJson<T> | null> {
   try {
-    const response = await fetch(`${apiBase()}${path}`, { ...init, cache: 'no-store' });
+    const response = await fetch(resolveUrl(path), { ...init, cache: 'no-store' });
     if (!response.ok) return null;
     return { body: (await response.json()) as T, headers: response.headers };
   } catch {
