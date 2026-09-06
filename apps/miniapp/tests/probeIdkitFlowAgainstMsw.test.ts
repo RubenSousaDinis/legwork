@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../lib/api';
-import { verifyProof } from '../lib/probeApi';
+import { verifyProof } from '../lib/worldid';
 import { lastVerifyBody, nullifierAlreadyRegistered } from '../mocks/handlers';
 import { server } from '../mocks/server';
 import { IDKIT_RESULT_FIXTURE } from './fixtures';
