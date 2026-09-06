@@ -9,6 +9,9 @@ const { TaskList } = await import('../../app/tasks/TaskList');
 
 const TITLE = 'Padaria Central · Rua de Alcobaça 12, Leiria';
 
+/** Before the fixture's `claim_expires_at` (10:22Z), so the claimed card has a live countdown. */
+const CLAIMED_AT = '2026-09-06T09:52:00.000Z';
+
 /** Phone floors: nothing tappable under 44 px, nothing narrated under 20 px. */
 const TAPPABLE = 'button, a';
 
@@ -38,10 +41,15 @@ beforeEach(() => {
   push.mockClear();
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
 
 describe('phone floors', () => {
   it('hitTargetsAtLeast44', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(CLAIMED_AT) });
+
     render(<TaskList />);
     const summary = await screen.findByText(TITLE);
 

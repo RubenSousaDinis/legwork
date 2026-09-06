@@ -15,7 +15,11 @@ const TASK_ID = '1024';
 const TITLE = 'Padaria Central · Rua de Alcobaça 12, Leiria';
 const RELAYED = 'relayed claim · gas paid by Legwork';
 
-/** `claim_expires_at` in the fixture is 10:22Z; standing here makes the claim exactly 1800 s old. */
+/**
+ * `claim_expires_at` in the fixture is a fixed 10:22Z, so every test that wants a *live* claim
+ * has to stand before it — otherwise the countdown is already at `00:00` and the card is
+ * showing the expiry copy instead of the actions. 09:52Z makes the claim exactly 1800 s long.
+ */
 const CLAIMED_AT = '2026-09-06T09:52:00.000Z';
 
 let requests: ReturnType<typeof recordRequests>;
@@ -81,6 +85,8 @@ describe('claiming', () => {
   });
 
   it('releaseClaimCallsRoute', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(CLAIMED_AT) });
+
     render(<TaskList />);
     await claimFirstTask();
     await waitFor(() => expect(document.querySelector('[data-claimed="true"]')).not.toBeNull());
