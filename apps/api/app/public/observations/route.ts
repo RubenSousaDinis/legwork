@@ -6,10 +6,10 @@
  * behind it, so the number is never a claim a reader has to take on faith.
  *
  * The response is assembled field by field from `PublicObservation`, which is the frozen
- * `Observation` **minus** `worker_nullifier`, plus `worker_verified`. Spreading a row would be
- * one keystroke and would publish the nullifier — and a nullifier-keyed movement history is
- * the one thing 10-schemas §8 refuses outright. There is no coordinate here at all: the record
- * never carried one, so `PUBLIC_COORD_DECIMALS` has nothing to round.
+ * `Observation` **minus** the worker's nullifier, plus `worker_verified`. Spreading a row
+ * would be one keystroke and would publish that nullifier — and a nullifier-keyed movement
+ * history is the one thing 10-schemas §8 refuses outright. There is no coordinate here at
+ * all: the record never carried one, so `PUBLIC_COORD_DECIMALS` has nothing to round.
  *
  * `syncObservations` runs first. There is no keeper process, so a completed task becomes an
  * observation because somebody loaded this page — the same lazy shape as the escrow's claim
@@ -53,11 +53,15 @@ export interface ObservationsResponse {
   place_id?: string;
   delta: ListingDelta;
   observations: PublicObservationView[];
-  /** Rendered beside the sentence, never as fine print. */
-  note: string;
+  /**
+   * Rendered beside the sentence, never as fine print. Called `disclosure` and not `note`
+   * because `note` is the worker's free text, which never reaches a public surface — one key
+   * name, one meaning.
+   */
+  disclosure: string;
 }
 
-export const DELTA_NOTE = 'real observations only; seeded rows excluded';
+export const DELTA_DISCLOSURE = 'real observations only; seeded rows excluded';
 
 /**
  * Built key by key from the nine fields, never by deleting from a row: a spread with one
@@ -124,7 +128,7 @@ export const GET = route(async (req) => {
     ...(placeId === null ? {} : { place_id: placeId }),
     delta,
     observations: rows.map((row) => publicView(toObservation(row))),
-    note: DELTA_NOTE,
+    disclosure: DELTA_DISCLOSURE,
   };
   return Response.json(body, { headers: { 'cache-control': CACHE_CONTROL } });
 });
