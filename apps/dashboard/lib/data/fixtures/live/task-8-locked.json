@@ -1,0 +1,15 @@
+{
+  "task_id": "8",
+  "status": "open",
+  "task_type": "verify-open",
+  "amount_usdc": 3,
+  "fee_usdc": 0.45,
+  "area": "ez1dp",
+  "posted_at": "2026-09-05T10:35:00.000Z",
+  "tx": {
+    "post": "0x55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd"
+  },
+  "dashboard_url": "https://legwork.example/task/8",
+  "changed": false,
+  "poll_after_seconds": 3
+}

@@ -1,0 +1,29 @@
+{
+  "task_id": "7",
+  "status": "released",
+  "task_type": "verify-open",
+  "amount_usdc": 3,
+  "fee_usdc": 0.45,
+  "area": "ez1dp",
+  "posted_at": "2026-09-05T10:40:00.000Z",
+  "claimed_at": "2026-09-05T10:44:00.000Z",
+  "submitted_at": "2026-09-05T10:51:00.000Z",
+  "released_at": "2026-09-05T10:52:00.000Z",
+  "answer": { "answer": "open", "_source": "worker", "_untrusted": true },
+  "proof": {
+    "hash": "0x3d71c40986ba25ef1c0d4a7b6e39f582cc17b0d4e9a3625f7801c4d3ba95e6f1",
+    "hash_ok": true,
+    "captured_at": "2026-09-05T10:51:00.000Z",
+    "coordinate_rounded": { "lat": 39.744, "lon": -8.807 },
+    "gps_unavailable": false
+  },
+  "tx": {
+    "post": "0x11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900",
+    "claim": "0x22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff778899001122",
+    "submit": "0x33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011223344",
+    "release": "0x44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff778899001122334455aa"
+  },
+  "dashboard_url": "https://legwork.example/task/7",
+  "changed": true,
+  "poll_after_seconds": 0
+}

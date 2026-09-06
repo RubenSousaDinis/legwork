@@ -1,0 +1,140 @@
+/*
+ * The receipt on the same ink ground as the dashboard, one column, phone first. Every
+ * token here is one `globals.css` already declares — no new colour, no red, no shadow,
+ * no gradient. This page is not filmed, so it carries no `data-floor`.
+ */
+
+.receipt {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-5) var(--sp-9);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.receipt-head-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.receipt-id {
+  font-size: var(--text-h2);
+  color: var(--fg-1);
+}
+
+.receipt-chips,
+.receipt-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.receipt-money-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+.receipt-state {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-h2);
+  letter-spacing: var(--track-label);
+  color: var(--fg-1);
+}
+
+.receipt-amount {
+  font-size: var(--text-stat-sm);
+  color: var(--fg-1);
+}
+
+.receipt-tail,
+.receipt-money-note,
+.receipt-note,
+.receipt-fineprint {
+  color: var(--fg-3);
+  font-size: var(--text-body-sm);
+}
+
+.receipt[data-status='released'] .receipt-state,
+.receipt[data-status='released'] .receipt-amount {
+  color: var(--verified-500);
+}
+
+.receipt-hash {
+  /* The full hash, wrapping — an elided proof hash is not a proof reference. */
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  color: var(--fg-2);
+  font-size: var(--text-body-sm);
+  margin: var(--sp-3) 0;
+}
+
+.receipt-hash-ok {
+  color: var(--verified-500);
+  margin: 0 0 var(--sp-3);
+}
+
+/* Refusals and failures are amber. Red exists nowhere in this product. */
+.receipt-hash-bad {
+  color: var(--refusal-500);
+  margin: 0 0 var(--sp-3);
+}
+
+.receipt-thumb {
+  margin: 0 0 var(--sp-3);
+}
+
+.receipt-thumb img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-tile);
+}
+
+.receipt-thumb figcaption {
+  color: var(--fg-3);
+  font-size: var(--text-body-sm);
+  margin-top: var(--sp-2);
+}
+
+.receipt-answer-line {
+  color: var(--fg-1);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+.receipt-tx-list,
+.receipt-timeline-list {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.receipt-tx {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--verified-500);
+  text-decoration: none;
+  font-size: var(--text-body-sm);
+}
+
+.receipt-tx:hover {
+  text-decoration: underline;
+}
+
+.receipt-timeline-list li,
+.receipt-coord {
+  color: var(--fg-2);
+  font-size: var(--text-body-sm);
+}

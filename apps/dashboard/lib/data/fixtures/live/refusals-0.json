@@ -1,0 +1,13 @@
+{
+  "counts": {
+    "credential fraud": 0,
+    "identity impersonation": 0,
+    "automated reconnaissance": 0,
+    "social media manipulation": 0,
+    "authentication circumvention": 0,
+    "referral fraud": 0
+  },
+  "total": 0,
+  "recent": [],
+  "examples": []
+}

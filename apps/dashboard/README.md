@@ -11,11 +11,28 @@ ground, one accent, no red anywhere.
 | `/?present=1` | The sparse present canvas on the same route, for filming. |
 | `/present` | The same canvas with no query to remember on set. |
 | `/opengraph-image` | 1200x630 card so every link unfurls with the escrow meter. |
+| `/task/[id]` | The receipt an external builder's agent is handed through `dashboard_url`: state, the full proof hash and whether it re-hashes, the coordinate rounded to about 100 m, the tx links, and a thumbnail only a buyer can see. |
+| `/task/[id]/opengraph-image` | 1200x630 card for the receipt — state and amounts only. Never the thumbnail, the coordinate or the answer. |
+| `/refusals` | The six abuse-class counts and hand-picked examples. **Never a raw live feed**, never a requester identity. |
+| `/admin` | Operator controls, behind `NEXT_PUBLIC_ADMIN_UI=1`. 404 otherwise, and `robots: { index: false }`. |
 
 Both `/` and `/present` accept `?state=locked\|submitted\|released\|refunded` to preview a
 meter beat without touching the chain.
 
-T-26 adds `/task/[id]`, `/refusals` and `/admin`.
+`?task=<id>` pins one task as the featured row, on `/` and through the live poll, so the
+filmed errand stays on the escrow meter while newer rows arrive.
+
+### The receipt token
+
+`/task/<id>?t=<buyer token>` reveals the signed thumbnail URL. The token is read on the
+server, forwarded once as the `X-Buyer-Token` header, and then dropped: it is never
+rendered, never logged, never put in a link and never handed to the client. The browser
+poll that follows carries no token — it is the public read — so a signed `proof.url` the
+server already resolved is carried forward while the proof hash is unchanged rather than
+blinking out of the page on the next tick.
+
+Without a token the proof block says `thumbnail gated — buyer only`. A `seeded` flag the
+subgraph could not answer for renders `seeded status unavailable`, never silence.
 
 ## `DATA_MODE`
 
@@ -25,10 +42,78 @@ Read on the server only, never from a `NEXT_PUBLIC_*` var and never in a client 
   `demo-data.json` from the repo root, validates it with `DemoData` from
   `@legwork/shared`, and maps it to `DashboardData`. Every route and the OG image
   render a visible `DEMO DATA` chip.
-- `DATA_MODE=live` — `getDashboardData` returns an empty `DashboardData` with
-  `dataMode: 'live'` and no `DEMO DATA` chip. **T-26 replaces this branch** with the
-  real adapter over `/public/*` and the subgraph. Nothing else has to change: the
+- `DATA_MODE=live` — `lib/data/live.ts` reads the deployment and maps it into the same
+  `DashboardData`, with no `DEMO DATA` chip anywhere. Nothing else has to change: the
   components take `DashboardData` and nothing else.
+
+## Live mode
+
+| Env | Where it is read | What it does |
+|---|---|---|
+| `DATA_MODE=live\|demo` | server only | picks the adapter |
+| `NEXT_PUBLIC_API_BASE_URL` | server, and `next.config.ts` | the API origin; defaults to `http://localhost:3001` |
+| `NEXT_PUBLIC_SUBGRAPH_QUERY_URL` | server and browser | the publishable subgraph query URL |
+| `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `sandbox World ID`, anything else `sandbox Selfie Check` |
+| `NEXT_PUBLIC_ADMIN_UI` | build time | `1` mounts `/admin`; anything else, unset included, 404s |
+
+`apiBase()` is isomorphic: the API's own origin on the server, and the same-origin `/api`
+prefix in the browser, which `next.config.ts` rewrites. So the browser never needs a CORS
+pre-flight and no origin is baked into the client bundle. Every read is `cache: 'no-store'`.
+
+Sources: `GET /public/feed`, `/public/refusals`, `/public/posters`,
+`/public/preflight?task_type=&area=`, plus one subgraph round trip for the worker pool and
+one for the agent card. The subgraph goes through `@legwork/subgraph-client`'s
+`client.query` — there is no second GraphQL fetcher in this app — and **no API key is ever
+passed**, so nothing secret can reach a bundle.
+
+**The agent card is entirely the subgraph's.** A requester identity is not on a public
+surface and is not going to be, so `/public/*` carries neither a `buyer_agent_id` on a feed
+row nor an `agent_id` on a refusal. The id is the featured task's `Task.buyerAgentId`
+rendered as `8004-<id>`; `marks` is the count of `Mark` rows against that id and
+`lastMarkClass` is the newest one's `classId` mapped back through `abuseClassById` from
+`@legwork/shared` — the index stores the integer and this is the only place it becomes
+words. With no subgraph the card reads `—` and `0`: a mark the index cannot confirm is
+never attributed to an agent by guesswork.
+
+`highlighted.level` is the one value the poll has to be handed rather than re-derive.
+`WORLD_CREDENTIAL_LEVEL` is a server var and this mapper also runs in the browser, so
+`useLiveDashboard` passes `initial.pool.highlighted?.level` into
+`getLiveDashboardData({ level })`; the env is read only when no level is given. Without
+that an `orb` deployment would render `sandbox World ID` on load and `sandbox Selfie Check`
+from the first tick.
+
+`lib/live/` polls it every 3 s. The poller never overlaps requests, does nothing at all
+when the response says `changed: false`, calls `onChange` only when the mapped result
+actually differs, waits `max(interval, poll_after_seconds)` when the API asks it to, and
+pauses entirely while the tab is hidden. `LiveDashboard` is the render prop over it;
+`useLiveTask` is the receipt's version and stops once the task is terminal.
+
+**A source that fails contributes its zero or empty value and names itself** in
+`sourceNotes` (`feed unavailable`). It never borrows a demo number: in live mode there are
+no demo figures on the page at all.
+
+Two honesty rules are enforced in the mapping rather than the components. Only a *funded*
+feed row can become the `FeaturedTask`, so a refusal has no path to the escrow meter; and
+`agentPays` is `amount + fee` summed in 6-decimal integer units, never a subtraction.
+
+## Admin
+
+`/admin` is gated on the literal `process.env.NEXT_PUBLIC_ADMIN_UI` — the only form Next
+inlines; a dynamic key would read `undefined` in the browser and gate nothing. The check
+runs on the server page before `AdminPanel` is ever in the tree, and because the flag is a
+build-time constant the route prerenders straight to a 404 when it is off.
+
+The admin key is **pasted at runtime and held in React state only**. It is never an env of
+this app, never under `NEXT_PUBLIC_*`, never written to `localStorage`, `sessionStorage`, a
+cookie or a query string, and it is gone on reload. The field is deliberately
+*uncontrolled*: a controlled password input makes React write the current value into the
+`value` attribute, which would put the key into `document.body.innerHTML`.
+
+Buttons are disabled until a key is present. `resolve`, `reset-demo` and `reset-worker`
+need a second tap on `Confirm` within 5 seconds, and the arm expires on its own. Every
+control is a 44 px target. Results render `ok · tx <hash> ↗` or the API's error (`401`
+reads `key rejected`) in the refusal amber — red exists nowhere in this product — and the
+panel says out loud that every call is audit-logged by the API.
 
 Two fields are absent from `demo-data.json` and are filled with defaults rather than
 invented: there is no `posterStats` block (zeros) and no per-row `agent_pays`
@@ -93,7 +178,7 @@ Sizes are declared with `data-floor` in design px and enforced by T-39 at 1280x7
 
 | Task | Where it works |
 |---|---|
-| **T-26** (live data) | Replaces the `live` branch of `getDashboardData` in `lib/data/index.ts` and adds `app/task/**`, `app/refusals/**`, `app/admin/**`. It calls the API through the same-origin `/api` prefix that `next.config.ts` rewrites to `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:3001`). The component props are the contract and do not change. |
+| **T-26** (live data) | Done: `lib/data/live.ts`, `lib/live/**`, `app/task/**`, `app/refusals/**`, `app/admin/**`. `getDashboardData` stays synchronous because `app/page.tsx` and `app/opengraph-image.tsx` call it without `await`; `loadDashboardData(mode, opts)` is the awaited form, and `LiveDashboard` is what T-43 mounts. The component props are the contract and did not change. |
 | **T-39** (Playwright) | Adds `e2e/playwright.config.ts` and measures the `data-floor` attributes at 1280x720. The `e2e` and `e2e:install` scripts are already declared here. |
 | **T-43** (present polish) | Owns `app/(present)/**` and `components/EscrowMeter.tsx` from Day 6: the clock sync, the one-shot LOCKED to RELEASED animation and the card cuts. `PresentCanvas` takes `nowMs` so the clock and the timer can be driven deterministically. |
 | **T-47** (frame read) | Reads the composited PNG of the canvas. |

@@ -6,6 +6,9 @@
  */
 export { poolString } from '@legwork/shared';
 
+/** Imported, never retyped: 3 decimals is about 100 m and the number is frozen. */
+import { PUBLIC_COORD_DECIMALS } from '@legwork/shared';
+
 /** Always two decimals: `3.45`, `3.00`, `0.45`. Never a deducted figure. */
 export function usdc(n: number): string {
   return n.toFixed(2);
@@ -44,4 +47,27 @@ export function shortHash(hash: string): string {
 /** `HH:MM:SS` of an ISO instant, for the `proof ✓ <captured_at>` line. */
 export function timeOf(iso: string): string {
   return clockTime(Date.parse(iso));
+}
+
+/** The one explorer this deployment links to. Base Sepolia, never mainnet. */
+const BASESCAN = 'https://sepolia.basescan.org';
+
+/** `https://sepolia.basescan.org/tx/0x…` — every tx link on every surface. */
+export function basescanTx(hash: string): string {
+  return `${BASESCAN}/tx/${hash}`;
+}
+
+/** `https://sepolia.basescan.org/address/0x…`. */
+export function basescanAddress(address: string): string {
+  return `${BASESCAN}/address/${address}`;
+}
+
+/**
+ * `≈ 39.744, −8.807 · rounded to ~100 m`. Public surfaces round to
+ * `PUBLIC_COORD_DECIMALS` and never render a digit past it — the exact coordinate
+ * stays in the private task record. The sign is a unicode minus, not a hyphen.
+ */
+export function coord(lat: number, lon: number): string {
+  const fixed = (n: number) => n.toFixed(PUBLIC_COORD_DECIMALS).replace(/^-/, '−');
+  return `≈ ${fixed(lat)}, ${fixed(lon)} · rounded to ~100 m`;
 }

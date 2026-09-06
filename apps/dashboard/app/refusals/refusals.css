@@ -1,0 +1,76 @@
+/* Amber, never red: a refusal is the system working. Tokens from `globals.css` only. */
+
+.refusals {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-5) var(--sp-9);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.refusals-lede {
+  color: var(--fg-2);
+  margin: var(--sp-2) 0 0;
+}
+
+.refusals-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.refusals-note {
+  color: var(--refusal-500);
+  font-size: var(--text-body-sm);
+  margin: var(--sp-3) 0 0;
+}
+
+.refusals-class-list,
+.refusals-example-list {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+}
+
+.refusals-class {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--hairline-2);
+}
+
+.refusals-count {
+  font-size: var(--text-stat-sm);
+  color: var(--refusal-500);
+  min-width: 2ch;
+}
+
+.refusals-class-label {
+  color: var(--fg-1);
+}
+
+.refusals-total,
+.refusals-no-retry-line {
+  color: var(--fg-3);
+  font-size: var(--text-body-sm);
+}
+
+.refusals-example {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--hairline-2);
+}
+
+.refusals-example-line {
+  color: var(--fg-2);
+  margin: var(--sp-2) 0 0;
+}
+
+.refusals-no-retry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0 0;
+}

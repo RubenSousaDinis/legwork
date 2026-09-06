@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "credential fraud": 0,
+    "identity impersonation": 0,
+    "automated reconnaissance": 0,
+    "social media manipulation": 0,
+    "authentication circumvention": 1,
+    "referral fraud": 0
+  },
+  "total": 1,
+  "recent": [
+    {
+      "at": "2026-09-05T10:30:00.000Z",
+      "task_type": "call-confirm",
+      "class": "authentication circumvention",
+      "reason": "asks the worker to read a one-time code aloud from another person handset",
+      "rule_id": "kw-otp-readback",
+      "spec_hash": "0x9e15d3c8047ba62f1830d5c4e97a06b3128fd47ce0a539b6742c081de5ab39f4",
+      "marked": true,
+      "mark_tx": "0xMARK",
+      "mark_status": "confirmed",
+      "agent_id": "8004-1207",
+      "spec": "SPEC-LEAK",
+      "payer": "0xPAYER"
+    }
+  ],
+  "examples": []
+}
