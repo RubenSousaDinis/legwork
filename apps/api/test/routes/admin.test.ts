@@ -260,7 +260,17 @@ describe('/admin/*', () => {
     expect(res.status).toBe(200);
     expect(chain.calls.at(-1)).toEqual({ fn: 'resetWorker', args: [4242n], role: 'owner' });
 
-    const [left] = await fixture.rawQuery('SELECT count(*)::int AS n FROM nullifiers');
-    expect(left?.n).toBe(0);
+    // The column is cleared, the row stays: `registered_at` and `action` are the
+    // registration's audit trail, and a reset that erased them would erase the record that
+    // this human ever proved they were one.
+    const [row] = await fixture.rawQuery(
+      'SELECT worker, action, registered_at IS NOT NULL AS kept FROM nullifiers WHERE nullifier = 4242',
+    );
+    expect(row?.worker).toBeNull();
+    expect(row?.action).toBe('legwork-worker');
+    expect(row?.kept).toBe(true);
+
+    const [count] = await fixture.rawQuery('SELECT count(*)::int AS n FROM nullifiers');
+    expect(count?.n).toBe(1);
   });
 });

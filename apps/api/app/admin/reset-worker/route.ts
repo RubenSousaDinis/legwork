@@ -27,10 +27,14 @@ export const POST = audited('/admin/reset-worker', async (body): Promise<AdminRe
   const result = await ownerWrite(() => getChain().resetWorker(nullifierHash));
   if (result instanceof Response) return result;
 
-  // The frozen schema declares `nullifiers.worker` NOT NULL, so the binding is dropped by
-  // deleting the row rather than nulling the column. Same effect — the human can register a
-  // new wallet — and the frozen file stays untouched. See the PR's INTERFACE REQUEST.
-  await getDb().delete(nullifiers).where(eq(nullifiers.nullifier, nullifierHash.toString()));
+  // The column, not the row: `registered_at` and `action` are the registration's audit
+  // trail and survive the reset. The human is now where `/idkit/verify` leaves them —
+  // verified, with no address bound — and `nullifiers_worker_uq` still permits exactly one
+  // address per human, because Postgres treats NULLs as distinct in a unique btree.
+  await getDb()
+    .update(nullifiers)
+    .set({ worker: null })
+    .where(eq(nullifiers.nullifier, nullifierHash.toString()));
 
   return result;
 });
