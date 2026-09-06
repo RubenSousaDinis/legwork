@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlVisibility, recordRequests } from './requests';
 
@@ -10,7 +10,8 @@ const { http, HttpResponse } = await import('msw');
 const { server } = await import('../../mocks/server');
 const { TaskList } = await import('../../app/tasks/TaskList');
 
-const TASKS_PATH = '/api/tasks';
+/** The route the API actually serves: `app/tasks/route.ts` is POST-only. */
+const TASKS_PATH = '/api/tasks/list';
 
 let requests: ReturnType<typeof recordRequests>;
 let visibility: ReturnType<typeof controlVisibility>;
@@ -51,7 +52,19 @@ describe('the task poll', () => {
     expect(seededChip?.textContent).toBe('seeded');
     expect(document.querySelector('[data-task="1024"] .lw-chip')).toBeNull();
 
+    // …and the poll went to the route the API serves, with the geohash-5 cell and no finer.
     expect(requests.count('GET', TASKS_PATH)).toBe(1);
+    expect(requests.count('GET', '/api/tasks')).toBe(0);
+
+    // The `photo-of` row's `brief.subject` is what the worker is actually asked to photograph,
+    // so it renders under the type-derived question line.
+    const seededRow = document.querySelector('[data-task="1025"]') as HTMLElement;
+    fireEvent.click(seededRow.querySelector('button') as HTMLButtonElement);
+    expect(seededRow.querySelector('[data-brief="subject"]')?.textContent).toBe(
+      'the opening-hours sign at the main entrance',
+    );
+    expect(screen.getByText('Photograph the subject named in the title')).toBeTruthy();
+    fireEvent.click(seededRow.querySelector('button') as HTMLButtonElement);
 
     // 3 s later, the list has asked again.
     await act(async () => {
@@ -73,7 +86,9 @@ describe('the task poll', () => {
 
   it('unauthorizedRedirects', async () => {
     server.use(
-      http.get('*/api/tasks', () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })),
+      http.get('*/api/tasks/list', () =>
+        HttpResponse.json({ error: 'unauthorized' }, { status: 401 }),
+      ),
     );
 
     render(<TaskList />);

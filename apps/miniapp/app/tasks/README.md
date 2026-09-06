@@ -13,9 +13,15 @@ is the `mm:ss` clock. Both are used again by T-33.
 
 ## The poll
 
-`GET /tasks?area=&lat=&lon=` every **3 seconds**. A claim is a race — a row that is gone needs
-to disappear before the worker walks to it — and three seconds is what `02-architecture` asks
-for.
+`GET /tasks/list?area=&lat=&lon=` every **3 seconds**. A claim is a race — a row that is gone
+needs to disappear before the worker walks to it — and three seconds is what `02-architecture`
+asks for.
+
+The path is **`/tasks/list`**, not `/tasks`. `apps/api/app/tasks/route.ts` is POST-only so that
+T-16 and T-17 never share a file, so the worker's board is a route of its own; `api-contract.ts`
+(`listTasks`), `docs/api.md` and `apps/api/app/tasks/list/route.ts` all agree. The brief's §2
+and §5 carried the pre-wave-2 spelling — the route on `main` wins, and the lead is amending
+both sections. T-24's mocks answer either path, so nothing but this line changed.
 
 - `area` is `resolveArea()`, the geohash-5 cell and nothing finer. It is resolved once on
   mount and read through a ref, so the interval is built once instead of once per fix.
@@ -77,13 +83,28 @@ Price is `price_usdc` — the posted rate the worker keeps, 3.00. The agent pays
 locks 3.45 and the fee is 0.45 on top; no deducted figure appears anywhere on this screen.
 Every seeded row carries the chip `seeded`.
 
-Distance is `~180 m` at street scale and `~1.2 km` beyond it, `—` when the API sends none.
-The TTL line is `claim within 30 min`, from `DEFAULT_CLAIM_TTL_S`.
+Distance is rounded to the nearest **10 m** and written `~180 m` at street scale, `~1.2 km`
+(one decimal) beyond a kilometre, and `—` when the API sends none. Ten metres is as fine as
+this screen ever gets: it is a "how far do I walk" figure, not a position. The TTL line is
+`claim within 30 min`, from `DEFAULT_CLAIM_TTL_S`.
 
-The address is the row's `title` and the question is derived from `task_type`. `WorkerTaskRow`
-in `api-contract.ts` does carry a `brief` object with `place`, `question`, `subject` and
-`template_question` — the interface gap the brief's §13 anticipated is already closed — but §2
-specifies the type-derived copy, and the brief is the contract.
+The address is the row's `title` — the API renders it as `<place> · <street>, <locality>` — and
+the question line is derived from `task_type`, because that line is the same for every task of
+its type.
+
+Under it, `BriefDetail` renders the one thing that differs, when the row's `brief` carries it:
+
+| type | rendered | marker |
+|---|---|---|
+| `verify-open` | nothing more — "Is it open right now?" is the whole question | — |
+| `photo-of` | `subject`, joined to `subject_detail` with `—` when that is present | `[data-brief="subject"]` |
+| `call-confirm` | `template_question` | `[data-brief="template_question"]` |
+| `compare-two` | `criterion_id`, as a `MonoTag` | `[data-brief="criterion_id"]` |
+
+A row whose `brief` is absent, or which carries only fields this card does not render, shows
+the type-derived copy and nothing else. `place`, `phone` and `slots` are on the wire and are
+deliberately not rendered here: the address is already the `title`, and the rest belongs to
+the proof screen after the claim.
 
 ## Phone floors
 

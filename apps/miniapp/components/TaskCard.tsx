@@ -18,7 +18,23 @@ import { StatusBadge } from './ui/StatusBadge';
  * the fee is 0.45 on top; this screen only ever shows the worker's 3.00.
  */
 
-/** `WorkerTaskRow` in `api-contract.ts`. `brief` is on the wire but §2 renders type-derived copy. */
+/**
+ * `WorkerBrief` in `api-contract.ts` — place and question fields only, never `claimed_*` or
+ * `source`. Every field is optional, and a row that carries none of them renders the
+ * type-derived copy on its own.
+ */
+export type TaskBrief = {
+  place?: { name: string; street_address: string; locality: string };
+  question?: string;
+  subject?: string;
+  subject_detail?: string;
+  phone?: string;
+  template_question?: string;
+  slots?: Record<string, string>;
+  criterion_id?: string;
+};
+
+/** `WorkerTaskRow` in `api-contract.ts`. */
 export type TaskRow = {
   task_id: string;
   task_type: TaskType;
@@ -28,6 +44,7 @@ export type TaskRow = {
   claim_expires_in_s?: number;
   state: 'open' | 'claimed';
   seeded: boolean;
+  brief?: TaskBrief;
 };
 
 /** The caller's own live claim — `localStorage['legwork.activeClaim.v1']`, verbatim. */
@@ -180,7 +197,8 @@ export function TaskCard({
           <p style={{ margin: '0 0 var(--s-3)' }}>{row.title}</p>
 
           <p className="lw-section-label">The question</p>
-          <p style={{ margin: '0 0 var(--s-3)' }}>{QUESTION[row.task_type]}</p>
+          <p style={{ margin: '0 0 var(--s-2)' }}>{QUESTION[row.task_type]}</p>
+          <BriefDetail row={row} />
 
           <p className="lw-section-label">Proof required</p>
           <p style={{ margin: '0 0 var(--s-3)' }}>{PROOF_REQUIREMENTS[row.task_type]}</p>
@@ -215,6 +233,46 @@ export function TaskCard({
       ) : null}
     </li>
   );
+}
+
+/**
+ * What the worker is actually being asked, when the row says. The question line above is
+ * derived from `task_type` and is the same for every task of that type; this is the one line
+ * that differs — the thing to photograph, the question to read down the phone, the criterion
+ * to pick against. A row whose `brief` does not carry it renders nothing extra.
+ *
+ * `verify-open` needs nothing more: "Is it open right now?" is the whole question.
+ */
+function BriefDetail({ row }: { row: TaskRow }) {
+  const brief = row.brief;
+  if (brief === undefined) return null;
+
+  if (row.task_type === 'photo-of' && brief.subject !== undefined) {
+    const detail = brief.subject_detail;
+    return (
+      <p data-brief="subject" style={{ margin: '0 0 var(--s-3)' }}>
+        {detail === undefined ? brief.subject : `${brief.subject} — ${detail}`}
+      </p>
+    );
+  }
+
+  if (row.task_type === 'call-confirm' && brief.template_question !== undefined) {
+    return (
+      <p data-brief="template_question" style={{ margin: '0 0 var(--s-3)' }}>
+        {brief.template_question}
+      </p>
+    );
+  }
+
+  if (row.task_type === 'compare-two' && brief.criterion_id !== undefined) {
+    return (
+      <p data-brief="criterion_id" style={{ margin: '0 0 var(--s-3)' }}>
+        <MonoTag>{brief.criterion_id}</MonoTag>
+      </p>
+    );
+  }
+
+  return null;
 }
 
 type ClaimedActionsProps = {

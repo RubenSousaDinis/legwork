@@ -123,11 +123,11 @@ describe('claiming', () => {
     setScenario({ claim: 'AlreadyClaimed' });
     render(<TaskList />);
     await screen.findByText(TITLE);
-    const before = requests.count('GET', '/api/tasks');
+    const before = requests.count('GET', '/api/tasks/list');
     await claimFirstTask();
     expect(await screen.findByText(/claimed this task first/)).toBeTruthy();
     // The list was already wrong, so it asked again rather than waiting out the 3 s.
-    await waitFor(() => expect(requests.count('GET', '/api/tasks')).toBe(before + 1));
+    await waitFor(() => expect(requests.count('GET', '/api/tasks/list')).toBe(before + 1));
     cleanup();
 
     setScenario({ claim: 'SeededCannotClaimExternal' });

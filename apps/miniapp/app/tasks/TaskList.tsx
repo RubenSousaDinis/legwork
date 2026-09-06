@@ -10,7 +10,7 @@ import { lastKnownPosition, resolveArea } from '../../lib/area';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 
 /**
- * The worker's task list. It polls `GET /tasks` every 3 seconds because a claim is a race —
+ * The worker's task list. It polls `GET /tasks/list` every 3 seconds because a claim is a race —
  * a row that is gone needs to disappear before the worker walks to it — and it stops polling
  * the moment the tab is hidden, because a phone in a pocket has no reason to keep asking.
  */
@@ -44,6 +44,11 @@ function errorCode(thrown: unknown): string | null {
 }
 
 /**
+ * `GET /tasks/list`, not `GET /tasks`: `apps/api/app/tasks/route.ts` is POST-only so that T-16
+ * and T-17 never share a file, and the worker's board is a route of its own. The brief's §2
+ * and §5 carried the pre-wave-2 spelling; `api-contract.ts` (`listTasks`), `docs/api.md` and
+ * `apps/api/app/tasks/list/route.ts` all say `/tasks/list`, and the route on `main` wins.
+ *
  * `area` is the geohash-5 cell and nothing finer; `lat`/`lon` ride along only so the API can
  * sort nearest-first, and only when the worker already granted the permission.
  */
@@ -56,7 +61,7 @@ function tasksPath(area: string | null): string {
     params.set('lon', String(position.lon));
   }
   const query = params.toString();
-  return query.length > 0 ? `/tasks?${query}` : '/tasks';
+  return query.length > 0 ? `/tasks/list?${query}` : '/tasks/list';
 }
 
 export function TaskList() {
