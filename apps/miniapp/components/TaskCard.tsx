@@ -2,7 +2,7 @@
 
 import { DEFAULT_CLAIM_TTL_S, type TaskType } from '@legwork/shared';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { clearActiveClaim } from '../app/tasks/activeClaim';
 import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
@@ -233,17 +233,20 @@ type ClaimedActionsProps = {
  * list both read, so the next poll un-pins the card on its own.
  */
 function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProps) {
-  const [expired, setExpired] = useState(false);
-
-  // A fresh claim on the same card is a fresh clock.
-  useEffect(() => setExpired(false), [claim.claim_expires_at]);
+  // Reset during render, not in an effect: `Countdown` is a child, so its effects run first,
+  // and a claim that is already past its deadline would have its `onExpire` undone by a
+  // parent effect firing afterwards.
+  const [clock, setClock] = useState({ until: claim.claim_expires_at, expired: false });
+  if (clock.until !== claim.claim_expires_at) {
+    setClock({ until: claim.claim_expires_at, expired: false });
+  }
 
   const onExpire = useCallback(() => {
     clearActiveClaim();
-    setExpired(true);
+    setClock((current) => ({ ...current, expired: true }));
   }, []);
 
-  if (expired) {
+  if (clock.expired) {
     return (
       <p data-claim="expired" data-floor="20" style={{ margin: 0 }}>
         {CLAIM_EXPIRED}
