@@ -28,7 +28,9 @@
  * escrow pays the worker; the 15 % fee sits in `fee_units` on top and is the buyer's concern.
  *
  * The reuse and geofence checks that turn a submit into an auto-dispute live in
- * `proofChecks.ts` and land in PR2; `sweeper.ts` and `reconcile.ts` land with them.
+ * `proofChecks.ts`; the pass that pushes expirable and auto-releasable tasks forward is
+ * `sweeper.ts`, and `reconcile.ts` is the mirror it runs first. `settleIfEligible` below is
+ * that pass for one task, which is what `GET /tasks/:id` (T-19) calls on a status read.
  */
 import {
   TASK_STATE,
@@ -42,9 +44,12 @@ import {
   type TaskType,
 } from '@legwork/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { getChain } from '../chain';
 import { getDb } from '../db/client';
 import { tasks } from '../db/schema';
 import { ApiError } from '../errors';
+import { logger } from '../log';
+import { distanceM } from './geo';
 
 /** A `tasks` row, exactly as the frozen schema declares it. */
 export type TaskRow = typeof tasks.$inferSelect;
@@ -230,6 +235,82 @@ export function claimDeadlines(chainTask: ChainTask): {
   };
 }
 
+// ---------------------------------------------------------------- lazy settlement
+
+/** What a task has outrun, if anything. `null` means the deadlines are still in the future. */
+export type EligibleAction = 'expire' | 'autoRelease';
+
+/**
+ * The one predicate the sweeper, `POST /admin/sweep` and T-19's status read all share.
+ *
+ * The comparisons mirror `ITaskEscrow` exactly — `>=` for the dispute window, `>` for both
+ * expiries. Offering a settlement the contract then reverts on is worse than waiting one more
+ * second for it, so this is deliberately never the more generous of the two operators.
+ */
+export function eligibleAction(
+  row: Pick<
+    TaskRow,
+    'state' | 'postedAt' | 'claimedAt' | 'submittedAt' | 'claimTtlS' | 'submitTtlS' | 'disputeWindowS'
+  >,
+  now: bigint,
+): EligibleAction | null {
+  switch (stateName(row)) {
+    case 'Submitted':
+      if (!row.submittedAt) return null;
+      return now >= dateToSeconds(row.submittedAt) + BigInt(row.disputeWindowS) ? 'autoRelease' : null;
+    case 'Open':
+      return now > dateToSeconds(row.postedAt) + BigInt(row.claimTtlS) ? 'expire' : null;
+    case 'Claimed':
+      if (!row.claimedAt) return null;
+      return now > dateToSeconds(row.claimedAt) + BigInt(row.submitTtlS) ? 'expire' : null;
+    default:
+      return null;
+  }
+}
+
+export interface Settlement {
+  action: EligibleAction;
+  tx: string;
+}
+
+/**
+ * The sweep, for one task. A status read calls it, so a worker's money can arrive because
+ * somebody looked at the page — there is no keeper process and nothing waits on a cron.
+ *
+ * The chain is asked first and the row is mirrored from the answer, because the deadline
+ * arithmetic is only worth running against state the chain agrees with; a mirror that drifted
+ * would otherwise offer a settlement that reverts. A revert here is logged and swallowed: this
+ * is opportunistic work on somebody else's request, and it must never be the reason their
+ * request fails.
+ *
+ * (`chain.getTask` + `mirrorFromChain` is `reconcileTask` inlined. `reconcile.ts` imports this
+ * module, so importing it back would close a cycle for two lines.)
+ */
+export async function settleIfEligible(taskId: bigint): Promise<Settlement | null> {
+  const rows = await getDb().select().from(tasks).where(eq(tasks.taskId, taskId)).limit(1);
+  let row = rows[0];
+  if (!row) return null;
+
+  const chain = getChain();
+  const [now, chainTask] = await Promise.all([chain.now(), chain.getTask(taskId)]);
+  row = await mirrorFromChain(row, chainTask);
+
+  const action = eligibleAction(row, now);
+  if (!action) return null;
+
+  let tx: { hash: string };
+  try {
+    tx = action === 'autoRelease' ? await chain.autoRelease(taskId) : await chain.expire(taskId);
+  } catch (err) {
+    // Two readers racing the same deadline is the normal case, not an error worth surfacing.
+    logger.warn({ task_id: taskId.toString(), action, revert: revertName(err) }, 'settle_skipped');
+    return null;
+  }
+
+  await mirrorFromChain(row, await chain.getTask(taskId));
+  return { action, tx: tx.hash };
+}
+
 // ---------------------------------------------------------------- the worker's view
 
 export interface BriefPlace {
@@ -333,22 +414,6 @@ export function titleOf(row: Pick<TaskRow, 'taskType' | 'specJson'>): string {
 
 // ---------------------------------------------------------------- distance
 
-const EARTH_RADIUS_M = 6_371_008.8;
-const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
-
-/** Haversine, in metres. Used for `distance_m` and for the submit-time geofence. */
-export function haversineM(
-  a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
-): number {
-  const dLat = toRadians(b.lat - a.lat);
-  const dLon = toRadians(b.lon - a.lon);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * Math.sin(dLon / 2) ** 2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(s)));
-}
-
 /** The exact coordinate of a task's place. Private: it is used here and never serialised. */
 export function taskCoordinate(
   row: Pick<TaskRow, 'exactLat' | 'exactLon'>,
@@ -391,7 +456,7 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
   const own = options.ownClaim === true;
   const coordinate = taskCoordinate(row);
   const distance =
-    options.from && coordinate ? Math.round(haversineM(options.from, coordinate)) : undefined;
+    options.from && coordinate ? Math.round(distanceM(options.from, coordinate)) : undefined;
 
   let claimExpiresInS: number | undefined;
   if (own && row.claimedAt) {
