@@ -1,0 +1,13 @@
+{
+  "a": {
+    "kind": "image",
+    "url": "https://evidence.legwork.example/leiria/hours-sign-left.jpg",
+    "sha256": "9f1c3a7d5e2b4806a1c9d7e3f5b204869f1c3a7d5e2b4806a1c9d7e3f5b20486"
+  },
+  "b": {
+    "kind": "image",
+    "url": "https://evidence.legwork.example/leiria/hours-sign-right.jpg",
+    "sha256": "3b6d9f0247ace13579bdf02468ace1353b6d9f0247ace13579bdf02468ace135"
+  },
+  "criterion_id": "more_legible"
+}

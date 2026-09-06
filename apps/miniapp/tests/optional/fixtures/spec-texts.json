@@ -1,0 +1,13 @@
+{
+  "a": {
+    "kind": "text",
+    "text": "Padaria Central, Rua de Alcobaca 12, Leiria. Opening hours painted on the door: Monday to Friday from eight in the morning until seven in the evening, Saturday until one.",
+    "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
+  },
+  "b": {
+    "kind": "text",
+    "text": "Padaria Central, Rua de Alcobaca 12, Leiria. Printed card taped inside the window: open every weekday from eight until eight, Saturday mornings only, closed on Sunday and public holidays.",
+    "sha256": "0c1d2e3f405162738495a6b7c8d9eaf00c1d2e3f405162738495a6b7c8d9eaf0"
+  },
+  "criterion_id": "which_is_newer"
+}
