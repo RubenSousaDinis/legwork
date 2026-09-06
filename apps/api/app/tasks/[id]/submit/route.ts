@@ -1,16 +1,22 @@
 /**
  * `POST /tasks/:id/submit` — the worker hands in the proof, the relayer anchors it.
  *
- * PR1 is the plain path: schema, ownership of the proof row, `submitFor`, mirror, observation.
- * PR2 adds the two checks that make this API the default reviewer while the buyer's agent is
- * asleep — content-hash reuse for the same place and type, and a ~150 m geofence — and each of
- * them is **submit then dispute**, both onchain. Neither is ever a 4xx: refusing to submit
- * would leave the worker with no record that they went, and a dispute the buyer can see is
- * more honest than a silent drop.
+ * The plain path is: schema, ownership of the proof row, `submitFor`, mirror, observation.
+ * On top of it sit the two checks that make this API the default reviewer while the buyer's
+ * agent is asleep — content-hash reuse for the same place and type, and a ~150 m geofence
+ * (`proofChecks.ts`). Each is **submit then dispute**, both onchain, and neither is ever a 4xx:
+ * refusing to submit would leave the worker with no record that they went, and a dispute the
+ * buyer can see is more honest than a silent drop.
+ *
+ * The GPS downgrade is the third branch and the one that is easiest to get wrong. A phone with
+ * no fix is not evidence of anything, so the worker taps to confirm they are at the place, the
+ * geofence is skipped rather than failed, and the observation is written at 0.6 instead of 0.9.
+ * Accepted and labelled — never accepted and dressed up as proof.
  */
 import { getAddress, isAddress, keccak256, toBytes } from 'viem';
 import {
   CompareTwoProof,
+  GEOFENCE_M,
   TASK_STATE,
   CallConfirmProof,
   PhotoOfProof,
@@ -19,13 +25,24 @@ import {
   type CallTemplateId,
   type TaskType,
 } from '@legwork/shared';
+import { randomUUID } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { route, preflight, pathParam } from '@/src/http/route';
 import { ApiError } from '@/src/errors';
 import { getChain } from '@/src/chain';
 import { getDb } from '@/src/db/client';
-import { observations, proofs, tasks } from '@/src/db/schema';
+import { observations, proofs, screeningLog, tasks } from '@/src/db/schema';
+import { logger } from '@/src/log';
 import { requireWorkerSession } from '@/src/session';
+import {
+  GEOFENCE_RULE_ID,
+  REUSE_RULE_ID,
+  checkGeofence,
+  checkReuse,
+  type GeofenceResult,
+  type ProofLocation,
+  type ReuseResult,
+} from '@/src/services/proofChecks';
 import {
   loadTask,
   mirrorFromChain,
@@ -49,6 +66,9 @@ const PHOTO_TYPES = new Set<TaskType>(['verify-open', 'photo-of']);
 /** 10-schemas §8. `compare-two` is a judgement rather than an observation; see below. */
 const CONFIDENCE = { full: 0.9, gpsDowngraded: 0.6, selfReported: 0.5, compareTwo: 0.8 } as const;
 
+/** What an auto-disputed observation is worth. Kept, labelled, and trusted by nothing. */
+const DISPUTED_CONFIDENCE = 0.1;
+
 /** Which `CLAIM_TYPES` member a call-confirm template answers. */
 const CLAIM_TYPE_BY_TEMPLATE = {
   open_now: 'open_now',
@@ -70,11 +90,12 @@ interface ParsedProof {
   claimType?: string;
   confidence: number;
   observedAt: Date;
+  /** Where the phone said it was when it captured, or `null` for an errand with no photo. */
+  location: ProofLocation | null;
 }
 
-const badProofHash = (): never => {
-  throw ApiError.of('invalid_request', { field: 'proofHash', reason: 'unknown proof for this worker' });
-};
+const unknownProof = (): ApiError =>
+  ApiError.of('invalid_request', { field: 'proofHash', reason: 'unknown proof for this worker' });
 
 /**
  * Parses the body with the per-type proof schema and settles what the proof hash is.
@@ -101,11 +122,12 @@ async function parseProof(row: TaskRow, caller: string, raw: unknown): Promise<P
     // The uploaded file has to belong to the worker handing it in. Without this, one worker's
     // proof hash is another worker's free submission.
     const owned = await getDb()
-      .select({ hash: proofs.hash })
+      .select()
       .from(proofs)
       .where(and(eq(proofs.hash, proofHash), sql`lower(${proofs.worker}) = lower(${caller})`))
       .limit(1);
-    if (!owned[0]) badProofHash();
+    const uploaded = owned[0];
+    if (!uploaded) throw unknownProof();
 
     return {
       proofHash: proofHash as `0x${string}`,
@@ -117,6 +139,13 @@ async function parseProof(row: TaskRow, caller: string, raw: unknown): Promise<P
       // radius — we do not prove it. A worker whose phone had no fix is accepted and labelled.
       confidence: proof.gps_unavailable ? CONFIDENCE.gpsDowngraded : CONFIDENCE.full,
       observedAt: new Date(proof.captured_at),
+      location: {
+        exactLat: uploaded.exactLat,
+        exactLon: uploaded.exactLon,
+        // Either side saying "no fix" is a downgrade: the row is what `/proofs` recorded at
+        // upload, the body is what the worker is stating now, and they should agree.
+        gpsUnavailable: uploaded.gpsUnavailable || proof.gps_unavailable,
+      },
     };
   }
 
@@ -130,6 +159,8 @@ async function parseProof(row: TaskRow, caller: string, raw: unknown): Promise<P
       claimType: CLAIM_TYPE_BY_TEMPLATE[proof.template_id],
       confidence: CONFIDENCE.selfReported,
       observedAt: new Date(proof.called_at),
+      // A phone call has no place to be far from.
+      location: null,
     };
   }
 
@@ -141,6 +172,7 @@ async function parseProof(row: TaskRow, caller: string, raw: unknown): Promise<P
     evidenceHash: null,
     confidence: CONFIDENCE.compareTwo,
     observedAt: new Date(),
+    location: null,
   };
 }
 
@@ -179,11 +211,22 @@ export const POST = route(async (req, ctx) => {
     throw err;
   }
 
+  // The checks read the database as it stands *before* this submission is mirrored onto it, so
+  // neither of them can match the task against itself. Both exclude this task id anyway.
+  const reuse = await checkReuse({ proofHash: proof.proofHash, task: row });
+  const geofence = checkGeofence({ proof: proof.location, task: row });
+  const decision = autoDisputeFor(reuse, geofence);
+
   const settled = await chain.getTask(taskId);
-  await mirrorFromChain(row, settled, { submit: tx.hash });
+  const mirrored = await mirrorFromChain(row, settled, { submit: tx.hash });
   await getDb()
     .update(tasks)
-    .set({ answer: proof.answer, note: proof.note ?? null, updatedAt: new Date() })
+    .set({
+      answer: proof.answer,
+      note: proof.note ?? null,
+      ...(decision ? { autoDisputeReason: decision.reason } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(tasks.taskId, taskId));
 
   const placeId = placeIdOf(row);
@@ -194,10 +237,84 @@ export const POST = route(async (req, ctx) => {
       .where(eq(proofs.hash, proof.evidenceHash));
   }
 
-  await recordObservation(row, session.nullifier, proof, await chain.isSeeded(caller));
+  if (!decision) {
+    await recordObservation(row, session.nullifier, proof, await chain.isSeeded(caller));
+    return Response.json({ tx: tx.hash, status: 'submitted' });
+  }
 
-  return Response.json({ tx: tx.hash, status: 'submitted' });
+  // Submit *then* dispute, both onchain. Never a 4xx and never a silent drop: refusing the
+  // submission would leave the worker with no record that they went, and the buyer with
+  // nothing to look at. The log line names the rule and the spec hash, never the spec.
+  let disputeTx: string | undefined;
+  try {
+    disputeTx = (await chain.dispute(taskId)).hash;
+    await mirrorFromChain(mirrored, await chain.getTask(taskId));
+  } catch (err) {
+    // The window is open the moment after a submit, so this is close to unreachable — but a
+    // dispute that did not land is not one this route may claim happened.
+    logger.warn(
+      { task_id: taskId.toString(), rule_id: decision.ruleId, revert: revertName(err) },
+      'auto_dispute_failed',
+    );
+  }
+
+  // An auto-dispute is an outcome, not a refusal: `class` stays null and `marked` stays false.
+  // Nothing here marks, and `markIfIdentified` is not imported anywhere in this file.
+  await getDb().insert(screeningLog).values({
+    id: randomUUID(),
+    taskType: taskTypeOf(row.taskType),
+    class: null,
+    reason: decision.reason_text,
+    ruleId: decision.ruleId,
+    specHash: row.specHash,
+    marked: false,
+  });
+
+  await recordObservation(
+    row,
+    session.nullifier,
+    { ...proof, confidence: DISPUTED_CONFIDENCE },
+    await chain.isSeeded(caller),
+  );
+
+  if (!disputeTx) return Response.json({ tx: tx.hash, status: 'submitted' });
+  return Response.json({
+    tx: tx.hash,
+    status: 'disputed',
+    auto_dispute_reason: decision.reason,
+    dispute_tx: disputeTx,
+  });
 });
+
+interface AutoDispute {
+  reason: 'proof_reuse' | 'geofence';
+  ruleId: string;
+  /** The `screening_log` line. Says what was seen, never what the spec said. */
+  reason_text: string;
+}
+
+/**
+ * Reuse is checked first because it is the stronger statement: the same bytes handed in twice
+ * for the same place and type is a replay whatever the coordinate says, and one auto-dispute
+ * per submission is enough to make the point.
+ */
+function autoDisputeFor(reuse: ReuseResult, geofence: GeofenceResult): AutoDispute | undefined {
+  if (reuse.hit) {
+    return {
+      reason: 'proof_reuse',
+      ruleId: REUSE_RULE_ID,
+      reason_text: `proof content hash seen before on task ${reuse.other_task_id} for this place and type`,
+    };
+  }
+  if ('hit' in geofence && geofence.hit) {
+    return {
+      reason: 'geofence',
+      ruleId: GEOFENCE_RULE_ID,
+      reason_text: `capture ${geofence.distance_m} m from the place, outside the ${GEOFENCE_M} m fence`,
+    };
+  }
+  return undefined;
+}
 
 /**
  * One observation per task.
