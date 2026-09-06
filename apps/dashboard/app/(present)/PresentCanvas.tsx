@@ -27,12 +27,15 @@ export type HideCard = 'agent' | 'supply' | 'screening' | 'row2' | 'row3';
 const HIDE_ORDER: readonly HideCard[] = ['agent', 'supply', 'screening', 'row2', 'row3'];
 
 /**
- * How many screening lines present mode shows. The right column carries the log and
- * two feed rows in 932 design px, and the demo refusal alone wraps to four lines at
- * its 32 px floor — so the log shows the refusals and stops there rather than
- * overflowing its card, which is what T-39 measured on the Day-5 gate.
+ * How many screening lines present mode shows.
+ *
+ * One. The right column carries the log and two feed rows in 984 design px, and the
+ * demo refusal's class + reason alone wraps to four lines at its 32-px floor — 224 px
+ * for one entry. A second entry does not fit, and T-39 measured what happens when it
+ * is asked to: the log ran 771 px past its card and the lines below it never
+ * rendered. The one line shown is the marked refusal, which is the narrated one.
  */
-const PRESENT_SCREENING_LINES = 2;
+const PRESENT_SCREENING_LINES = 1;
 
 export interface PresentCanvasProps {
   data: DashboardData;
