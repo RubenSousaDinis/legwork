@@ -143,7 +143,7 @@ describe('compare-two', () => {
     expect(amount.textContent).toBe('Released · 3.00 USDC');
     expect(card.textContent).toContain('testnet USDC — not spendable');
     expect(card.textContent).toContain('+1 completed');
-    // Never a deducted figure: no 2.55, and nothing else beginning `2.` either.
+    // Never a deducted figure: nothing on the receipt begins `2.` at all.
     expect(card.textContent).not.toMatch(/\b2\.\d/);
     expect(localStorage.getItem(ACTIVE_CLAIM_KEY)).toBeNull();
   });
