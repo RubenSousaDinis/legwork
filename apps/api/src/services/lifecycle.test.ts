@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GET as listRoute } from '../../app/tasks/list/route';
 import { POST as claimRoute } from '../../app/tasks/[id]/claim/route';
 import { POST as releaseClaimRoute } from '../../app/tasks/[id]/release-claim/route';
+import { GET as specRoute } from '../../app/tasks/[id]/spec/route';
 import { POST as submitRoute } from '../../app/tasks/[id]/submit/route';
 import { POST as reportRoute } from '../../app/tasks/[id]/report/route';
 import { GET as earningsRoute } from '../../app/me/earnings/route';
@@ -469,6 +470,50 @@ describe('POST /tasks/:id/release-claim', () => {
       headers: auth(token),
     });
     expect(res.status).toBe(409);
+  });
+});
+
+// ---------------------------------------------------------------- GET /tasks/:id/spec
+
+describe('GET /tasks/:id/spec', () => {
+  it('specToClaimantOnly: the holder reads the spec minus the buyer claims', async () => {
+    const token = await sessionFor(WORKER);
+    const taskId = await postTask('call-confirm');
+    await fake.claimFor(taskId, WORKER);
+    await syncRow(taskId);
+
+    const res = await call(specRoute, { params: { id: taskId.toString() }, headers: auth(token) });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { task_type: string; spec: Record<string, unknown> };
+    expect(body.task_type).toBe('call-confirm');
+    // What the errand needs is there: the template, its slots, the phone, the place.
+    expect(body.spec.template_id).toBe(SPECS['call-confirm'].template_id);
+    expect(body.spec.phone).toBe(SPECS['call-confirm'].phone);
+    expect(body.spec.place).toEqual(SPECS['call-confirm'].place);
+    // What the buyer claims the answer is never reaches the worker.
+    for (const banned of ['claimed_open', 'claimed_hours', 'claimed_state', 'source']) {
+      expect(body.spec).not.toHaveProperty(banned);
+    }
+    expect(JSON.stringify(body)).not.toContain('claimed_');
+  });
+
+  it('403s another worker, an unclaimed task, and 401s no session', async () => {
+    const holder = await sessionFor(WORKER);
+    const other = await sessionFor(OTHER_WORKER, '1002');
+    const taskId = await postTask('verify-open');
+
+    // Nobody holds it yet: not even the worker who will.
+    expect((await call(specRoute, { params: { id: taskId.toString() }, headers: auth(holder) })).status).toBe(403);
+
+    await fake.claimFor(taskId, WORKER);
+    await syncRow(taskId);
+
+    const stranger = await call(specRoute, { params: { id: taskId.toString() }, headers: auth(other) });
+    expect(stranger.status).toBe(403);
+    expect(((await stranger.json()) as { reason?: string }).reason).toBe('not_claimant');
+
+    expect((await call(specRoute, { params: { id: taskId.toString() } })).status).toBe(401);
+    expect((await call(specRoute, { params: { id: '999999' }, headers: auth(holder) })).status).toBe(404);
   });
 });
 
