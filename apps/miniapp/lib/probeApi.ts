@@ -1,48 +1,36 @@
-import { orbLegacy, selfieCheckLegacy, type Preset, type RpContext } from '@worldcoin/idkit-core';
-import { apiFetch } from './api';
-import { WORLD_ACTION, type CredentialLevel } from './env';
+/**
+ * The probe's readout types.
+ *
+ * T-24 moved `pickPreset`, `requestRpContext` and `verifyProof` to `lib/worldid.ts`; they are
+ * re-exported here so `app/probe/**` — T-05's, and out of this task's scope — keeps compiling
+ * against the import path it was written with. The brief asks for this file to be deleted; the
+ * six symbols below are probe-only and have no home in `lib/worldid.ts`, and every remaining
+ * importer (`app/probe/page.tsx`, `app/probe/ProbeReadouts.tsx` and four `tests/*` files) sits
+ * outside this task's `owned_paths`. See the PR body — the deletion is the lead's call.
+ */
 
-/** `POST /idkit/request` — the wrapper is the one in packages/shared/src/api-contract.ts. */
-export type RpContextResponse = { rp_context: RpContext };
+import type { CredentialLevel } from './env';
+
+export {
+  pickPreset,
+  requestRpContext,
+  verifyProof,
+  type RpContextResponse,
+} from './worldid';
+
+import type { VerifyResponse as WorldIdVerifyResponse } from './worldid';
 
 /**
- * `POST /idkit/verify`. `world_response` is the probe-only extra the temporary route adds so
- * the operator can read World's raw payload shape; it goes away with the route in T-24.
+ * `POST /idkit/verify`. `world_response` is the probe-only extra the temporary route added so
+ * the operator could read World's raw payload shape; the real API does not send it, so it is
+ * optional here.
  */
-export type VerifyResponse = {
-  verified: true;
-  nullifier: string;
-  level: string;
-  world_response?: unknown;
-};
+export type VerifyResponse = WorldIdVerifyResponse & { world_response?: unknown };
 
 export type PresetName = 'selfieCheckLegacy' | 'orbLegacy';
 
-/**
- * Selfie Check when the Portal granted access, Orb otherwise — and Orb whenever the level is
- * unset, which is the §2 default. The IDKit signal is not part of our contract, so it is ''.
- */
-export function pickPreset(level: CredentialLevel | undefined): Preset {
-  return level === 'selfie' ? selfieCheckLegacy({ signal: '' }) : orbLegacy({ signal: '' });
-}
-
 export function presetName(level: CredentialLevel | undefined): PresetName {
   return level === 'selfie' ? 'selfieCheckLegacy' : 'orbLegacy';
-}
-
-export function requestRpContext(action: string = WORLD_ACTION): Promise<RpContextResponse> {
-  return apiFetch<RpContextResponse>('/idkit/request', {
-    method: 'POST',
-    body: JSON.stringify({ action }),
-  });
-}
-
-/** The IDKit widget result is forwarded as-is — the same object, nothing added or re-shaped. */
-export function verifyProof(result: unknown): Promise<VerifyResponse> {
-  return apiFetch<VerifyResponse>('/idkit/verify', {
-    method: 'POST',
-    body: JSON.stringify(result),
-  });
 }
 
 // ------------------------------------------------------------------ readouts
