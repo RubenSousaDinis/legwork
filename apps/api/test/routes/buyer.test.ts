@@ -18,12 +18,10 @@ import { resetRateLimitForTests } from '../../src/http/rateLimit';
 import { proofs, tasks } from '../../src/db/schema';
 import { hashBuyerToken } from '../../src/services/buyerToken';
 import {
-  deps,
-  eligibleAction,
-  parseWait,
-  proofDeps,
-  type TaskRow,
-} from '../../src/services/statusBus';
+  MemoryProofStore, imageKey, rawKey, setProofStoreForTests,
+} from '../../src/services/proofStore';
+import { verifyProofUrl } from '../../src/services/signedUrl';
+import { deps, eligibleAction, parseWait, type TaskRow } from '../../src/services/statusBus';
 import { call } from '../app';
 import { createTestDb, type TestDb } from '../db';
 
@@ -105,8 +103,10 @@ const hashOf = (n: number): `0x${string}` => `0x${n.toString(16).padStart(64, '0
 
 const DASHBOARD = 'https://dashboard.legwork.test';
 const BUYER_TOKEN = 'a-buyer-token-nobody-else-holds';
-const PROOF_BYTES = toBytes('proof bytes for task one');
+const PROOF_BYTES = Buffer.from(toBytes('proof bytes for task one'));
 const PROOF_HASH = keccak256(PROOF_BYTES);
+/** The re-encoded copy a URL resolves to; its bytes differ from the anchored original. */
+const SERVED_BYTES = Buffer.from(toBytes('the stripped copy a signed URL serves'));
 
 const VERIFY_OPEN_BIT = 1;
 const AMOUNT_UNITS = 3_000_000n;
@@ -117,6 +117,7 @@ const SUBMIT_TTL_S = 3600;
 
 let fixture: TestDb;
 let chain: RecordingChain;
+let proofStore: MemoryProofStore;
 
 type TaskSeed = Partial<typeof tasks.$inferInsert>;
 
@@ -155,7 +156,8 @@ const status = (url: string, headers: Record<string, string> = {}) =>
 beforeEach(async () => {
   resetConfigForTests({ DASHBOARD_URL: DASHBOARD, API_BASE_URL: 'https://api.legwork.test' });
   resetRateLimitForTests();
-  proofDeps.store.clear();
+  proofStore = new MemoryProofStore();
+  setProofStoreForTests(proofStore);
   chain = new RecordingChain();
   setChainForTests(chain.adapter);
   fixture = await createTestDb();
@@ -163,6 +165,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   setChainForTests(undefined);
+  setProofStoreForTests(undefined);
   await fixture.close();
 });
 
@@ -285,7 +288,10 @@ describe('the buyer verbs', () => {
       worker: `0x${'c1'.repeat(20)}`,
       taskId: 1n,
     });
-    proofDeps.store.set(PROOF_HASH, PROOF_BYTES);
+    // The retained original is what `rehash` checks the anchored hash against; the served
+    // copy is a different object and deliberately a different number.
+    await proofStore.put(rawKey(PROOF_HASH), PROOF_BYTES, 'application/octet-stream');
+    await proofStore.put(imageKey(PROOF_HASH), SERVED_BYTES, 'image/jpeg');
 
     const post = (headers: Record<string, string> = {}) =>
       call(approve, { method: 'POST', headers, params: { id: '1' } });
@@ -308,12 +314,15 @@ describe('the buyer verbs', () => {
     const revealedBody = (await revealed.json()) as {
       proof: { url: string; hash_ok: boolean };
     };
-    const checked = proofDeps.verifyProofUrl(revealedBody.proof.url);
-    expect(checked.ok).toBe(true);
-    expect(checked.hash).toBe(PROOF_HASH);
-    expect(checked.expiresAtS).toBe(
-      Math.floor(submittedAt.getTime() / 1000) + DISPUTE_WINDOW_S + 3600,
-    );
+    const url = new URL(revealedBody.proof.url, 'http://localhost');
+    const exp = url.searchParams.get('exp');
+    const sig = url.searchParams.get('sig');
+    const nowS = Math.floor(Date.now() / 1000);
+    expect(url.pathname).toBe(`/proofs/${PROOF_HASH}`);
+    expect(verifyProofUrl(PROOF_HASH, exp, sig, nowS)).toBe(true);
+    expect(Number(exp)).toBe(Math.floor(submittedAt.getTime() / 1000) + DISPUTE_WINDOW_S + 3600);
+    // One second past the deadline the same signature is refused.
+    expect(verifyProofUrl(PROOF_HASH, exp, sig, Number(exp))).toBe(false);
     expect(revealedBody.proof.hash_ok).toBe(true);
 
     // --- the right token settles it ---

@@ -17,7 +17,9 @@ import { resetConfigForTests } from '../../src/config';
 import { resetRateLimitForTests } from '../../src/http/rateLimit';
 import { proofs, screeningLog, tasks } from '../../src/db/schema';
 import { hashBuyerToken } from '../../src/services/buyerToken';
-import { proofDeps } from '../../src/services/statusBus';
+import {
+  MemoryProofStore, imageKey, rawKey, setProofStoreForTests,
+} from '../../src/services/proofStore';
 import { call } from '../app';
 import { createTestDb, type TestDb } from '../db';
 
@@ -29,22 +31,27 @@ const AGENT_ID = '8004-1207';
 const EXACT_LAT = '39.74362';
 const EXACT_LON = '-8.80713';
 
-const PROOF_BYTES = toBytes('the photo bytes we would serve');
+const PROOF_BYTES = Buffer.from(toBytes('the photo bytes as they were uploaded'));
 const PROOF_HASH = keccak256(PROOF_BYTES);
+/** The re-encoded copy a URL resolves to; no public surface ever names it. */
+const SERVED_BYTES = Buffer.from(toBytes('the stripped copy a signed URL serves'));
 const WORKER = `0x${'c1'.repeat(20)}`;
 
 const hashOf = (n: number): string => `0x${n.toString(16).padStart(64, '0')}`;
 
 let fixture: TestDb;
+let proofStore: MemoryProofStore;
 
 beforeEach(async () => {
   resetConfigForTests({ DASHBOARD_URL: 'https://dashboard.legwork.test' });
   resetRateLimitForTests();
-  proofDeps.store.clear();
+  proofStore = new MemoryProofStore();
+  setProofStoreForTests(proofStore);
   fixture = await createTestDb();
 });
 
 afterEach(async () => {
+  setProofStoreForTests(undefined);
   await fixture.close();
 });
 
@@ -95,7 +102,8 @@ async function seed(): Promise<void> {
     worker: WORKER,
     taskId: 1n,
   });
-  proofDeps.store.set(PROOF_HASH, PROOF_BYTES);
+  await proofStore.put(rawKey(PROOF_HASH), PROOF_BYTES, 'application/octet-stream');
+  await proofStore.put(imageKey(PROOF_HASH), SERVED_BYTES, 'image/jpeg');
 
   await fixture.db.insert(screeningLog).values([
     {

@@ -10,9 +10,10 @@
  * proof never carries a URL.
  */
 import { getConfig } from '@/src/config';
+import { round100m } from '@/src/services/geo';
+import { rehash } from '@/src/services/proofStore';
 import {
   answerOf,
-  proofDeps,
   statusOf,
   taskTypeName,
   txSetOf,
@@ -81,14 +82,11 @@ export async function publicTaskView(
       hash: row.proofHash,
       // Re-hashed here, at response time, on every request. A `hash_ok` read from a column
       // would be a claim about a check somebody ran once.
-      hash_ok: await proofDeps.rehash(row.proofHash),
+      hash_ok: (await rehash(row.proofHash)).hash_ok,
       captured_at: proofRow.capturedAt.toISOString(),
       ...(hasGps
         ? {
-            coordinate_rounded: proofDeps.round100m(
-              Number(proofRow.exactLat),
-              Number(proofRow.exactLon),
-            ),
+            coordinate_rounded: round100m(Number(proofRow.exactLat), Number(proofRow.exactLon)),
           }
         : {}),
       gps_unavailable: proofRow.gpsUnavailable,

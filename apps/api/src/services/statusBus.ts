@@ -19,12 +19,10 @@
  * Vercel Hobby kills a function at 60 seconds, so the long poll waits at most 50 and says
  * `changed: false, poll_after_seconds: 1` when it gives up. It never pretends the row moved.
  */
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { keccak256 } from 'viem';
 import {
   LONGPOLL_MAX_S,
-  PUBLIC_COORD_DECIMALS,
   bitmaskToTaskTypes,
   fromUsdcUnits,
   wrapWorkerAnswer,
@@ -34,6 +32,9 @@ import {
 import { getConfig } from '../config';
 import type { Db } from '../db/client';
 import { proofs, tasks } from '../db/schema';
+import { round100m } from './geo';
+import { rehash } from './proofStore';
+import { signProofUrl } from './signedUrl';
 
 export type TaskRow = typeof tasks.$inferSelect;
 export type ProofRow = typeof proofs.$inferSelect;
@@ -44,79 +45,19 @@ export const TERMINAL_STATES = ['released', 'refunded', 'resolved'] as const;
 /** The four states in which a worker has already answered, so the answer may be shown. */
 const ANSWERABLE_STATES = ['submitted', 'released', 'disputed', 'resolved'] as const;
 
-// --------------------------------------------------------------------- stubs
+// ---------------------------------------------------------------------- stub
 
 /**
  * TODO(T-17): replace with `settleIfEligible` from `src/services/lifecycle.ts`.
  *
  * The lazy settlement path. `GET /tasks/:id` calls it whenever `eligibleAction` says the
  * task has outrun a deadline, so a status read is what makes an auto-release happen without
- * a cron. Until T-17 merges this returns `null` and the route behaves exactly as it will
- * afterwards, minus the chain call.
+ * a cron. T-17 has landed `lifecycle.ts` and `sweeper.ts` but exports no `settleIfEligible`
+ * yet, so this still returns `null` and the route behaves exactly as it will afterwards,
+ * minus the chain call.
  */
 export const lifecycle = {
   settleIfEligible: async (_id: bigint): Promise<null> => null,
-};
-
-/**
- * TODO(T-18): replace with `rehash` from `src/services/proofStore.ts`, `signProofUrl` from
- * `src/services/signedUrl.ts` and `round100m` from `src/services/geo.ts`.
- *
- * T-18 owns the proof store, the URL signing secret and the rounding helper; none of those
- * three modules exists on `main` yet, and none of them is mine to create. What is here is a
- * seam of the same shape, marked for deletion, so the buyer and public views can be written
- * and tested now and the swap is three imports later. `store` is the in-memory stand-in for
- * `MemoryProofStore`.
- */
-export const proofDeps = {
-  store: new Map<string, Uint8Array>(),
-
-  /**
-   * `hash_ok`: re-hash the bytes we would serve and compare them with the hash the chain
-   * anchored. Computed at response time on every request and never written back to a column —
-   * a `hash_ok` cached as `true` is a claim about the past, not a check.
-   *
-   * `task_status` and the proof card re-hash the served file and show "hash matches onchain ✓" —
-   * an anchor nobody checks is decoration.
-   */
-  async rehash(hash: string): Promise<boolean> {
-    const bytes = proofDeps.store.get(hash);
-    if (!bytes) return false;
-    const actual = Buffer.from(keccak256(bytes).slice(2), 'hex');
-    const expected = Buffer.from(hash.replace(/^0x/, ''), 'hex');
-    if (actual.length !== expected.length) return false;
-    return timingSafeEqual(actual, expected);
-  },
-
-  /** A signed, expiring URL into the private bucket. Only a valid buyer token gets one. */
-  signProofUrl(hash: string, expiresAtS: number): string {
-    const base = getConfig().API_BASE_URL ?? 'http://localhost:3001';
-    const mac = createHmac('sha256', getConfig().PROOF_URL_SECRET)
-      .update(`${hash}:${expiresAtS}`, 'utf8')
-      .digest('hex');
-    return `${base}/proofs/${hash}?exp=${expiresAtS}&sig=${mac}`;
-  },
-
-  /** The verifier side of `signProofUrl`; the buyer test asserts the URL it was handed. */
-  verifyProofUrl(url: string): { ok: boolean; hash: string; expiresAtS: number } {
-    const parsed = new URL(url);
-    const hash = parsed.pathname.split('/').pop() ?? '';
-    const expiresAtS = Number(parsed.searchParams.get('exp'));
-    const presented = parsed.searchParams.get('sig') ?? '';
-    const expected = createHmac('sha256', getConfig().PROOF_URL_SECRET)
-      .update(`${hash}:${expiresAtS}`, 'utf8')
-      .digest('hex');
-    const ok =
-      presented.length === expected.length &&
-      timingSafeEqual(Buffer.from(presented, 'hex'), Buffer.from(expected, 'hex'));
-    return { ok, hash, expiresAtS };
-  },
-
-  /** Three decimals, about 100 metres. The exact coordinate never leaves the private record. */
-  round100m(lat: number, lon: number): { lat: number; lon: number } {
-    const factor = 10 ** PUBLIC_COORD_DECIMALS;
-    return { lat: Math.round(lat * factor) / factor, lon: Math.round(lon * factor) / factor };
-  },
 };
 
 /** How long after the dispute window a buyer's proof URL stays valid: one hour. */
@@ -372,7 +313,9 @@ export function answerOf(row: TaskRow): WorkerAnswer | undefined {
  * The proof card, re-hashed on every request.
  *
  * `url` appears only under `reveal` — a valid buyer token — and expires one hour after the
- * dispute window closes, which is the last moment the buyer could still act on it.
+ * dispute window closes, which is the last moment the buyer could still act on it. It points
+ * at the stripped copy, never at the retained original: `rehash` reads the original so the
+ * anchored hash can be checked, and no route serves it.
  */
 export async function proofViewOf(
   row: TaskRow,
@@ -387,11 +330,17 @@ export async function proofViewOf(
 
   return {
     hash: row.proofHash,
-    hash_ok: await proofDeps.rehash(row.proofHash),
-    ...(options.reveal ? { url: proofDeps.signProofUrl(row.proofHash, expiresAtS) } : {}),
+    // `hash_ok`: T-18 re-hashes the retained original at request time and compares it with
+    // the hash the chain anchored. Computed on every request and never written back to a
+    // column — a `hash_ok` cached as `true` is a claim about the past, not a check.
+    //
+    // `task_status` and the proof card re-hash the served file and show "hash matches onchain ✓" —
+    // an anchor nobody checks is decoration.
+    hash_ok: (await rehash(row.proofHash)).hash_ok,
+    ...(options.reveal ? { url: signProofUrl(row.proofHash, expiresAtS) } : {}),
     captured_at: proofRow.capturedAt.toISOString(),
     ...(hasGps
-      ? { coordinate_rounded: proofDeps.round100m(Number(proofRow.exactLat), Number(proofRow.exactLon)) }
+      ? { coordinate_rounded: round100m(Number(proofRow.exactLat), Number(proofRow.exactLon)) }
       : {}),
     gps_unavailable: proofRow.gpsUnavailable,
   };
