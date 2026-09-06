@@ -8,7 +8,7 @@ import {
   type RemainingBudget,
   type RequirePaymentResult,
   type SettleResult,
-} from '../gateway.js';
+} from '../gateway';
 
 const NOT_IMPLEMENTED = 'direct funding not implemented — T-16b';
 

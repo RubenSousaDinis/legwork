@@ -8,7 +8,7 @@ import type {
   SupportedResponse,
   VerifyResponse,
 } from '@x402/core/types';
-import { readAuthorization } from './paths.js';
+import { readAuthorization } from './paths';
 
 const DEFAULT_NETWORK: Network = 'eip155:84532';
 

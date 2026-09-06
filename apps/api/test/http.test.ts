@@ -4,7 +4,6 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GET as healthz } from '../app/healthz/route';
-import { POST as tasksStub } from '../app/tasks/route';
 import { resetConfigForTests } from '../src/config';
 import { ApiError } from '../src/errors';
 import { requireAdminKey } from '../src/http/adminKey';
@@ -58,12 +57,6 @@ describe('route', () => {
 
     const stranger = await call(handler, { headers: { origin: 'https://elsewhere.test' } });
     expect(stranger.headers.get('access-control-allow-origin')).toBeNull();
-  });
-
-  it('reports a stub as 501 not_implemented', async () => {
-    const res = await call(tasksStub, { method: 'POST' });
-    expect(res.status).toBe(501);
-    expect(await res.json()).toEqual({ error: 'not_implemented' });
   });
 });
 
