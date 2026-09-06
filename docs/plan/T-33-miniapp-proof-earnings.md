@@ -11,6 +11,7 @@ owned_paths:
   - apps/miniapp/app/proof/**
   - apps/miniapp/app/earnings/**
   - apps/miniapp/lib/gps.ts
+  - apps/miniapp/tests/proof/**
 labels: [area:miniapp, wave:3, size:M, agent:cloud]
 branch: t-33/miniapp-proof-earnings
 ---
