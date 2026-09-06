@@ -152,6 +152,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.1
+      '@x402/core':
+        specifier: 'catalog:'
+        version: 2.25.0
+      '@x402/evm':
+        specifier: 'catalog:'
+        version: 2.25.0(typescript@5.9.3)
+      '@x402/fetch':
+        specifier: 'catalog:'
+        version: 2.25.0
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
@@ -167,6 +176,9 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.69.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      viem:
+        specifier: 'catalog:'
+        version: 2.56.3(typescript@5.9.3)(zod@4.5.4)
       vitest:
         specifier: 'catalog:'
         version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0)(lightningcss@1.32.0)(msw@2.15.0(@types/node@22.20.1)(typescript@5.9.3))
