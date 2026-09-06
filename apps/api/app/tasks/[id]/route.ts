@@ -14,7 +14,6 @@ import { verifyBuyerToken, BUYER_TOKEN_HEADER } from '@/src/services/buyerToken'
 import {
   buildTaskView,
   eligibleAction,
-  lifecycle,
   parseWait,
   pollAfterSeconds,
   readProof,
@@ -22,6 +21,7 @@ import {
   versionOf,
   waitForChange,
 } from '@/src/services/statusBus';
+import { settleIfEligible } from '@/src/services/lifecycle';
 
 export const runtime = 'nodejs';
 /** Vercel Hobby's ceiling. The poll waits at most 50 s, so the platform never hangs up first. */
@@ -47,7 +47,7 @@ export const GET = route(async (req, ctx) => {
   // The lazy settlement path: a status read is what makes an auto-release or an expiry
   // happen without a cron, and it is never gated by the paused flag.
   if (eligibleAction(row, Math.floor(Date.now() / 1000)) !== null) {
-    await lifecycle.settleIfEligible(taskId);
+    await settleIfEligible(taskId);
     row = (await readTask(db, taskId)) ?? row;
   }
 

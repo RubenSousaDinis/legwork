@@ -43,7 +43,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | POST | `/admin/resolve` | admin-key | Resolve a dispute (owner key); to the buyer 3.45 back, to the worker 3.00 and the 0.45 fee back | 200, 404, 409 |
 | POST | `/admin/reset-demo` | admin-key | Reset demo state (tasks, proofs, logs, sessions); keeps nullifiers, posters, nonces, admin_audit; body must confirm | 200 |
 | POST | `/admin/reset-worker` | admin-key | resetWorker(nullifier) | 200 |
-| POST | `/admin/sweep` | admin-key | Expire + autoRelease pass (GitHub Actions cron every 5 min) | 200 |
+| POST | `/admin/sweep` | admin-key | Expire + autoRelease pass after reconciling every non-final row; admin key, or X-Sweep-Secret for a cron; audit-logged | 200 |
 | POST | `/admin/seed-demo` | admin-key | Seed the demo feed rows with seeded=true and the tx placeholder; idempotent | 200 |
 | GET | `/openapi.json` | public | OpenAPI 3.1 rendered from this contract (T-35) | 200 |
 | GET | `/healthz` | public | Liveness plus the four facts an operator asks first; never an address derived from a key | 200 |
@@ -12979,10 +12979,28 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
     "tx": {
       "type": "string",
       "pattern": "^0x[0-9a-f]{64}$"
+    },
+    "expired": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      }
+    },
+    "auto_released": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      }
     }
   },
   "required": [
-    "ok"
+    "ok",
+    "expired",
+    "auto_released"
   ]
 }
 ```
