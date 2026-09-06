@@ -1,0 +1,249 @@
+{
+  "_comment": [
+    "A recorded Studio world for PreflightWorkers / PreflightCompletions.",
+    "task_type: verify-open, area: ez5ku, now fixed at 2026-09-01T12:00:00Z.",
+    "Variant A: three seeded verify-open releases (6, 9, 14 min) and one real (11 min).",
+    "Variant B: the same, except the real worker's release is photo-of, so n_real is 0.",
+    "The rows the two where-clauses exclude are kept here on purpose: a fixture that only",
+    "held the answer could not show that the inactive worker and the other area are dropped."
+  ],
+  "now": 1788264000,
+  "task_type": "verify-open",
+  "area": "ez5ku",
+  "workers": [
+    {
+      "id": "0x1111111111111111111111111111111111111111",
+      "seeded": false,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 3,
+      "completed": 4,
+      "lastCompletedAt": "1788091200",
+      "score": "5"
+    },
+    {
+      "id": "0x2222222222222222222222222222222222222222",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 9,
+      "lastCompletedAt": "1788177600",
+      "score": "4"
+    },
+    {
+      "id": "0x3333333333333333333333333333333333333333",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 7,
+      "lastCompletedAt": "1788004800",
+      "score": "3"
+    },
+    {
+      "id": "0x4444444444444444444444444444444444444444",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 1,
+      "completed": 5,
+      "lastCompletedAt": "1787832000",
+      "score": "5"
+    },
+    {
+      "id": "0x5555555555555555555555555555555555555555",
+      "seeded": true,
+      "reset": false,
+      "area": "ez5ku",
+      "taskTypes": 15,
+      "completed": 2,
+      "lastCompletedAt": "1786536000",
+      "score": "2"
+    },
+    {
+      "id": "0x6666666666666666666666666666666666666666",
+      "seeded": false,
+      "reset": false,
+      "area": "ez5kv",
+      "taskTypes": 15,
+      "completed": 3,
+      "lastCompletedAt": "1788177600",
+      "score": "1"
+    }
+  ],
+  "variants": {
+    "A": [
+      {
+        "id": "101",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1788004800",
+        "submittedAt": "1788005160",
+        "releasedAt": "1788005760",
+        "worker": {
+          "id": "0x2222222222222222222222222222222222222222",
+          "seeded": true
+        }
+      },
+      {
+        "id": "102",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1787918400",
+        "submittedAt": "1787918940",
+        "releasedAt": "1787919540",
+        "worker": {
+          "id": "0x3333333333333333333333333333333333333333",
+          "seeded": true
+        }
+      },
+      {
+        "id": "103",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1787832000",
+        "submittedAt": "1787832840",
+        "releasedAt": "1787833440",
+        "worker": {
+          "id": "0x4444444444444444444444444444444444444444",
+          "seeded": true
+        }
+      },
+      {
+        "id": "104",
+        "seeded": false,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5kv",
+        "claimedAt": "1788177600",
+        "submittedAt": "1788177780",
+        "releasedAt": "1788178380",
+        "worker": {
+          "id": "0x6666666666666666666666666666666666666666",
+          "seeded": false
+        }
+      },
+      {
+        "id": "105",
+        "seeded": false,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1786449600",
+        "submittedAt": "1786452000",
+        "releasedAt": "1786452600",
+        "worker": {
+          "id": "0x1111111111111111111111111111111111111111",
+          "seeded": false
+        }
+      },
+      {
+        "id": "106",
+        "seeded": false,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1788091200",
+        "submittedAt": "1788091860",
+        "releasedAt": "1788092460",
+        "worker": {
+          "id": "0x1111111111111111111111111111111111111111",
+          "seeded": false
+        }
+      }
+    ],
+    "B": [
+      {
+        "id": "101",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1788004800",
+        "submittedAt": "1788005160",
+        "releasedAt": "1788005760",
+        "worker": {
+          "id": "0x2222222222222222222222222222222222222222",
+          "seeded": true
+        }
+      },
+      {
+        "id": "102",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1787918400",
+        "submittedAt": "1787918940",
+        "releasedAt": "1787919540",
+        "worker": {
+          "id": "0x3333333333333333333333333333333333333333",
+          "seeded": true
+        }
+      },
+      {
+        "id": "103",
+        "seeded": true,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1787832000",
+        "submittedAt": "1787832840",
+        "releasedAt": "1787833440",
+        "worker": {
+          "id": "0x4444444444444444444444444444444444444444",
+          "seeded": true
+        }
+      },
+      {
+        "id": "104",
+        "seeded": false,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5kv",
+        "claimedAt": "1788177600",
+        "submittedAt": "1788177780",
+        "releasedAt": "1788178380",
+        "worker": {
+          "id": "0x6666666666666666666666666666666666666666",
+          "seeded": false
+        }
+      },
+      {
+        "id": "105",
+        "seeded": false,
+        "taskType": 1,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1786449600",
+        "submittedAt": "1786452000",
+        "releasedAt": "1786452600",
+        "worker": {
+          "id": "0x1111111111111111111111111111111111111111",
+          "seeded": false
+        }
+      },
+      {
+        "id": "106",
+        "seeded": false,
+        "taskType": 2,
+        "state": "Released",
+        "area": "ez5ku",
+        "claimedAt": "1788091200",
+        "submittedAt": "1788091860",
+        "releasedAt": "1788092460",
+        "worker": {
+          "id": "0x1111111111111111111111111111111111111111",
+          "seeded": false
+        }
+      }
+    ]
+  }
+}
