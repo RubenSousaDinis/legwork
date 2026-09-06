@@ -1,0 +1,17 @@
+{
+  "chainId": 84532,
+  "verifyingContract": "0x1111111111111111111111111111111111111111",
+  "nullifierHash": "14940787124834364435609191474985415663966297007114343940867997176341876661281",
+  "worker": "0x2222222222222222222222222222222222222222",
+  "area": "ez5ku",
+  "taskTypes": 3,
+  "deadline": 4102444800,
+  "digest": "0x008b55557989c9bdddda5e99f9cc14e2d92a399a84382fc006b5841be4d43b99",
+  "signature": "0x7e7338ea166400e2171c3efd48f52878e639031d30c367230cf4d203647ff53c213c9e97febf5e8512078ea1aaa50c2b12c7e28d5a12b5cfa048d4e8d5672e801c",
+  "signer": "0xF8c480C7Da3971d06FEc7C6cE6565Af4bf797931",
+  "keyDerivation": "keccak256(utf8('legwork-test-verifier'))",
+  "domain": {
+    "name": "Legwork WorkerRegistry",
+    "version": "1"
+  }
+}
