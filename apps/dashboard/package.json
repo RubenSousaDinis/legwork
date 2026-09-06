@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@legwork/shared": "workspace:*",
+    "@legwork/subgraph-client": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
