@@ -1,0 +1,5 @@
+# The Playwright HTML reporter empties its `outputFolder` at the start of every run,
+# so a `report/.gitignore` — where the brief puts it — is deleted by the first `e2e`
+# and then shows up as a deleted tracked file. The rule lives here instead, where it
+# survives, and does the same job: nothing generated is committed.
+report/
