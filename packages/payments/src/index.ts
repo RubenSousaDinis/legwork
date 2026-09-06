@@ -7,22 +7,22 @@ export {
   type RemainingBudget,
   type RequirePaymentResult,
   type SettleResult,
-} from './gateway.js';
+} from './gateway';
 export {
   MemoryIdempotencyStore,
   SqlIdempotencyStore,
   type IdempotencyStore,
   type Reservation,
   type SqlExecutor,
-} from './idempotency.js';
-export { X402Gateway, type FacilitatorClient, type X402GatewayOptions } from './x402/gateway.js';
-export { FakeFacilitator } from './x402/fakeFacilitator.js';
+} from './idempotency';
+export { X402Gateway, type FacilitatorClient, type X402GatewayOptions } from './x402/gateway';
+export { FakeFacilitator } from './x402/fakeFacilitator';
 export {
   ANVIL_ACCOUNT_0_PRIVATE_KEY,
   signPaymentHeader,
   type SignPaymentHeaderArgs,
   type SignedPaymentHeader,
-} from './x402/testSigner.js';
+} from './x402/testSigner';
 export {
   PAYMENT_REQUIRED_HEADER,
   PAYMENT_RESPONSE_HEADER,
@@ -30,6 +30,6 @@ export {
   readNonce,
   readPayer,
   type ExactEvmAuthorization,
-} from './x402/paths.js';
-export { DirectFundingGateway } from './direct/gateway.js';
-export { selectGateway, type PaymentMode, type SelectGatewayDeps } from './select.js';
+} from './x402/paths';
+export { DirectFundingGateway } from './direct/gateway';
+export { selectGateway, type PaymentMode, type SelectGatewayDeps } from './select';

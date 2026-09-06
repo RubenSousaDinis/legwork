@@ -191,6 +191,12 @@ importers:
       '@legwork/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
+      '@legwork/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
+      '@legwork/screening':
+        specifier: workspace:*
+        version: link:../../packages/screening
       '@legwork/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -206,6 +212,9 @@ importers:
       '@worldcoin/minikit-js':
         specifier: 'catalog:'
         version: 2.0.3(react@19.2.8)(typescript@5.9.3)(viem@2.56.3(typescript@5.9.3)(zod@4.5.4))(zod@4.5.4)
+      '@x402/core':
+        specifier: 'catalog:'
+        version: 2.25.0
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@electric-sql/pglite@0.5.8)(postgres@3.4.9)

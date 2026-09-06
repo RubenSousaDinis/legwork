@@ -13,8 +13,8 @@ import {
   type RemainingBudget,
   type RequirePaymentResult,
   type SettleResult,
-} from '../gateway.js';
-import { PAYMENT_REQUIRED_HEADER, REQUEST_HEADER, readNonce, readPayer } from './paths.js';
+} from '../gateway';
+import { PAYMENT_REQUIRED_HEADER, REQUEST_HEADER, readNonce, readPayer } from './paths';
 import type { TaskType } from '@legwork/shared';
 
 export type { FacilitatorClient };
