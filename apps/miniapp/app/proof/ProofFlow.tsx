@@ -40,6 +40,7 @@ export const RETAKE_LABEL = 'Retake';
 export const SUBMIT_LABEL = 'SUBMIT';
 export const SUBMIT_WITHIN = 'submit within';
 export const NOTE_LABEL = 'note (optional)';
+export const REPORT_TASK_LABEL = 'Report task';
 
 /** Both lines sit under the capture button and stay there until the proof is handed in. */
 export const PAID_FOR_THE_PROOF =
@@ -308,6 +309,12 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
           {title ?? `Task ${taskId}`}
         </h1>
         <Countdown label={SUBMIT_WITHIN} until={claim.submit_deadline} />
+        {/* T-42's way out of a task that should not have been posted: release, then report. */}
+        <p style={{ margin: 'var(--s-3) 0 0' }}>
+          <a data-hit="44" data-link="report" href={`/report/${taskId}`} style={{ color: 'var(--ink-text-2)' }}>
+            {REPORT_TASK_LABEL}
+          </a>
+        </p>
       </header>
 
       {phase === 'settled' && releaseTx !== undefined && task !== null ? (

@@ -77,8 +77,10 @@ it.
 />
 ```
 
-The mount point is T-25's `app/tasks/page.tsx`, when there is no session, fed with the open
-rows of `GET /public/feed` — the lead's one-liner, because that file is another task's. The
+Mounted by the lead after #102: `app/tasks/page.tsx` renders `app/tasks/UnverifiedTasks.tsx`
+when the session probe has settled without a session, fed with the open rows of
+`GET /public/feed` (`price_usdc` is already the worker's rate there, and a row with no title is
+titled `<type> · <area>`). The proof header carries the `Report task` link. The
 banner goes first, above the rows: the offer is readable at real prices, and every row's
 button is disabled and says so in ARIA.
 
