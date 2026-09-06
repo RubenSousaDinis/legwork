@@ -119,19 +119,20 @@ const RELAYER_WRITES = new Set([
 
 type RecordingChain = FakeChain & {
   calls: ChainCall[];
-  failNextWith: (name: string) => void;
+  /** A revert name, or an error object to throw as it stands — an unreachable node is not a revert. */
+  failNextWith: (failure: string | Error) => void;
 };
 
 function recordingChain(inner: FakeChain): RecordingChain {
   const calls: ChainCall[] = [];
-  let failNext: string | undefined;
+  let failNext: string | Error | undefined;
 
   return new Proxy(inner, {
     get(target, property) {
       if (property === 'calls') return calls;
       if (property === 'failNextWith') {
-        return (name: string) => {
-          failNext = name;
+        return (failure: string | Error) => {
+          failNext = failure;
         };
       }
       const value = Reflect.get(target, property, target);
@@ -139,9 +140,11 @@ function recordingChain(inner: FakeChain): RecordingChain {
       return (...args: unknown[]) => {
         calls.push({ role: 'relayer', fn: String(property), args });
         if (failNext !== undefined) {
-          const name = failNext;
+          const failure = failNext;
           failNext = undefined;
-          return Promise.reject(new ChainRevert(name));
+          return Promise.reject(
+            typeof failure === 'string' ? new ChainRevert(failure) : failure,
+          );
         }
         return (value as (...a: unknown[]) => unknown).apply(target, args);
       };
@@ -406,6 +409,24 @@ describe('duplicateNullifierIs409', () => {
 
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'nullifier_already_registered' });
+    expect(await workerOf(nullifier)).toBeNull();
+  });
+
+  it('answers 503 when the node is unreachable, and still leaves the row unbound', async () => {
+    const nullifier = nullifierToNumeric('0x3f');
+    await seedUnbound(nullifier);
+    // What an unreachable RPC actually throws. It carries a `name` like any other error, and
+    // a `name` alone must never be read as a decoded revert.
+    chain.failNextWith(new TypeError('fetch failed'));
+
+    const res = await postRegister(nullifier, {
+      worker_address: WORKER_LOWER,
+      area: AREA,
+      task_types: ['verify-open'],
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'chain_unavailable' });
     expect(await workerOf(nullifier)).toBeNull();
   });
 });

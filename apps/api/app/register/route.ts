@@ -42,6 +42,20 @@ const Body = z.object({
   task_types: z.array(z.enum(TASK_TYPES)).min(1, 'expected at least one task type'),
 });
 
+/**
+ * `IWorkerRegistry`'s own revert names, in full. Nothing else counts as a revert: a
+ * `TimeoutError` or an `HttpRequestError` from an unreachable node also carries a `name`, and
+ * treating that as a decoded revert would answer 409 for a chain the API never reached.
+ */
+const REGISTRY_REVERTS = new Set([
+  'DuplicateNullifier',
+  'WorkerAlreadyBound',
+  'AttestationExpired',
+  'BadAttestation',
+  'AttestationUsed',
+  'NotRelayer',
+]);
+
 /** The registry's revert names, mapped onto what a client can act on. */
 function fromRevert(name: string): ApiError {
   if (name === 'DuplicateNullifier') return nullifierAlreadyRegistered();
@@ -52,12 +66,14 @@ function fromRevert(name: string): ApiError {
     logger.error({ name }, 'attestation rejected by the registry');
     return namedError('internal', 'attestation_rejected', { name });
   }
-  return namedError('conflict', name);
+  // `NotRelayer` — this API is not the relayer the registry is configured with. Also ours.
+  logger.error({ name }, 'registry refused the relayer');
+  return namedError('internal', 'attestation_rejected', { name });
 }
 
 function revertName(err: unknown): string | undefined {
   const name = (err as { name?: unknown } | null)?.name;
-  return typeof name === 'string' && name !== 'Error' && name.length > 0 ? name : undefined;
+  return typeof name === 'string' && REGISTRY_REVERTS.has(name) ? name : undefined;
 }
 
 export const POST = route(async (req) => {
