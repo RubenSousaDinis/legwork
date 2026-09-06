@@ -59,6 +59,11 @@ Day 8 the API is down**; it is never in the filmed live frame.
 the two cannot land a tick apart. A `nowMs` prop freezes both and skips the sync
 entirely — that is how the tests and a composited frame pin the canvas.
 
+One thing to know on set: an HTTP `Date` header carries whole seconds, so the estimate
+can sit up to a second behind the server's true instant and the elapsed timer can read
+`t+04:11` for the first tick after load before settling. Well inside the 2 s the
+operator's rehearsal check allows, and the timer counts up from there either way.
+
 ## The cut order T-47 follows
 
 1. **`row3`** — the third feed row. Costs nothing the narration names.
@@ -70,7 +75,10 @@ entirely — that is how the tests and a composited frame pin the canvas.
 
 A cut card renders nothing at all. Each column is a grid of **fixed** rows with every
 card placed explicitly, so the row stays behind and nothing below it rises: the meter,
-row 1, the clock and the timer sit at the same y in every take. `.stage` carries
+row 1, the clock and the timer sit at the same y in every take. The three columns are
+placed in their tracks by name for the same reason — a cut that empties the left column
+must not let the centre auto-place into track 1 and slide the meter out of the 9:16
+band. `.stage` carries
 `data-hidden="<comma list>"` — written in the order `agent, supply, screening, row2,
 row3` whatever order the query asked for — and it is empty when nothing is cut.
 

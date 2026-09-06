@@ -114,6 +114,22 @@
 }
 
 /*
+ * Each column is placed in its own track by name, never by document order. A cut that
+ * empties the left column must not let the centre auto-place into track 1 — that
+ * would slide the escrow meter from x 680-1240 to x 60-640 and straight out of the
+ * 9:16 band, which is the one thing a cut may never do.
+ */
+.stage .present-col-left {
+  grid-column: 1;
+}
+.stage .present-col-centre {
+  grid-column: 2;
+}
+.stage .present-col-right {
+  grid-column: 3;
+}
+
+/*
  * Fixed rows, and every card placed in one explicitly. A cut renders nothing at all
  * where its card was, and because the row stays the card below it does not rise —
  * the meter, row 1, the clock and the timer are at the same y in every take.
@@ -167,14 +183,14 @@
 /* ------------------------------------------------------------------- cuts */
 
 /*
- * `data-hidden` is the record of what this take dropped, in a fixed order so two
- * takes that cut the same cards write the same attribute. It drives no layout: the
- * rows above are fixed heights and a cut card simply leaves its row empty. The one
- * rule is for a column that lost every card — it draws nothing rather than an
- * empty track edge.
+ * `data-hidden` is the record of what this take dropped, in a fixed order so two takes
+ * that cut the same cards write the same attribute. It drives no layout at all, and
+ * that is deliberate: the tracks and the rows are fixed above, so a cut card leaves an
+ * empty box where it was and every card that is still on screen keeps its x and its y.
+ * A rule here that removed an emptied column would move the two beside it.
  */
-.stage[data-hidden]:not([data-hidden='']) .present-col:empty {
-  display: none;
+.stage[data-hidden] .present-col {
+  align-content: start;
 }
 
 /* ------------------------------------------------------------------- cards */
