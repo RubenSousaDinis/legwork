@@ -141,8 +141,8 @@ describe('auth flow', () => {
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
     expect(registerRequests()[0]).toEqual({
       worker_address: getPayoutAddress(),
-      area: 'ez5ku',
-      task_types: 15,
+      area: 'ez1dp',
+      task_types: ['verify-open', 'photo-of', 'call-confirm', 'compare-two'],
     });
 
     // Nothing secret rode along: not in a URL, not in a header, not in a body.

@@ -9,8 +9,11 @@ import ngeohash from 'ngeohash';
  * phone and, later, in the private task record. Nothing here writes a coordinate anywhere.
  */
 
-/** Leiria — the demo's home cell, and the answer whenever the phone will not give a fix. */
-export const DEFAULT_AREA = 'ez5ku';
+/**
+ * Leiria — the demo's home cell, and the answer whenever the phone will not give a fix.
+ * `ngeohash.encode(39.744, -8.807, 5)`; the `ez5ku` the briefs carry is 300 km inland.
+ */
+export const DEFAULT_AREA = 'ez1dp';
 
 /** `Geohash5` in the API contract: five characters, base32 without a, i, l or o. */
 const GEOHASH_PRECISION = 5;

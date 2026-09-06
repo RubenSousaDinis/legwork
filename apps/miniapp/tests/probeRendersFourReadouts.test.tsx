@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ProbeReadouts } from '../app/probe/ProbeReadouts';
-import { requestRpContext, verifyProof, type ProbeResults } from '../lib/probeApi';
+import { requestRpContext, verifyProof, type ProbeResults } from '../lib/worldid';
 import { IDKIT_RESULT_FIXTURE } from './fixtures';
 
 describe('probe', () => {

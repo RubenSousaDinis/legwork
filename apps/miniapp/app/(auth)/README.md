@@ -55,7 +55,7 @@ import field already open.
 
 ## Area
 
-`resolveArea()` tries `getCurrentPosition` once and falls back to `DEFAULT_AREA` (`ez5ku`,
+`resolveArea()` tries `getCurrentPosition` once and falls back to `DEFAULT_AREA` (`ez1dp`,
 Leiria). Public surfaces only ever see the geohash-5 cell; the exact fix stays on the phone.
 
 ## Registration

@@ -6,7 +6,7 @@ import { Chip } from '../components/ui/Chip';
 import { MonoTag } from '../components/ui/MonoTag';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { VerifiedChip } from '../components/ui/VerifiedChip';
-import { emptyResults } from '../lib/probeApi';
+import { emptyResults } from '../lib/worldid';
 
 /** Phone floor: nothing tappable is smaller than 44 px, and the marker attribute proves it. */
 const TAPPABLE = 'button, a, input[type=file]';

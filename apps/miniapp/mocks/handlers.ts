@@ -34,7 +34,7 @@ const PROOF_HASH = hash('6e9024681357bdf0ace13579bdf02468');
 
 /** Leiria, rounded to 3 decimals (≈100 m) — the only precision a public surface ever sees. */
 const COORDINATE_ROUNDED = { lat: 39.749, lon: -8.808 };
-const AREA = 'ez5ku';
+const AREA = 'ez1dp';
 const DASHBOARD_URL = 'https://legwork.example/dashboard/1024';
 const PROOF_URL = `https://legwork.example/api/proofs/${PROOF_HASH}?exp=1757034000&sig=${'ab'.repeat(32)}`;
 

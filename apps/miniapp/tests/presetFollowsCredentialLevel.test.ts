@@ -10,7 +10,7 @@ vi.mock('@worldcoin/idkit-core', async (importOriginal) => {
 });
 
 const { orbLegacy, selfieCheckLegacy } = await import('@worldcoin/idkit-core');
-const { pickPreset } = await import('../lib/probeApi');
+const { pickPreset } = await import('../lib/worldid');
 
 describe('probe', () => {
   beforeEach(() => {

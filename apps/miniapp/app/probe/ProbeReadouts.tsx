@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
-import type { ProbeResults } from '../../lib/probeApi';
+import type { ProbeResults } from '../../lib/worldid';
 
 const NOT_RUN = 'not run yet';
 

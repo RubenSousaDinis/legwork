@@ -16,7 +16,7 @@ import {
   verifyProof,
   type ProbeResults,
   type VerifyResponse,
-} from '../../lib/probeApi';
+} from '../../lib/worldid';
 import { ProbeReadouts } from './ProbeReadouts';
 
 const GEO_TIMEOUT_MS = 10_000;
