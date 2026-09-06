@@ -138,4 +138,4 @@ Known at dispatch — comment at start, continue with the written fallback: `INT
 Open `lib/gps.ts` (options exact, every error code mapped), then `ProofFlow.tsx` (submit disabled until photo + answer + location-or-confirmation; downgrade sets both flags; long-poll ends in an honest state), then `PaidState.tsx` (null thumbnail → nothing; amount from the API). Most likely wrong: `lat/lon` sent as `0` on the downgrade path, the paid amount computed, the copy lines hidden behind a step, `capture` attribute dropped by the re-encode wrapper.
 
 ## 15. Round 2+
-—
+Merged (Sept 6, #99). §13's known gap was a missing implementation, not a missing interface: `GET /tasks/:id/spec` is in the contract and the lead implemented it right after (claimant only, buyer claims stripped) — the call-confirm picker may read `template_id` + `slots` from it as a follow-up. §8's `one_paid` parenthetical says `score: 1` where T-24's fixture carries `score: 5`; the assertion is against the fixture. Follow-up: treat `resolved` + `tx.release` as released on the proof screen (the poll stops at `disputed` today).
