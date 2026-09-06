@@ -4,6 +4,8 @@ import feed from './feed.json';
 import outcomes from './outcomes.json';
 import posters from './posters.json';
 import preflight from './preflight.json';
+import marks0 from './marks-0.json';
+import marks1 from './marks-1.json';
 import refusals0 from './refusals-0.json';
 import refusals1 from './refusals-1.json';
 import pool from './workers.json';
@@ -41,22 +43,31 @@ export function preflightHandler() {
   return http.get(`${ORIGIN}/api/public/preflight`, () => HttpResponse.json(preflight));
 }
 
-/** One endpoint, two documents: the pool round trip and the agent's paid outcomes. */
-export function subgraphHandler() {
+/**
+ * One endpoint, two documents: the pool round trip, and the agent's paid outcomes and
+ * marks. `marksBody` is what `markCounterAnimates` swaps — the mark counter is fed by
+ * the `Mark` entity, not by the public refusals feed.
+ */
+export function subgraphHandler(marksBody: Record<string, unknown> = marks0) {
   return http.post(SUBGRAPH_URL, async ({ request }) => {
     const body = (await request.json()) as { query: string };
-    if (body.query.includes('AgentOutcomes')) return HttpResponse.json({ data: outcomes });
+    if (body.query.includes('query Agent')) {
+      return HttpResponse.json({ data: { ...outcomes, ...marksBody } });
+    }
     return HttpResponse.json({ data: pool });
   });
 }
 
-export function liveHandlers(refusalsBody: Record<string, unknown> = refusals0) {
+export function liveHandlers(
+  refusalsBody: Record<string, unknown> = refusals0,
+  marksBody: Record<string, unknown> = marks0,
+) {
   return [
     feedHandler(),
     refusalsHandler(refusalsBody),
     postersHandler(),
     preflightHandler(),
-    subgraphHandler(),
+    subgraphHandler(marksBody),
   ];
 }
 
@@ -75,4 +86,14 @@ export function liveServer() {
   return setupServer(...liveHandlers());
 }
 
-export const fixtures = { feed, posters, preflight, refusals0, refusals1, outcomes, pool };
+export const fixtures = {
+  feed,
+  posters,
+  preflight,
+  refusals0,
+  refusals1,
+  outcomes,
+  marks0,
+  marks1,
+  pool,
+};

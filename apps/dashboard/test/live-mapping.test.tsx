@@ -1,11 +1,16 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { poolString } from '../lib/format';
 import { getLiveDashboardData, refusalCounts } from '../lib/data/live';
+import { http, HttpResponse } from 'msw';
 import {
   downHandlers,
+  feedHandler,
   fixtures,
   liveHandlers,
   liveServer,
+  postersHandler,
+  preflightHandler,
+  refusalsHandler,
   SUBGRAPH_URL,
 } from '../lib/data/fixtures/live/handlers';
 
@@ -72,7 +77,7 @@ describe('live adapter', () => {
   });
 
   it('livePinsTheFilmedTaskAndReadsTheAgent', async () => {
-    server.use(...liveHandlers(fixtures.refusals1));
+    server.use(...liveHandlers(fixtures.refusals1, fixtures.marks1));
     const result = await getLiveDashboardData({ taskId: '8' });
 
     // `?task=` pins the featured row even though a newer one exists.
@@ -80,13 +85,16 @@ describe('live adapter', () => {
     expect(result.featured?.state).toBe('locked');
     expect(result.featured?.agentPays).toBe(3.45);
 
-    // The agent id is the featured row's buyer, the marks are counted against it, and
-    // `paid on proof` comes from the subgraph's `outcome: 1` rows.
+    // Every field of the agent card is the subgraph's. The id is the featured task's
+    // `Task.buyerAgentId`, the marks are the `Mark` rows against it with the class id
+    // mapped back through the shared table, and `paid on proof` is its `outcome: 1`
+    // rows. The public API carries no requester identity and none is read.
     expect(result.agent.id).toBe('8004-1207');
     expect(result.agent.marks).toBe(1);
     expect(result.agent.lastMarkClass).toBe('authentication circumvention');
     expect(result.agent.paidOnProof).toBe(1);
     expect(result.agent.score).toBeNull();
+    expect(JSON.stringify(fixtures.feed)).not.toContain('buyer_agent_id');
 
     // The highlighted worker is the real one, with a real completion time.
     expect(result.pool.highlighted?.id).toBe('w-0417');
@@ -146,6 +154,23 @@ describe('live adapter', () => {
     expect(result.dataMode).toBe('live');
   });
 
+  it('liveAgentIsBlankWithoutTheSubgraphRatherThanGuessed', async () => {
+    // The refusals feed still carries `agent_id: '8004-1207'` and a marked entry, and
+    // it still must not become an agent: attributing a mark to an agent the index
+    // cannot confirm is exactly the guess this adapter refuses to make.
+    server.use(feedHandler(), refusalsHandler(fixtures.refusals1), postersHandler(), preflightHandler());
+    server.use(http.post(SUBGRAPH_URL, () => new HttpResponse(null, { status: 503 })));
+    const result = await getLiveDashboardData();
+
+    expect(result.agent.id).toBe('—');
+    expect(result.agent.marks).toBe(0);
+    expect(result.agent.lastMarkClass).toBeUndefined();
+    expect(result.sourceNotes).toContain('worker pool unavailable');
+    // The refusal is still a feed row and a screening line; only the agent card is blank.
+    expect(result.feed.some((r) => r.state === 'refused')).toBe(true);
+    expect(result.screening.some((l) => l.outcome === 'refused' && l.marked)).toBe(true);
+  });
+
   it('liveReadsEitherRefusalCountShape', () => {
     // `api-contract.ts` freezes `classes: [{class, count}]`; §5's expected shape is a
     // `counts` record. Both are read, so the adapter is right either way.
@@ -160,7 +185,9 @@ describe('live adapter', () => {
   it('recordedFixturesAreLeiriaAndCarryNothingPublicSurfacesMayNot', () => {
     const all = JSON.stringify(fixtures);
     expect(all).not.toContain('buyer_token');
-    for (const row of fixtures.feed.tasks) expect(row.area).toBe('ez5ku');
+    for (const row of fixtures.feed.tasks) expect(row.area).toBe('ez1dp');
+    // The public feed carries no requester identity, and the adapter does not want one.
+    expect(JSON.stringify(fixtures.feed)).not.toContain('buyer_agent_id');
 
     // The refusal fixture deliberately carries the four fields no surface may render.
     const recent = fixtures.refusals1.recent[0]!;

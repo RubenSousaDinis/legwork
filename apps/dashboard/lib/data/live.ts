@@ -1,5 +1,6 @@
 import {
   ABUSE_CLASSES,
+  abuseClassById,
   fromUsdcUnits,
   toUsdcUnits,
   type AbuseClass,
@@ -90,9 +91,12 @@ export function subgraphClient(): SubgraphClient | null {
 /**
  * What `/public/feed` sends. `api-contract.ts` is the authority and spells the row
  * `state` / `price_usdc`; §5's expected shape spells the same two fields `status` /
- * `amount_usdc`. Both are read, so the mapper is right either way. `title`,
- * `spec_hash` and `buyer_agent_id` are the fields the INTERFACE REQUEST asks for;
- * each has a fallback below and none is invented when absent.
+ * `amount_usdc`. Both are read, so the mapper is right either way. `title` and
+ * `spec_hash` are absent from the contract and each has a fallback below; none is
+ * invented when absent.
+ *
+ * There is deliberately no `buyer_agent_id` here. A requester identity stays off the
+ * public API, so the agent's id comes from the subgraph's `Task.buyerAgentId` instead.
  */
 export interface WireFeedRow {
   task_id: string;
@@ -108,7 +112,6 @@ export interface WireFeedRow {
   posted_at: string;
   released_at?: string;
   spec_hash?: string;
-  buyer_agent_id?: string | number;
   proof?: { hash?: string; captured_at?: string };
   tx?: { post?: string; claim?: string; submit?: string; release?: string };
 }
@@ -117,7 +120,12 @@ export interface WireFeed {
   tasks?: WireFeedRow[];
 }
 
-/** One entry of `/public/refusals.recent`. Optional fields are read, never required. */
+/**
+ * One entry of `/public/refusals.recent`. Optional fields are read, never required.
+ * `agent_id` is not in the frozen contract and is not expected to arrive; it is read
+ * only so a `ScreeningLine` can carry one if it ever does. The agent card never reads
+ * it — `marks` comes from the subgraph `Mark` entity.
+ */
 export interface WireRefusalRecent {
   at: string;
   task_type?: TaskType;
@@ -173,11 +181,13 @@ interface WireReleasedTask {
 interface WirePool {
   workers?: WireWorker[];
   released?: WireReleasedTask[];
-  recent?: { id: string; specHash: string }[];
+  recent?: { id: string; specHash: string; buyerAgentId: string }[];
 }
 
-interface WireOutcomes {
+/** One round trip for both halves of the agent card. */
+interface WireAgent {
   outcomes?: { id: string }[];
+  marks?: { id: string; classId: number; at: string }[];
 }
 
 // -------------------------------------------------------------------- queries
@@ -211,15 +221,27 @@ query DashboardPool($first: Int!, $recent: Int!) {
   recent: tasks(first: $recent, orderBy: postedAt, orderDirection: desc) {
     id
     specHash
+    buyerAgentId
   }
 }
 `;
 
-/** `outcome: 1` is `OUTCOME.Paid` — the count the agent card reads as paid on proof. */
-export const AGENT_OUTCOMES_QUERY = `
-query AgentOutcomes($agentId: BigInt!, $first: Int!) {
+/**
+ * Both halves of the agent card in one round trip. `outcome: 1` is `OUTCOME.Paid` — the
+ * count that reads as paid on proof; `marks` is the `Mark` entity the abuse registry
+ * writes, which is where a mark against an agent actually lives. Neither number comes
+ * from the public API: a requester identity is not on a public surface, so the only
+ * place that can attribute a mark is the index.
+ */
+export const AGENT_QUERY = `
+query Agent($agentId: BigInt!, $first: Int!) {
   outcomes(first: $first, where: { agentId: $agentId, outcome: 1 }) {
     id
+  }
+  marks(first: $first, where: { agentId: $agentId }, orderBy: at, orderDirection: desc) {
+    id
+    classId
+    at
   }
 }
 `;
@@ -235,10 +257,13 @@ const TYPE_LABEL: Record<TaskType, string> = {
 };
 
 const PASSED_REASON = 'schema ok · placeId resolved';
+/** Leiria as a geohash-5. The one area this deployment works in. */
+const LEIRIA_AREA = 'ez1dp';
 const MAX_FEED_ROWS = 20;
 const MAX_SCREENING_LINES = 12;
 const PAGE = 500;
 
+/** Local time — the server's when rendered there, the viewer's after the first poll. */
 function hhmm(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -379,10 +404,16 @@ function totalsOf(rows: WireFeedRow[]): DashboardTotals {
   return totals;
 }
 
+/** `8004-` plus the registry's number is the handle every surface shows. */
+export function agentHandle(buyerAgentId: string): string {
+  return `8004-${buyerAgentId}`;
+}
+
 /**
  * The ERC-8004 id the registry knows is the number; `8004-1207` is the handle the
  * dashboard shows. The subgraph stores a `BigInt`, so the digits after the last dash
- * are what a subgraph variable can be. An id that is already digits passes through.
+ * are what a subgraph variable can be. An id that is already digits passes through,
+ * and the `—` placeholder yields nothing to query with.
  */
 export function subgraphAgentId(id: string): string | null {
   const digits = id.split('-').pop() ?? '';
@@ -402,6 +433,14 @@ const EMPTY_PREFLIGHT: PreflightData = {
 export interface LiveDashboardOptions {
   /** `?task=<id>` pins the filmed task as the featured row. */
   taskId?: string;
+  /**
+   * The credential level the server already resolved. `WORLD_CREDENTIAL_LEVEL` is a
+   * server var, and this mapper also runs in the browser through `useLiveDashboard`,
+   * where a non-`NEXT_PUBLIC_` var reads `undefined` — so the poll carries the
+   * server-rendered value forward instead of silently downgrading `orb` to `selfie`
+   * on the first tick.
+   */
+  level?: 'selfie' | 'orb';
 }
 
 /**
@@ -437,7 +476,7 @@ export async function getLiveDashboardData(
   const featuredRow = pinned ?? newest;
   const featured = featuredRow ? toFeatured(featuredRow) : null;
 
-  const preflightArea = featuredRow?.area ?? 'ez5ku';
+  const preflightArea = featuredRow?.area ?? LEIRIA_AREA;
   const preflightResponse = await fetchJson<WirePreflight>(
     `/public/preflight?task_type=verify-open&area=${encodeURIComponent(preflightArea)}`,
   );
@@ -485,31 +524,45 @@ export async function getLiveDashboardData(
     .sort((a, b) => byTimeDesc(a.at, b.at))
     .slice(0, MAX_SCREENING_LINES);
 
-  // ---- agent
-  const marked = recent
-    .filter((entry) => entry.marked === true)
-    .sort((a, b) => byTimeDesc(a.at, b.at));
-  const newestMarked = marked[0];
-  const agentId =
-    (featuredRow?.buyer_agent_id !== undefined ? String(featuredRow.buyer_agent_id) : undefined) ??
-    (newestMarked?.agent_id !== undefined ? String(newestMarked.agent_id) : undefined) ??
-    '—';
-  const marks = marked.filter(
-    (entry) => entry.agent_id !== undefined && String(entry.agent_id) === agentId,
-  ).length;
+  // ---- agent: every field of it comes from the subgraph.
+  // The public API carries no requester identity and is not going to — so the featured
+  // task's buyer is read from the index's `Task.buyerAgentId`, and the marks against
+  // that agent from the `Mark` entity the abuse registry writes.
+  const agentIdByTask = new Map((pool?.recent ?? []).map((t) => [t.id, t.buyerAgentId]));
+  const buyerAgentId = featuredRow ? agentIdByTask.get(featuredRow.task_id) : undefined;
+  const agentId = buyerAgentId ? agentHandle(buyerAgentId) : '—';
 
   let paidOnProof = 0;
+  let marks = 0;
+  let lastMarkClass: AbuseClass | undefined;
   const numericAgentId = subgraphAgentId(agentId);
   if (client && numericAgentId) {
-    const outcomes = await client
-      .query<WireOutcomes>(AGENT_OUTCOMES_QUERY, { agentId: numericAgentId, first: PAGE })
+    const agentRows = await client
+      .query<WireAgent>(AGENT_QUERY, { agentId: numericAgentId, first: PAGE })
       .catch(() => null);
-    if (outcomes) paidOnProof = outcomes.outcomes?.length ?? 0;
-    else notes.push('outcomes unavailable');
+    if (agentRows) {
+      paidOnProof = agentRows.outcomes?.length ?? 0;
+      const markRows = (agentRows.marks ?? [])
+        .slice()
+        .sort((a, b) => Number(b.at) - Number(a.at));
+      marks = markRows.length;
+      const newest = markRows[0];
+      if (newest) {
+        try {
+          // The 1-based table lives in `@legwork/shared`; the index stores the integer
+          // and nothing else, so this is the only place it becomes words.
+          lastMarkClass = abuseClassById(newest.classId);
+        } catch {
+          notes.push('mark class unknown');
+        }
+      }
+    } else {
+      notes.push('agent unavailable');
+    }
   }
 
   const agent: AgentData = { id: agentId, score: null, paidOnProof, marks };
-  if (marks > 0 && newestMarked?.class) agent.lastMarkClass = newestMarked.class;
+  if (lastMarkClass) agent.lastMarkClass = lastMarkClass;
 
   // ---- pool
   const workers = (pool?.workers ?? []).filter((w) => !w.reset);
@@ -534,7 +587,7 @@ export async function getLiveDashboardData(
       .sort((a, b) => Number(b.releasedAt ?? 0) - Number(a.releasedAt ?? 0))[0];
     poolData.highlighted = {
       id: poolWorkerId(highlightedWorker.id),
-      level: process.env.WORLD_CREDENTIAL_LEVEL === 'orb' ? 'orb' : 'selfie',
+      level: opts.level ?? (process.env.WORLD_CREDENTIAL_LEVEL === 'orb' ? 'orb' : 'selfie'),
     };
     if (newestReleased?.releasedAt) {
       poolData.highlighted.minutesReal = Math.round(
