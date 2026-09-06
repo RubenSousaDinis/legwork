@@ -1,6 +1,11 @@
 'use client';
 
-import { CALL_CONFIRM_TEMPLATES, type CallTemplateId, type TaskType } from '@legwork/shared';
+import {
+  CALL_CONFIRM_TEMPLATES,
+  NOTE_MAX_CHARS,
+  type CallTemplateId,
+  type TaskType,
+} from '@legwork/shared';
 import { Button } from '../../components/ui/Button';
 
 /**
@@ -32,8 +37,21 @@ export const COMPARE_TWO_REASON_LABEL = 'why? (required)';
 
 export const COMPARE_ANSWERS = ['a', 'b', 'neither'] as const;
 
-/** The six rendered questions, in the order `packages/shared` declares them. */
+/** `14:32` on the worker's own clock, from the ISO instant that goes to the API. */
+export function clockTime(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return '';
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+}
+
+/** The six templates, in the order `packages/shared` declares them. */
 export const TEMPLATE_IDS = Object.keys(CALL_CONFIRM_TEMPLATES) as CallTemplateId[];
+
+/** The picker shows questions and answers in ids, so it needs the way back. */
+export const TEMPLATE_QUESTIONS = TEMPLATE_IDS.map((id) => CALL_CONFIRM_TEMPLATES[id].question);
+export const TEMPLATE_BY_QUESTION = new Map<string, CallTemplateId>(
+  TEMPLATE_IDS.map((id) => [CALL_CONFIRM_TEMPLATES[id].question, id]),
+);
 
 /**
  * Everything the worker has answered so far. `answer` is the string the API takes; the rest
@@ -192,7 +210,7 @@ function CallConfirmAnswer({
         </Button>
       ) : (
         <p data-called-at="true" style={{ fontFamily: 'var(--font-mono)', margin: '0 0 var(--s-4)' }}>
-          {`called at ${value.called_at.slice(11, 16)} — the server timestamps the submission`}
+          {`called at ${clockTime(value.called_at)} — the server timestamps the submission`}
         </p>
       )}
 
@@ -200,17 +218,19 @@ function CallConfirmAnswer({
         <Segmented
           label={TEMPLATE_PICKER_LABEL}
           name="template"
-          onSelect={(id) =>
+          onSelect={(question) => {
+            const id = TEMPLATE_BY_QUESTION.get(question);
+            if (id === undefined) return;
             onChange({
               ...value,
-              template_id: id as CallTemplateId,
+              template_id: id,
               // A different question means the previous answer belongs to no enum.
               answer: null,
               price: undefined,
               time: undefined,
-            })
-          }
-          options={TEMPLATE_IDS.map((id) => CALL_CONFIRM_TEMPLATES[id].question)}
+            });
+          }}
+          options={TEMPLATE_QUESTIONS}
           value={value.template_id === undefined ? null : CALL_CONFIRM_TEMPLATES[value.template_id].question}
         />
       )}
@@ -279,7 +299,13 @@ export type CharacterFieldProps = {
  * A capped text field with the count beside it. The cap is `NOTE_MAX_CHARS` from
  * `packages/shared` at both call sites, so the field cannot outgrow the schema.
  */
-export function CharacterField({ label, name, value, onChange, maxLength = 120 }: CharacterFieldProps) {
+export function CharacterField({
+  label,
+  name,
+  value,
+  onChange,
+  maxLength = NOTE_MAX_CHARS,
+}: CharacterFieldProps) {
   return (
     <div style={{ marginBottom: 'var(--s-4)' }}>
       <label style={{ display: 'block' }}>
