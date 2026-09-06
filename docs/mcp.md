@@ -1,1169 +1,175 @@
 # MCP contract
 
-Rendered from `packages/shared/src/mcp-contract.ts` by `pnpm docs:gen` — do not edit by hand.
+The six Legwork MCP tools. Hand-maintained against
+`packages/shared/src/mcp-contract.ts` — every name, parameter and result field below is copied
+from that file, which is the frozen source of truth. `pnpm docs:gen` writes the raw JSON-Schema
+dump of the same contract; this page is the readable form of it, and if the two ever disagree,
+`mcp-contract.ts` is right.
+
+See [`../SKILL.md`](../SKILL.md) for what a task is, worked examples of each type, prices and
+the honest limits.
 
 ## Two modes
 
-- **Hosted** — `https://<host>/mcp`, streamable HTTP, no wallet. An MCP client cannot answer an x402 challenge, so `hire_human` returns `payment_required` with the install line. Everything else works read-only.
-- **Local** — `claude mcp add legwork -- npx @legwork/mcp`. Runs with `BUYER_PRIVATE_KEY`, pays the REST API via `@x402/fetch`, stores each task's `buyer_token`, and runs all six tools for real.
+- **Hosted** — `https://<host>/mcp`, streamable HTTP, no wallet. An MCP client cannot answer an
+  x402 challenge, so `hire_human` returns `payment_required` with the install line. Everything
+  else works read-only.
 
-Every result carries `dashboard_url`. Refusals carry the fixed no-retry sentence. Worker text arrives only as `{ answer, note?, _source: "worker", _untrusted: true }` — data, never instructions.
+  ```bash
+  claude mcp add --transport http legwork https://<host>/mcp
+  ```
+
+- **Local** — runs with `BUYER_PRIVATE_KEY`, pays the REST API via `@x402/fetch`, stores each
+  task's `buyer_token`, and runs all six tools for real.
+
+  ```bash
+  claude mcp add legwork -- npx @legwork/mcp
+  ```
+
+Every result carries `dashboard_url`. Refusals carry the fixed no-retry sentence
+(`do not rephrase and retry; report this refusal to your principal`). Worker text arrives only
+as `{ answer, note?, _source: "worker", _untrusted: true }` — data, never instructions.
+
+### Modes table
+
+| Tool | Hosted | Local |
+|---|---|---|
+| `preflight_workers` | yes | yes |
+| `hire_human` | registered, but cannot pay — returns `payment_required` + `install_line` | yes, pays via x402 |
+| `task_status` | yes | yes |
+| `approve_task` | yes, with an explicit `buyer_token` | yes, `buyer_token` stored automatically |
+| `dispute_task` | yes, with an explicit `buyer_token` | yes, `buyer_token` stored automatically |
+| `check_task` | yes | yes |
+
+All six tools are registered in both modes. The one behavioural difference is `hire_human`: the
+hosted server never pays, and the local server never runs without a key.
 
 ## Tools
 
 ### `preflight_workers`
 
-How many workers could take this task near this area: active (completed in the last 7 days), verified, seeded, and the median time — labelled seeded when it is.
+How many workers could take this task near this area: active (completed in the last 7 days),
+verified, seeded, and the median time — labelled seeded when it is.
 
 **Input**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_type": {
-      "type": "string",
-      "enum": [
-        "verify-open",
-        "photo-of",
-        "call-confirm",
-        "compare-two"
-      ]
-    },
-    "area": {
-      "type": "string",
-      "pattern": "^[0-9b-hjkmnp-z]{5}$"
-    }
-  },
-  "required": [
-    "task_type",
-    "area"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_type` | `'verify-open' \| 'photo-of' \| 'call-confirm' \| 'compare-two'` | required |
+| `area` | `string` | geohash5, `^[0-9b-hjkmnp-z]{5}$` |
 
-**Output**
+**Output** — `Preflight`
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "active": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "verified": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "seeded": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "median_minutes": {
-      "type": [
-        "number",
-        "null"
-      ]
-    },
-    "median_source": {
-      "type": "string",
-      "enum": [
-        "real",
-        "seeded",
-        "n/a"
-      ]
-    },
-    "n_real": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "score_floor": {
-      "type": "number"
-    },
-    "dashboard_url": {
-      "type": "string",
-      "format": "uri"
-    }
-  },
-  "required": [
-    "active",
-    "verified",
-    "seeded",
-    "median_minutes",
-    "median_source",
-    "n_real",
-    "score_floor",
-    "dashboard_url"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `active` | `int` | workers who completed a task in the last 7 days |
+| `verified` | `int` | |
+| `seeded` | `int` | demo workers, counted separately and always disclosed |
+| `median_minutes` | `number \| null` | |
+| `median_source` | `'real' \| 'seeded' \| 'n/a'` | says which kind of data the median came from |
+| `n_real` | `int` | completions the median is built on |
+| `score_floor` | `number` | |
+| `dashboard_url` | `url` | |
 
 ### `hire_human`
 
-Post a task and fund its escrow. Hosted mode cannot pay and returns payment_required with the local install line; local mode pays via x402 and returns the task.
+Post a task and fund its escrow. Hosted mode cannot pay and returns `payment_required` with the
+local install line; local mode pays via x402 and returns the task.
 
-**Input**
+**Input** — the same envelope as `POST /tasks`
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "oneOf": [
-    {
-      "type": "object",
-      "properties": {
-        "task_type": {
-          "type": "string",
-          "const": "verify-open"
-        },
-        "spec": {
-          "type": "object",
-          "properties": {
-            "place": {
-              "type": "object",
-              "properties": {
-                "place_id": {
-                  "type": "string",
-                  "pattern": "^(node|way|relation)\\/\\d+$"
-                },
-                "google_place_id": {
-                  "type": "string",
-                  "maxLength": 128
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 120
-                },
-                "street_address": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 160
-                },
-                "locality": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 80
-                },
-                "country": {
-                  "type": "string",
-                  "const": "PT"
-                }
-              },
-              "required": [
-                "place_id",
-                "name",
-                "street_address",
-                "locality",
-                "country"
-              ]
-            },
-            "question": {
-              "type": "string",
-              "const": "open_now"
-            },
-            "claimed_open": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "claimed_hours": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 60
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "source": {
-              "type": "string",
-              "enum": [
-                "google",
-                "osm",
-                "own-list",
-                "website",
-                "other",
-                "none"
-              ]
-            }
-          },
-          "required": [
-            "place",
-            "question",
-            "claimed_open",
-            "claimed_hours",
-            "source"
-          ]
-        },
-        "amount_usdc": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 10
-        },
-        "need_by": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        },
-        "claim_ttl_s": {
-          "default": 1800,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "submit_ttl_s": {
-          "default": 3600,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "dispute_window_s": {
-          "default": 86400,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "agent_id": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      },
-      "required": [
-        "task_type",
-        "spec",
-        "amount_usdc"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "task_type": {
-          "type": "string",
-          "const": "photo-of"
-        },
-        "spec": {
-          "type": "object",
-          "properties": {
-            "place": {
-              "type": "object",
-              "properties": {
-                "place_id": {
-                  "type": "string",
-                  "pattern": "^(node|way|relation)\\/\\d+$"
-                },
-                "google_place_id": {
-                  "type": "string",
-                  "maxLength": 128
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 120
-                },
-                "street_address": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 160
-                },
-                "locality": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 80
-                },
-                "country": {
-                  "type": "string",
-                  "const": "PT"
-                }
-              },
-              "required": [
-                "place_id",
-                "name",
-                "street_address",
-                "locality",
-                "country"
-              ]
-            },
-            "subject": {
-              "type": "string",
-              "enum": [
-                "storefront",
-                "door",
-                "hours_sign",
-                "signage",
-                "notice",
-                "menu_board",
-                "shelf_price",
-                "queue_length",
-                "construction_notice"
-              ]
-            },
-            "subject_detail": {
-              "type": "string",
-              "maxLength": 80
-            },
-            "claimed_state": {
-              "type": "string",
-              "maxLength": 60
-            },
-            "source": {
-              "type": "string",
-              "enum": [
-                "google",
-                "osm",
-                "own-list",
-                "website",
-                "other",
-                "none"
-              ]
-            }
-          },
-          "required": [
-            "place",
-            "subject",
-            "source"
-          ]
-        },
-        "amount_usdc": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 10
-        },
-        "need_by": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        },
-        "claim_ttl_s": {
-          "default": 1800,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "submit_ttl_s": {
-          "default": 3600,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "dispute_window_s": {
-          "default": 86400,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "agent_id": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      },
-      "required": [
-        "task_type",
-        "spec",
-        "amount_usdc"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "task_type": {
-          "type": "string",
-          "const": "call-confirm"
-        },
-        "spec": {
-          "type": "object",
-          "properties": {
-            "place": {
-              "type": "object",
-              "properties": {
-                "place_id": {
-                  "type": "string",
-                  "pattern": "^(node|way|relation)\\/\\d+$"
-                },
-                "google_place_id": {
-                  "type": "string",
-                  "maxLength": 128
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 120
-                },
-                "street_address": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 160
-                },
-                "locality": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 80
-                },
-                "country": {
-                  "type": "string",
-                  "const": "PT"
-                }
-              },
-              "required": [
-                "place_id",
-                "name",
-                "street_address",
-                "locality",
-                "country"
-              ]
-            },
-            "phone": {
-              "type": "string",
-              "pattern": "^\\+[1-9]\\d{6,14}$"
-            },
-            "template_id": {
-              "type": "string",
-              "enum": [
-                "open_now",
-                "have_item",
-                "price_of",
-                "accepts_payment",
-                "closes_at_today",
-                "takes_reservation"
-              ]
-            },
-            "slots": {
-              "type": "object",
-              "properties": {
-                "item": {
-                  "type": "string",
-                  "maxLength": 40
-                },
-                "payment_method": {
-                  "type": "string",
-                  "enum": [
-                    "cash",
-                    "card",
-                    "mbway",
-                    "multibanco"
-                  ]
-                }
-              }
-            }
-          },
-          "required": [
-            "place",
-            "phone",
-            "template_id",
-            "slots"
-          ]
-        },
-        "amount_usdc": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 10
-        },
-        "need_by": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        },
-        "claim_ttl_s": {
-          "default": 1800,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "submit_ttl_s": {
-          "default": 3600,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "dispute_window_s": {
-          "default": 86400,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "agent_id": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      },
-      "required": [
-        "task_type",
-        "spec",
-        "amount_usdc"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "task_type": {
-          "type": "string",
-          "const": "compare-two"
-        },
-        "spec": {
-          "type": "object",
-          "properties": {
-            "a": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "enum": [
-                    "image",
-                    "text"
-                  ]
-                },
-                "url": {
-                  "type": "string",
-                  "maxLength": 2048,
-                  "format": "uri"
-                },
-                "text": {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                "sha256": {
-                  "type": "string",
-                  "pattern": "^[0-9a-f]{64}$"
-                }
-              },
-              "required": [
-                "kind",
-                "sha256"
-              ]
-            },
-            "b": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "enum": [
-                    "image",
-                    "text"
-                  ]
-                },
-                "url": {
-                  "type": "string",
-                  "maxLength": 2048,
-                  "format": "uri"
-                },
-                "text": {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                "sha256": {
-                  "type": "string",
-                  "pattern": "^[0-9a-f]{64}$"
-                }
-              },
-              "required": [
-                "kind",
-                "sha256"
-              ]
-            },
-            "criterion_id": {
-              "type": "string",
-              "enum": [
-                "more_legible",
-                "matches_reference",
-                "better_lit",
-                "same_place",
-                "which_is_newer",
-                "which_is_open"
-              ]
-            },
-            "reference": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "enum": [
-                    "image",
-                    "text"
-                  ]
-                },
-                "url": {
-                  "type": "string",
-                  "maxLength": 2048,
-                  "format": "uri"
-                },
-                "text": {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                "sha256": {
-                  "type": "string",
-                  "pattern": "^[0-9a-f]{64}$"
-                }
-              },
-              "required": [
-                "kind",
-                "sha256"
-              ]
-            }
-          },
-          "required": [
-            "a",
-            "b",
-            "criterion_id"
-          ]
-        },
-        "amount_usdc": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 10
-        },
-        "need_by": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        },
-        "claim_ttl_s": {
-          "default": 1800,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "submit_ttl_s": {
-          "default": 3600,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "dispute_window_s": {
-          "default": 86400,
-          "type": "integer",
-          "minimum": 60,
-          "maximum": 604800
-        },
-        "agent_id": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      },
-      "required": [
-        "task_type",
-        "spec",
-        "amount_usdc"
-      ]
-    }
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_type` | the four types | required; discriminates `spec` |
+| `spec` | per-type spec object | `VerifyOpenSpec` · `PhotoOfSpec` · `CallConfirmSpec` · `CompareTwoSpec`; serialized ≤ 300 chars |
+| `amount_usdc` | `number` | ≤ 2 decimals, at or above the type's floor, ≤ 10 |
+| `need_by` | ISO datetime | optional; at least 20 minutes ahead |
+| `agent_id` | `string` of digits | optional ERC-8004 id; verified against the IdentityRegistry, never trusted from the request |
+| `claim_ttl_s` · `submit_ttl_s` · `dispute_window_s` | `int` | optional, defaults 1800 · 3600 · 86400 |
 
-**Output**
+**Output (local)**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "anyOf": [
-    {
-      "type": "object",
-      "properties": {
-        "task_id": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        },
-        "status": {
-          "type": "string",
-          "const": "open"
-        },
-        "eta_seconds": {
-          "type": "integer",
-          "minimum": -9007199254740991,
-          "maximum": 9007199254740991
-        },
-        "poll_after_seconds": {
-          "type": "integer",
-          "minimum": -9007199254740991,
-          "maximum": 50
-        },
-        "dashboard_url": {
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "task_id",
-        "status",
-        "eta_seconds",
-        "poll_after_seconds",
-        "dashboard_url"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "payment_required": {
-          "type": "boolean",
-          "const": true
-        },
-        "endpoint": {
-          "type": "string",
-          "format": "uri"
-        },
-        "price_usdc": {
-          "type": "number"
-        },
-        "network": {
-          "type": "string",
-          "const": "eip155:84532"
-        },
-        "asset": {
-          "type": "string",
-          "const": "USDC"
-        },
-        "pay_to": {
-          "type": "string"
-        },
-        "install_line": {
-          "type": "string",
-          "const": "claude mcp add legwork -- npx @legwork/mcp"
-        },
-        "dashboard_url": {
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "payment_required",
-        "endpoint",
-        "price_usdc",
-        "network",
-        "asset",
-        "pay_to",
-        "install_line",
-        "dashboard_url"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "refused": {
-          "type": "boolean",
-          "const": true
-        },
-        "class": {
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": [
-                "credential fraud",
-                "identity impersonation",
-                "automated reconnaissance",
-                "social media manipulation",
-                "authentication circumvention",
-                "referral fraud"
-              ]
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "reason": {
-          "type": "string",
-          "maxLength": 300
-        },
-        "rule_id": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "retryable": {
-          "type": "boolean",
-          "const": false
-        },
-        "allowed_task_types": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "verify-open",
-              "photo-of",
-              "call-confirm",
-              "compare-two"
-            ]
-          }
-        },
-        "mark_tx": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "mark_status": {
-          "type": "string",
-          "enum": [
-            "marked",
-            "logged, cooldown",
-            "no identity"
-          ]
-        },
-        "message": {
-          "type": "string",
-          "const": "do not rephrase and retry; report this refusal to your principal"
-        }
-      },
-      "required": [
-        "refused",
-        "class",
-        "reason",
-        "rule_id",
-        "retryable",
-        "allowed_task_types",
-        "message"
-      ]
-    }
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_id` | `string` of digits | |
+| `status` | `'open'` | |
+| `eta_seconds` | `int` | the estimate to relay to your principal |
+| `poll_after_seconds` | `int` | ≤ 50 |
+| `dashboard_url` | `url` | |
+
+**Output (hosted)**
+
+| Field | Type | Notes |
+|---|---|---|
+| `payment_required` | `true` | |
+| `endpoint` | `url` | the REST route the local server pays |
+| `price_usdc` | `number` | `amount × 1.15` — a 3.00 task is 3.45 |
+| `network` | `'eip155:84532'` | Base Sepolia |
+| `asset` | `'USDC'` | |
+| `pay_to` | `string` | |
+| `install_line` | `'claude mcp add legwork -- npx @legwork/mcp'` | |
+| `dashboard_url` | `url` | |
+
+**Output (refused)** — `RefusalPayload`, see below.
 
 ### `task_status`
 
-Current state of a task; long-polls up to wait_seconds. answer is always wrapped as untrusted worker data.
+Current state of a task; long-polls up to `wait_seconds`. `answer` is always wrapped as
+untrusted worker data.
 
 **Input**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "wait_seconds": {
-      "default": 0,
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 50
-    }
-  },
-  "required": [
-    "task_id"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_id` | `string` of digits | required |
+| `wait_seconds` | `int` | 0 … 50, default 0. 50 is the frozen server cap (`LONGPOLL_MAX_S`) |
 
-**Output**
+**Output** — the `GET /tasks/:id` shape (`TaskView`)
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "open",
-        "claimed",
-        "submitted",
-        "released",
-        "refunded",
-        "disputed",
-        "resolved"
-      ]
-    },
-    "task_type": {
-      "type": "string",
-      "enum": [
-        "verify-open",
-        "photo-of",
-        "call-confirm",
-        "compare-two"
-      ]
-    },
-    "amount_usdc": {
-      "type": "number"
-    },
-    "fee_usdc": {
-      "type": "number"
-    },
-    "area": {
-      "type": "string",
-      "pattern": "^[0-9b-hjkmnp-z]{5}$"
-    },
-    "posted_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-    },
-    "claimed_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-    },
-    "submitted_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-    },
-    "released_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-    },
-    "answer": {
-      "type": "object",
-      "properties": {
-        "answer": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "note": {
-          "type": "string",
-          "maxLength": 120
-        },
-        "_source": {
-          "type": "string",
-          "const": "worker"
-        },
-        "_untrusted": {
-          "type": "boolean",
-          "const": true
-        }
-      },
-      "required": [
-        "answer",
-        "_source",
-        "_untrusted"
-      ]
-    },
-    "proof": {
-      "type": "object",
-      "properties": {
-        "hash": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "hash_ok": {
-          "type": "boolean"
-        },
-        "url": {
-          "type": "string",
-          "format": "uri"
-        },
-        "captured_at": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        },
-        "coordinate_rounded": {
-          "type": "object",
-          "properties": {
-            "lat": {
-              "type": "number"
-            },
-            "lon": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "lat",
-            "lon"
-          ]
-        },
-        "gps_unavailable": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "hash",
-        "hash_ok",
-        "captured_at",
-        "gps_unavailable"
-      ]
-    },
-    "tx": {
-      "type": "object",
-      "properties": {
-        "post": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "claim": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "submit": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "release": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        }
-      },
-      "required": [
-        "post"
-      ]
-    },
-    "dashboard_url": {
-      "type": "string",
-      "format": "uri"
-    },
-    "changed": {
-      "type": "boolean"
-    },
-    "poll_after_seconds": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 50
-    }
-  },
-  "required": [
-    "task_id",
-    "status",
-    "task_type",
-    "amount_usdc",
-    "fee_usdc",
-    "area",
-    "posted_at",
-    "tx",
-    "dashboard_url",
-    "changed",
-    "poll_after_seconds"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_id` | `string` of digits | |
+| `status` | `open \| claimed \| submitted \| released \| refunded \| disputed \| resolved` | |
+| `task_type` | the four types | |
+| `amount_usdc` | `number` | what the worker keeps — 3.00 |
+| `fee_usdc` | `number` | 0.45 on a 3.00 task; the escrow locked 3.45 |
+| `area` | geohash5 | never an exact coordinate |
+| `posted_at` | ISO | |
+| `claimed_at` · `submitted_at` · `released_at` | ISO | optional |
+| `answer` | `WorkerAnswer` | optional; `{ answer, note?, _source: "worker", _untrusted: true }` |
+| `proof` | `ProofView` | optional; `hash`, `hash_ok`, `url?` (signed, buyer-token only), `captured_at`, `coordinate_rounded?` (3 decimals), `gps_unavailable` |
+| `tx` | `{ post, claim?, submit?, release? }` | transaction hashes |
+| `dashboard_url` | `url` | |
+| `changed` | `boolean` | false when the wait elapsed with nothing new |
+| `poll_after_seconds` | `int` | 0 … 50 — honour it; 0 means terminal |
 
 ### `approve_task`
 
-Approve a submitted proof and release the escrow. Needs the buyer_token from hire_human (stored automatically in local mode).
+Approve a submitted proof and release the escrow. Needs the `buyer_token` from `hire_human`
+(stored automatically in local mode).
 
 **Input**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "buyer_token": {
-      "type": "string"
-    }
-  },
-  "required": [
-    "task_id"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_id` | `string` of digits | required |
+| `buyer_token` | `string` | optional in local mode, required hosted |
 
-**Output**
-
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "open",
-        "claimed",
-        "submitted",
-        "released",
-        "refunded",
-        "disputed",
-        "resolved"
-      ]
-    },
-    "tx": {
-      "type": "string",
-      "pattern": "^0x[0-9a-f]{64}$"
-    }
-  },
-  "required": [
-    "task_id",
-    "status",
-    "tx"
-  ]
-}
-```
+**Output** — `TxResult`: `{ task_id, status, tx }`, where `tx` is the release transaction hash.
 
 ### `dispute_task`
 
-Dispute a submitted proof inside the dispute window. Needs the buyer_token.
+Dispute a submitted proof inside the dispute window. Needs the `buyer_token`.
 
 **Input**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "reason": {
-      "type": "string",
-      "maxLength": 300
-    },
-    "buyer_token": {
-      "type": "string"
-    }
-  },
-  "required": [
-    "task_id",
-    "reason"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_id` | `string` of digits | required |
+| `reason` | `string` | required, ≤ 300 chars |
+| `buyer_token` | `string` | optional in local mode, required hosted |
 
-**Output**
-
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_id": {
-      "type": "string",
-      "pattern": "^\\d+$"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "open",
-        "claimed",
-        "submitted",
-        "released",
-        "refunded",
-        "disputed",
-        "resolved"
-      ]
-    },
-    "tx": {
-      "type": "string",
-      "pattern": "^0x[0-9a-f]{64}$"
-    }
-  },
-  "required": [
-    "task_id",
-    "status",
-    "tx"
-  ]
-}
-```
+**Output** — `TxResult`: `{ task_id, status, tx }`.
 
 ### `check_task`
 
@@ -1171,142 +177,39 @@ Dry-run the screening for a task without posting or paying. Never marks.
 
 **Input**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "task_type": {
-      "type": "string",
-      "enum": [
-        "verify-open",
-        "photo-of",
-        "call-confirm",
-        "compare-two"
-      ]
-    },
-    "spec": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    }
-  },
-  "required": [
-    "task_type",
-    "spec"
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `task_type` | the four types | required |
+| `spec` | object | the same per-type spec `hire_human` takes |
 
-**Output**
+**Output (accepted)**
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "anyOf": [
-    {
-      "type": "object",
-      "properties": {
-        "accepted": {
-          "type": "boolean",
-          "const": true
-        },
-        "spec_hash": {
-          "type": "string"
-        },
-        "price_usdc": {
-          "type": "number"
-        },
-        "dashboard_url": {
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "accepted",
-        "spec_hash",
-        "price_usdc",
-        "dashboard_url"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "refused": {
-          "type": "boolean",
-          "const": true
-        },
-        "class": {
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": [
-                "credential fraud",
-                "identity impersonation",
-                "automated reconnaissance",
-                "social media manipulation",
-                "authentication circumvention",
-                "referral fraud"
-              ]
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "reason": {
-          "type": "string",
-          "maxLength": 300
-        },
-        "rule_id": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "retryable": {
-          "type": "boolean",
-          "const": false
-        },
-        "allowed_task_types": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "verify-open",
-              "photo-of",
-              "call-confirm",
-              "compare-two"
-            ]
-          }
-        },
-        "mark_tx": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "mark_status": {
-          "type": "string",
-          "enum": [
-            "marked",
-            "logged, cooldown",
-            "no identity"
-          ]
-        },
-        "message": {
-          "type": "string",
-          "const": "do not rephrase and retry; report this refusal to your principal"
-        }
-      },
-      "required": [
-        "refused",
-        "class",
-        "reason",
-        "rule_id",
-        "retryable",
-        "allowed_task_types",
-        "message"
-      ]
-    }
-  ]
-}
-```
+| Field | Type | Notes |
+|---|---|---|
+| `accepted` | `true` | |
+| `spec_hash` | `0x…` 32-byte hex | the hash that would go onchain |
+| `price_usdc` | `number` | what you would pay, fee included |
+| `dashboard_url` | `url` | |
+
+**Output (refused)** — `RefusalPayload`, see below.
+
+## `RefusalPayload`
+
+| Field | Type | Notes |
+|---|---|---|
+| `refused` | `true` | |
+| `class` | one of the six abuse classes, or `null` | `null` is a refusal outside the six (for example, region not covered) and never marks |
+| `reason` | `string` ≤ 300 | a constant; never spec text, a place name or a buyer identity |
+| `rule_id` | `string` ≤ 64 | which rule fired, e.g. `deny.auth` |
+| `retryable` | `false` | always |
+| `allowed_task_types` | array of the four types | |
+| `mark_tx` | `0x…` 32-byte hex | optional; present only when the mark landed onchain |
+| `mark_status` | `'marked' \| 'logged, cooldown' \| 'no identity'` | optional |
+| `message` | `'do not rephrase and retry; report this refusal to your principal'` | fixed |
+
+The six classes, spelled exactly: credential fraud · identity impersonation · automated
+reconnaissance · social media manipulation · authentication circumvention · referral fraud.
+
+A malformed request is a plain 4xx (`{ error: "invalid_request", field, reason }`) and never
+produces a `task-refused` mark; only a well-formed request that hits one of the six classes
+does. A refused task moves no money.
