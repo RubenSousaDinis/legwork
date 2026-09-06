@@ -30,6 +30,7 @@ import {
   type WorkerAnswer,
 } from '@legwork/shared';
 import { getConfig } from '../config';
+import { eligibleAction as lifecycleEligibleAction, type EligibleAction } from './lifecycle';
 import type { Db } from '../db/client';
 import { proofs, tasks } from '../db/schema';
 import { round100m } from './geo';
@@ -45,20 +46,14 @@ export const TERMINAL_STATES = ['released', 'refunded', 'resolved'] as const;
 /** The four states in which a worker has already answered, so the answer may be shown. */
 const ANSWERABLE_STATES = ['submitted', 'released', 'disputed', 'resolved'] as const;
 
-// ---------------------------------------------------------------------- stub
+// ------------------------------------------------------------ lazy settlement
 
 /**
- * TODO(T-17): replace with `settleIfEligible` from `src/services/lifecycle.ts`.
- *
- * The lazy settlement path. `GET /tasks/:id` calls it whenever `eligibleAction` says the
- * task has outrun a deadline, so a status read is what makes an auto-release happen without
- * a cron. T-17 has landed `lifecycle.ts` and `sweeper.ts` but exports no `settleIfEligible`
- * yet, so this still returns `null` and the route behaves exactly as it will afterwards,
- * minus the chain call.
+ * `settleIfEligible` is T-17's (`lifecycle.ts`): the one-task sweep a status read runs so an
+ * auto-release or an expiry happens because somebody looked at the page. Re-exported here so
+ * the read side has one import for everything it needs.
  */
-export const lifecycle = {
-  settleIfEligible: async (_id: bigint): Promise<null> => null,
-};
+export { settleIfEligible, type EligibleAction } from './lifecycle';
 
 /** How long after the dispute window a buyer's proof URL stays valid: one hour. */
 export const PROOF_URL_GRACE_S = 3600;
@@ -139,35 +134,17 @@ export async function waitForChange(
 
 // ------------------------------------------------------------------ deadlines
 
-export type EligibleAction = 'autoRelease' | 'expire';
-
 const epochS = (at: Date | null): number | null => (at ? Math.floor(at.getTime() / 1000) : null);
 
 /**
  * What the escrow would let anybody do to this task right now, in seconds since the epoch.
  *
- * The comparisons mirror `ITaskEscrow` exactly — `>=` for the dispute window, `>` for both
- * expiries — because a route that offers a settlement the contract then reverts on is worse
- * than one that waits a second longer. Pure: T-17's sweeper imports it.
+ * One predicate in the repo: T-17's `lifecycle.eligibleAction` (`>=` for the dispute window,
+ * `>` for both expiries, as `ITaskEscrow` has them). This is the seconds-as-number spelling the
+ * buyer routes and their tests use.
  */
 export function eligibleAction(row: TaskRow, nowS: number): EligibleAction | null {
-  const state = String(row.state).toLowerCase();
-
-  if (state === 'submitted') {
-    const submitted = epochS(row.submittedAt);
-    if (submitted !== null && nowS >= submitted + row.disputeWindowS) return 'autoRelease';
-    return null;
-  }
-  if (state === 'open') {
-    const posted = epochS(row.postedAt);
-    if (posted !== null && nowS > posted + row.claimTtlS) return 'expire';
-    return null;
-  }
-  if (state === 'claimed') {
-    const claimed = epochS(row.claimedAt);
-    if (claimed !== null && nowS > claimed + row.submitTtlS) return 'expire';
-  }
-  return null;
+  return lifecycleEligibleAction(row, BigInt(Math.floor(nowS)));
 }
 
 /** The instant a task becomes eligible for the expiry refund, or `null` if it never will. */
