@@ -40,7 +40,7 @@ After verification (T-24) the worker lands on `/tasks`: nearby open tasks with p
 
 ## 4. Owned paths
 ```
-apps/miniapp/app/tasks/**   apps/miniapp/components/TaskCard.tsx   apps/miniapp/components/Countdown.tsx
+apps/miniapp/app/tasks/**   apps/miniapp/components/TaskCard.tsx   apps/miniapp/components/Countdown.tsx   apps/miniapp/tests/tasks/**
 ```
 
 ## 5. Interfaces consumed
@@ -117,6 +117,7 @@ owned-paths:
   - apps/miniapp/app/tasks/**
   - apps/miniapp/components/TaskCard.tsx
   - apps/miniapp/components/Countdown.tsx
+  - apps/miniapp/tests/tasks/**
 Scope confirmed: every §2 bullet done · Out-of-scope respected · §8 tests present by name · §9 output pasted below
 AI-Usage: <one line>
 BLOCKED items resolved: <none | list>

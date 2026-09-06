@@ -134,4 +134,4 @@ Known gaps to raise as written (do not resolve them yourself):
 Open `edge.ts` first: guard order, no `process.env` outside `readEnv`, `NextResponse.next()` carries the CORS headers. Then `adminGate.ts`: 404 without key, constant-time compare, minimum key length. Then `redact.ts`: allowlist, not denylist, for headers. Most likely wrong: blocking requests with no `Origin`; `Retry-After` missing; rate-limit keys built from the raw cookie; `node:crypto` imported into the edge bundle; `/admin` answering 401 when the key is unset.
 
 ## 15. Round 2+
-—
+Merged (Sept 6, #89): `browse` raised from 120 to **600/IP/min** by the lead — the dashboard polls four `/public/*` routes every 3 s per open tab; `apps/api/proxy.ts` (Next 16 deprecates the `middleware` file and refuses a re-exported `config`, so the entry point is `proxy(req)` + a literal matcher) and the `src/log.ts` adoption of `REDACT_PATHS` + `headerSerializer` landed in the wave-3 sync; `WORKER_SESSION_COOKIE` is pinned to `WORKER_COOKIE` by a test. `readJsonWithCap` is still unwired.

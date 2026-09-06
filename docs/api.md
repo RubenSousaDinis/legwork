@@ -37,7 +37,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | GET | `/public/posters` | public | External demand as counts only; source says which zero a zero is | 200 |
 | GET | `/public/preflight` | public | The MCP preflight_workers shape | 200 |
 | GET | `/public/proofs/:hash/verify` | public | Re-hash check at request time: hash_ok is keccak256 of the retained original, served_hash of the stripped copy; coordinate only rounded; 60/min | 200 |
-| GET | `/public/observations` | public | Optional (T-40) | 200 |
+| GET | `/public/observations` | public | Completed tasks only (T-40): the verify-open delta sentence over real rows plus the rows behind it; never a nullifier, a coordinate, a note, a spec, a payer or an agent id | 200, 400 |
 | POST | `/admin/pause` | admin-key | Pause post/claim | 200 |
 | POST | `/admin/unpause` | admin-key | Unpause | 200 |
 | POST | `/admin/resolve` | admin-key | Resolve a dispute (owner key); to the buyer 3.45 back, to the worker 3.00 and the 0.45 fee back | 200, 404, 409 |
@@ -12006,11 +12006,15 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
   "properties": {
     "place_id": {
       "type": "string"
+    },
+    "include_seeded": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ]
     }
-  },
-  "required": [
-    "place_id"
-  ]
+  }
 }
 ```
 
@@ -12021,6 +12025,58 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
+    "place_id": {
+      "type": "string"
+    },
+    "delta": {
+      "type": "object",
+      "properties": {
+        "checked_places": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "wrong_listings": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "by_source": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "checked_places": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "wrong_listings": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "checked_places",
+              "wrong_listings"
+            ]
+          }
+        },
+        "sentence": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "checked_places",
+        "wrong_listings",
+        "by_source",
+        "sentence"
+      ]
+    },
     "observations": {
       "type": "array",
       "items": {
@@ -12109,6 +12165,9 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
           },
           "seeded": {
             "type": "boolean"
+          },
+          "worker_verified": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -12119,32 +12178,68 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
           "observed_at",
           "confidence",
           "task_id",
-          "seeded"
+          "seeded",
+          "worker_verified"
         ]
       }
     },
-    "delta": {
-      "type": "object",
-      "properties": {
-        "checked": {
-          "type": "integer",
-          "minimum": -9007199254740991,
-          "maximum": 9007199254740991
-        },
-        "listing_wrong": {
-          "type": "integer",
-          "minimum": -9007199254740991,
-          "maximum": 9007199254740991
-        }
-      },
-      "required": [
-        "checked",
-        "listing_wrong"
+    "disclosure": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "delta",
+    "observations",
+    "disclosure"
+  ]
+}
+```
+
+**400**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "const": "invalid_request"
+    },
+    "field": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "allowed_task_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verify-open",
+          "photo-of",
+          "call-confirm",
+          "compare-two"
+        ]
+      }
+    },
+    "suggested_task_type": {
+      "type": "string",
+      "enum": [
+        "verify-open",
+        "photo-of",
+        "call-confirm",
+        "compare-two"
       ]
     }
   },
   "required": [
-    "observations"
+    "error",
+    "field",
+    "reason"
   ]
 }
 ```

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMiddleware } from './edge';
-import { MemoryRateLimitStore } from './rateLimit';
+import { MemoryRateLimitStore, WORKER_SESSION_COOKIE } from './rateLimit';
+import { WORKER_COOKIE } from '../session';
 import { request } from './testRequest';
 
 const env = { MINIAPP_URL: 'https://miniapp.legwork.test' };
@@ -68,5 +69,11 @@ describe('rateLimit', () => {
       }),
     );
     expect(other.status).toBe(200);
+  });
+
+  it('keys the session scope on the cookie T-19 actually sets', () => {
+    // Typed out in rateLimit.ts because session.ts cannot enter the edge bundle; pinned here
+    // so a rename turns into a red test instead of a silently unkeyed limiter.
+    expect(WORKER_SESSION_COOKIE).toBe(WORKER_COOKIE);
   });
 });

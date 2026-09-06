@@ -3,8 +3,8 @@
 The six Legwork MCP tools. Hand-maintained against
 `packages/shared/src/mcp-contract.ts` — every name, parameter and result field below is copied
 from that file, which is the frozen source of truth. `pnpm docs:gen` writes the raw JSON-Schema
-dump of the same contract; this page is the readable form of it, and if the two ever disagree,
-`mcp-contract.ts` is right.
+dump of the same contract to [`mcp-schema.md`](mcp-schema.md); this page is the readable form of
+it, and if the two ever disagree, `mcp-contract.ts` is right.
 
 See [`../SKILL.md`](../SKILL.md) for what a task is, worked examples of each type, prices and
 the honest limits.
@@ -156,6 +156,8 @@ Approve a submitted proof and release the escrow. Needs the `buyer_token` from `
 | `buyer_token` | `string` | optional in local mode, required hosted |
 
 **Output** — `TxResult`: `{ task_id, status, tx }`, where `tx` is the release transaction hash.
+Hosted mode without a `buyer_token` answers `{ error: "buyer_token_required", task_id, dashboard_url }`
+instead of acting.
 
 ### `dispute_task`
 
@@ -169,7 +171,8 @@ Dispute a submitted proof inside the dispute window. Needs the `buyer_token`.
 | `reason` | `string` | required, ≤ 300 chars |
 | `buyer_token` | `string` | optional in local mode, required hosted |
 
-**Output** — `TxResult`: `{ task_id, status, tx }`.
+**Output** — `TxResult`: `{ task_id, status, tx }`. Hosted mode without a `buyer_token` answers
+`{ error: "buyer_token_required", task_id, dashboard_url }` instead of acting.
 
 ### `check_task`
 

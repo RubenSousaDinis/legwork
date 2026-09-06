@@ -9,7 +9,8 @@ import { CallConfirmSpec, CompareTwoSpec, PhotoOfSpec, VerifyOpenSpec } from './
 
 const twoDecimals = (n: number) => Math.round(n * 100) / 100 === n;
 
-const common = {
+/** The fields every task type shares. Exported for `HireHumanInput`, which spells the same envelope as one object. */
+export const EnvelopeCommon = {
   amount_usdc: z.number().positive().max(MAX_TASK_AMOUNT_USDC).refine(twoDecimals, 'at most 2 decimals'),
   need_by: z.iso.datetime().optional(),
   claim_ttl_s: z.number().int().min(60).max(604_800).default(DEFAULT_CLAIM_TTL_S),
@@ -20,10 +21,10 @@ const common = {
 };
 
 const EnvelopeShape = z.discriminatedUnion('task_type', [
-  z.object({ task_type: z.literal('verify-open'), spec: VerifyOpenSpec, ...common }),
-  z.object({ task_type: z.literal('photo-of'), spec: PhotoOfSpec, ...common }),
-  z.object({ task_type: z.literal('call-confirm'), spec: CallConfirmSpec, ...common }),
-  z.object({ task_type: z.literal('compare-two'), spec: CompareTwoSpec, ...common }),
+  z.object({ task_type: z.literal('verify-open'), spec: VerifyOpenSpec, ...EnvelopeCommon }),
+  z.object({ task_type: z.literal('photo-of'), spec: PhotoOfSpec, ...EnvelopeCommon }),
+  z.object({ task_type: z.literal('call-confirm'), spec: CallConfirmSpec, ...EnvelopeCommon }),
+  z.object({ task_type: z.literal('compare-two'), spec: CompareTwoSpec, ...EnvelopeCommon }),
 ]);
 
 /**

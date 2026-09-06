@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { TASK_TYPES } from './enums';
 import { LONGPOLL_MAX_S } from './constants';
-import { Envelope } from './schemas/envelope';
+import { Envelope, EnvelopeCommon } from './schemas/envelope';
+import { CallConfirmSpec, CompareTwoSpec, PhotoOfSpec, VerifyOpenSpec } from './schemas/specs';
 import { RefusalPayload } from './schemas/refusal';
 import { Preflight, TaskId, TaskView, TxResult, Geohash5 } from './api-contract';
 
@@ -9,7 +10,8 @@ import { Preflight, TaskId, TaskView, TxResult, Geohash5 } from './api-contract'
  * The six MCP tools, two modes. **Hosted** (`https://<host>/mcp`, read-only) cannot answer an
  * x402 challenge, so its `hire_human` returns `payment_required` with the install line.
  * **Local** (`npx @legwork/mcp` with BUYER_PRIVATE_KEY) pays the REST API via @x402/fetch and
- * runs all six for real. `docs/mcp.md` is rendered from this file.
+ * runs all six for real. `docs/mcp-schema.md` is rendered from this file; `docs/mcp.md` is the
+ * hand-maintained readable form.
  */
 export const MCP_MODES = ['hosted', 'local'] as const;
 export const INSTALL_LINE = 'claude mcp add legwork -- npx @legwork/mcp';
@@ -17,7 +19,28 @@ export const INSTALL_LINE = 'claude mcp add legwork -- npx @legwork/mcp';
 const TaskType = z.enum(TASK_TYPES);
 const WithDashboard = { dashboard_url: z.url() };
 
-export const HireHumanInput = Envelope; // same envelope as POST /tasks
+/**
+ * `hire_human`'s input: the same envelope as `POST /tasks`, spelled as one object. The MCP
+ * SDK's schema converter emits `{}` for a union, so a union input advertised nothing in
+ * `tools/list` for the tool the product is sold on. The object advertises every field with
+ * `spec` as the four per-type shapes, and the refinement runs the real `Envelope` — nothing
+ * the REST route would refuse is accepted here.
+ */
+export const HireHumanInput = z
+  .object({
+    task_type: TaskType,
+    spec: z.union([VerifyOpenSpec, PhotoOfSpec, CallConfirmSpec, CompareTwoSpec]),
+    ...EnvelopeCommon,
+  })
+  .superRefine((value, ctx) => {
+    const parsed = Envelope.safeParse(value);
+    if (parsed.success) return;
+    for (const issue of parsed.error.issues) {
+      ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message });
+    }
+  });
+/** Hosted mode, no `buyer_token` on `approve_task` / `dispute_task`: the structured form of the refusal to act. */
+export const BuyerTokenRequired = z.object({ error: z.literal('buyer_token_required'), task_id: TaskId, ...WithDashboard });
 export const HireHumanLocalResult = z.object({
   task_id: TaskId, status: z.literal('open'), eta_seconds: z.number().int(), poll_after_seconds: z.number().int().max(LONGPOLL_MAX_S), ...WithDashboard,
 });
@@ -54,13 +77,13 @@ export const MCP_TOOLS = {
   approve_task: {
     description: 'Approve a submitted proof and release the escrow. Needs the buyer_token from hire_human (stored automatically in local mode).',
     input: z.object({ task_id: TaskId, buyer_token: z.string().optional() }),
-    output: TxResult,
+    output: z.union([TxResult, BuyerTokenRequired]),
     hosted: true, local: true,
   },
   dispute_task: {
     description: 'Dispute a submitted proof inside the dispute window. Needs the buyer_token.',
     input: z.object({ task_id: TaskId, reason: z.string().max(300), buyer_token: z.string().optional() }),
-    output: TxResult,
+    output: z.union([TxResult, BuyerTokenRequired]),
     hosted: true, local: true,
   },
   check_task: {

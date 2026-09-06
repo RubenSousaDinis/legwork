@@ -129,4 +129,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Read `## Install` first: the hosted line must not imply payment. Then run the §8 sentence greps yourself. Check every JSON example against the schema field names (`place.place_id`, `template_id`, `slots`, `criterion_id`) — a wrong field name in `SKILL.md` teaches every external agent the wrong call.
 
 ## 15. Round 2+
-—
+Post-merge (Sept 6, #93 merged): `pnpm docs:gen` now writes the JSON-Schema dump to `docs/mcp-schema.md`; `docs/mcp.md` stays hand-written. The corpus and §2 agree on the OTP read-back wording.

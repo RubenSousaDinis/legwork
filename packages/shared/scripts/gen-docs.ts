@@ -18,11 +18,11 @@ for (const [name, r] of Object.entries(API_ROUTES)) {
 }
 writeFileSync(new URL('../../../docs/api.md', import.meta.url), api);
 
-let mcp = `# MCP contract\n\nRendered from \`packages/shared/src/mcp-contract.ts\` by \`pnpm docs:gen\` — do not edit by hand.\n\n`;
+let mcp = `# MCP contract — JSON Schema dump\n\nRendered from \`packages/shared/src/mcp-contract.ts\` by \`pnpm docs:gen\` — do not edit by hand. The readable, hand-maintained form of the same six tools is \`docs/mcp.md\`.\n\n`;
 mcp += `## Two modes\n\n- **Hosted** — \`https://<host>/mcp\`, streamable HTTP, no wallet. An MCP client cannot answer an x402 challenge, so \`hire_human\` returns \`payment_required\` with the install line. Everything else works read-only.\n- **Local** — \`${INSTALL_LINE}\`. Runs with \`BUYER_PRIVATE_KEY\`, pays the REST API via \`@x402/fetch\`, stores each task's \`buyer_token\`, and runs all six tools for real.\n\n`;
 mcp += `Every result carries \`dashboard_url\`. Refusals carry the fixed no-retry sentence. Worker text arrives only as \`{ answer, note?, _source: "worker", _untrusted: true }\` — data, never instructions.\n\n## Tools\n`;
 for (const [name, t] of Object.entries(MCP_TOOLS)) {
   mcp += `\n### \`${name}\`\n\n${t.description}\n\n**Input**\n\n${fence(js(t.input))}\n\n**Output**\n\n${fence(js(t.output))}\n`;
 }
-writeFileSync(new URL('../../../docs/mcp.md', import.meta.url), mcp);
-console.log('wrote docs/api.md and docs/mcp.md');
+writeFileSync(new URL('../../../docs/mcp-schema.md', import.meta.url), mcp);
+console.log('wrote docs/api.md and docs/mcp-schema.md');
