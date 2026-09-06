@@ -2,13 +2,14 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { act, cleanup, render } from '@testing-library/react';
 import { AgentCard } from '../components/AgentCard';
 import { EscrowMeter } from '../components/EscrowMeter';
+import { WorkerPool } from '../components/WorkerPool';
 import { LiveDashboard } from '../lib/live/LiveDashboard';
 import { getLiveDashboardData } from '../lib/data/live';
 import {
   fixtures,
   liveHandlers,
   liveServer,
-  refusalsHandler,
+  subgraphHandler,
   SUBGRAPH_URL,
 } from '../lib/data/fixtures/live/handlers';
 
@@ -41,8 +42,12 @@ async function settle(check: () => boolean, tries = 60): Promise<void> {
 
 describe('live dashboard', () => {
   it('markCounterAnimates', async () => {
-    server.use(...liveHandlers(fixtures.refusals0));
+    // The refusals feed is constant throughout: it supplies the screening line and the
+    // class label. What moves is the subgraph `Mark` entity, which is the only place a
+    // mark against an agent is recorded — the public API carries no requester identity.
+    server.use(...liveHandlers(fixtures.refusals1, fixtures.marks0));
     const initial = await getLiveDashboardData();
+    expect(initial.agent.id).toBe('8004-1207');
     expect(initial.agent.marks).toBe(0);
 
     vi.useFakeTimers();
@@ -63,8 +68,8 @@ describe('live dashboard', () => {
     expect(counter().getAttribute('data-value')).toBe('0');
     const meterBefore = meter().outerHTML;
 
-    // The refusal is marked between one poll and the next.
-    server.use(refusalsHandler(fixtures.refusals1));
+    // The refusal is marked onchain between one poll and the next.
+    server.use(subgraphHandler(fixtures.marks1));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3000);
     });
@@ -90,7 +95,7 @@ describe('live dashboard', () => {
   it('liveDashboardLeavesDemoDataAlone', async () => {
     // A demo canvas never opens a socket: no handler is touched, and msw's
     // `onUnhandledRequest: 'error'` would fail this test if one were.
-    server.use(...liveHandlers(fixtures.refusals0));
+    server.use(...liveHandlers(fixtures.refusals0, fixtures.marks0));
     const live = await getLiveDashboardData();
     const demoShaped = { ...live, dataMode: 'demo' as const };
 
@@ -111,7 +116,7 @@ describe('live dashboard', () => {
   });
 
   it('liveDashboardPinsTheFilmedTaskThroughThePoll', async () => {
-    server.use(...liveHandlers(fixtures.refusals1));
+    server.use(...liveHandlers(fixtures.refusals1, fixtures.marks1));
     const initial = await getLiveDashboardData({ taskId: '8' });
     expect(initial.featured?.taskId).toBe('8');
 
@@ -130,5 +135,31 @@ describe('live dashboard', () => {
     const meter = container.querySelector('[data-testid="escrow-meter"]')!;
     expect(meter.getAttribute('data-state')).toBe('locked');
     expect(meter.textContent).toContain('3.45');
+  });
+
+  it('credentialLevelSurvivesThePoll', async () => {
+    server.use(...liveHandlers(fixtures.refusals1, fixtures.marks0));
+    // What the server renders: `WORLD_CREDENTIAL_LEVEL=orb` resolved on the server.
+    const fromServer = await getLiveDashboardData({ level: 'orb' });
+    expect(fromServer.pool.highlighted?.level).toBe('orb');
+
+    vi.useFakeTimers();
+    const { container } = render(
+      <LiveDashboard initial={fromServer}>
+        {(data) => <WorkerPool pool={data.pool} />}
+      </LiveDashboard>,
+    );
+    const chips = () => [...container.querySelectorAll('.chip')].map((c) => c.textContent);
+    expect(chips()).toContain('sandbox World ID');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    await settle(() => true);
+
+    // The browser cannot read a server-only env, so the poll carries the level it was
+    // given. Without that the chip would silently downgrade to `sandbox Selfie Check`.
+    expect(chips()).toContain('sandbox World ID');
+    expect(chips()).not.toContain('sandbox Selfie Check');
   });
 });

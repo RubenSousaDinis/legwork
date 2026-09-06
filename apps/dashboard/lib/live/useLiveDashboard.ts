@@ -23,6 +23,13 @@ export function useLiveDashboard(
   const intervalMs = opts.intervalMs ?? DEFAULT_INTERVAL_MS;
   const taskId = opts.taskId;
   const isDemo = initial.dataMode === 'demo';
+  /*
+   * `WORLD_CREDENTIAL_LEVEL` is a server var, and this poll runs in the browser, where
+   * a non-`NEXT_PUBLIC_` var reads `undefined`. Carrying the level the server already
+   * resolved is what stops an `orb` deployment rendering `sandbox World ID` on load and
+   * `sandbox Selfie Check` from the first tick onward.
+   */
+  const level = initial.pool.highlighted?.level;
 
   useEffect(() => {
     setData(initial);
@@ -31,12 +38,17 @@ export function useLiveDashboard(
   useEffect(() => {
     if (isDemo) return;
     const poller = createPoller<DashboardData>({
-      fetchOnce: async () => ({ value: await getLiveDashboardData(taskId ? { taskId } : {}) }),
+      fetchOnce: async () => ({
+        value: await getLiveDashboardData({
+          ...(taskId ? { taskId } : {}),
+          ...(level ? { level } : {}),
+        }),
+      }),
       intervalMs,
       onChange: setData,
     });
     return () => poller.dispose();
-  }, [isDemo, intervalMs, taskId]);
+  }, [isDemo, intervalMs, taskId, level]);
 
   return isDemo ? initial : data;
 }
