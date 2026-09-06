@@ -35,7 +35,7 @@ import {
   type SOURCES,
   type TaskType,
 } from '@legwork/shared';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import type { Hex } from 'viem';
 import { getChain } from '../chain';
 import { getDb, type Db } from '../db/client';
@@ -67,9 +67,6 @@ const CLAIM_TYPE_BY_TEMPLATE = {
   closes_at_today: 'hours',
   takes_reservation: 'reservation',
 } as const satisfies Record<CallTemplateId, Observation['claim']['type']>;
-
-/** A task is completed once the money has moved to the worker, and only then. */
-const COMPLETED_STATES = ['released', 'resolved'] as const;
 
 /**
  * What `buildObservation` is given. Everything it needs and nothing it could dial for: the
@@ -346,18 +343,26 @@ async function workerFacts(chain: ChainReader, worker: string): Promise<WorkerFa
 }
 
 /**
- * Which way a resolved dispute went, for the tasks named.
+ * Which way every resolved dispute went, by task id.
  *
  * `tasks` records that a dispute was resolved and not which way, so the answer is recovered
  * from the audit row `/admin/resolve` wrote — matched on the release transaction hash, which
  * is unique. A task with no matching row stays absent from the map and is read as unknown,
  * which `isCompleted` treats as the buyer's: an observation the operator may have judged
  * worthless is worse than a missing one. See the INTERFACE REQUEST on the PR.
+ *
+ * Whole-table, because a dispute that reached the operator is rare — there is no cheaper way
+ * to ask, and a per-request scan of a handful of rows is not worth a cache that can go stale.
  */
-async function resolvedToBuyerBy(db: Db, rows: readonly TaskRow[]): Promise<Map<string, boolean>> {
+async function resolutionsIn(db: Db): Promise<Map<string, boolean>> {
+  const resolved = await db
+    .select({ taskId: tasks.taskId, txRelease: tasks.txRelease })
+    .from(tasks)
+    .where(eq(tasks.state, 'resolved'));
+
   const byTx = new Map<string, string>();
-  for (const row of rows) {
-    if (row.state.toLowerCase() === 'resolved' && row.txRelease) byTx.set(row.txRelease, row.taskId.toString());
+  for (const row of resolved) {
+    if (row.txRelease) byTx.set(row.txRelease, row.taskId.toString());
   }
   if (byTx.size === 0) return new Map();
 
@@ -373,6 +378,36 @@ async function resolvedToBuyerBy(db: Db, rows: readonly TaskRow[]): Promise<Map<
     if (taskId && typeof body?.to_buyer === 'boolean') out.set(taskId, body.to_buyer);
   }
   return out;
+}
+
+interface Completion {
+  /** A `where` clause over `tasks`, for a query that has `tasks` joined in. */
+  filter: SQL;
+  resolutions: Map<string, boolean>;
+}
+
+async function completionIn(db: Db): Promise<Completion> {
+  const resolutions = await resolutionsIn(db);
+  const toWorker = [...resolutions.entries()].filter(([, toBuyer]) => !toBuyer).map(([id]) => BigInt(id));
+
+  const filter =
+    toWorker.length === 0
+      ? eq(tasks.state, 'released')
+      : (or(eq(tasks.state, 'released'), inArray(tasks.taskId, toWorker)) as SQL);
+  return { filter, resolutions };
+}
+
+/**
+ * "This task is completed": released, or resolved and settled in the worker's favour.
+ *
+ * The reason it is a `where` clause rather than a predicate is T-17. Its submit route already
+ * writes `obs-<task_id>` the moment a worker hands the proof in, so the table holds rows for
+ * tasks that are merely submitted, and keeps them when one ends refunded, disputed or
+ * resolved to the buyer. A reader that trusted the `observations` table alone would count a
+ * place nobody has finished checking — so every read joins `tasks` and applies this.
+ */
+export async function completedTaskFilter(db: Db): Promise<SQL> {
+  return (await completionIn(db)).filter;
 }
 
 /** The `observations` row an `Observation` becomes. `geohash5` is the task's area — never a coordinate. */
@@ -430,7 +465,7 @@ export async function recordObservation(
   const [task] = await db.select().from(tasks).where(eq(tasks.taskId, taskId)).limit(1);
   if (!task) return null;
 
-  const built = await buildFor(db, chain, task, await resolvedToBuyerBy(db, [task]));
+  const built = await buildFor(db, chain, task, await resolutionsIn(db));
   return built ? write(db, task, built) : null;
 }
 
@@ -462,27 +497,32 @@ async function buildFor(
 export const SYNC_BATCH = 200;
 
 /**
- * Lazy materialisation: every completed task that has no observation row yet gets one.
+ * Lazy reconciliation: the most recent completed tasks, re-materialised whether or not a row
+ * already exists.
  *
  * The same shape as the escrow's lazy claim expiry — there is no keeper process, so the work
- * happens because somebody loaded a page. One query finds the gap (a left join on the
- * primary key, `null` where the row is missing); the pass is bounded, so a caller waits on a
- * fixed amount of work whatever the backlog is.
+ * happens because somebody loaded a page — but it is a reconcile rather than a backfill, and
+ * that difference is the point. T-17 writes a provisional row at **submit** time, before the
+ * dispute window has run and under its own confidence numbers; the authoritative record is
+ * the one built at **completion**, under the rule this file owns: the TTL window, the
+ * accuracy, the seeded flag, the `observed_at`. Filling only the gaps would leave that
+ * provisional row standing for ever, so the batch is upserted on `obs-<task_id>` and the
+ * completion-time answer wins.
+ *
+ * Bounded to `SYNC_BATCH` by `released_at`, so a caller waits on a fixed amount of work
+ * whatever the backlog is, and the newest completions are always the ones reconciled.
  */
 export async function syncObservations(deps: ObservationDeps = {}): Promise<Observation[]> {
   const db = deps.db ?? getDb();
   const chain = deps.chain ?? getChain();
 
-  const pending = await db
-    .select({ task: tasks })
+  const { filter, resolutions } = await completionIn(db);
+  const rows = await db
+    .select()
     .from(tasks)
-    .leftJoin(observations, eq(observations.taskId, tasks.taskId))
-    .where(and(inArray(tasks.state, [...COMPLETED_STATES]), isNull(observations.observationId)))
+    .where(filter)
     .orderBy(desc(tasks.releasedAt))
     .limit(SYNC_BATCH);
-
-  const rows = pending.map((r) => r.task);
-  const resolutions = await resolvedToBuyerBy(db, rows);
 
   const written: Observation[] = [];
   for (const task of rows) {
@@ -496,10 +536,16 @@ export async function syncObservations(deps: ObservationDeps = {}): Promise<Obse
  * The `claimed_open`/`claimed_hours`/`source` behind the tasks named, read from the private
  * `spec_json`. It goes into `listingDelta` and comes back out as two integers — the buyer's
  * claim about a place never reaches a response.
+ *
+ * `completed` is required rather than optional: a task that is only submitted has a listing
+ * claim too, and a spec that reached the delta would put a place nobody has finished checking
+ * into `checked_places`. Membership of this map is also what tells `listingDelta` a row came
+ * from a `verify-open` task at all.
  */
 export async function listingSpecsFor(
   db: Db,
   taskIds: readonly bigint[],
+  completed: SQL,
 ): Promise<Map<string, ListingSpec>> {
   const out = new Map<string, ListingSpec>();
   if (taskIds.length === 0) return out;
@@ -507,7 +553,7 @@ export async function listingSpecsFor(
   const rows = await db
     .select({ taskId: tasks.taskId, taskType: tasks.taskType, specJson: tasks.specJson })
     .from(tasks)
-    .where(inArray(tasks.taskId, [...taskIds]));
+    .where(and(inArray(tasks.taskId, [...taskIds]), completed));
 
   for (const row of rows) {
     if (taskTypeOf(row.taskType) !== 'verify-open') continue;

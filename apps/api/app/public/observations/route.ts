@@ -13,7 +13,10 @@
  *
  * `syncObservations` runs first. There is no keeper process, so a completed task becomes an
  * observation because somebody loaded this page — the same lazy shape as the escrow's claim
- * expiry.
+ * expiry — and the pass reconciles rather than backfills, because T-17's submit route already
+ * wrote a provisional `obs-<task_id>` before the dispute window had run. For the same reason
+ * both reads below join `tasks`: a row exists here from the moment a proof is handed in, and
+ * only a *completed* task is a place somebody finished checking.
  */
 import { OSM_PLACE_ID, type PublicObservation } from '@legwork/shared';
 import { and, desc, eq } from 'drizzle-orm';
@@ -21,8 +24,9 @@ import { route, preflight } from '@/src/http/route';
 import { rateLimit, clientKey } from '@/src/http/rateLimit';
 import { ApiError } from '@/src/errors';
 import { getDb } from '@/src/db/client';
-import { observations } from '@/src/db/schema';
+import { observations, tasks } from '@/src/db/schema';
 import {
+  completedTaskFilter,
   listingDelta,
   listingSpecsFor,
   syncObservations,
@@ -95,39 +99,50 @@ export const GET = route(async (req) => {
   }
   const includeSeeded = url.searchParams.get('include_seeded') === '1';
 
-  // Lazy materialisation, before the read: a task released a second ago is a record now.
+  // Lazy reconciliation, before the read: a task released a second ago is a record now, and
+  // T-17's provisional submit-time row has been rewritten under this task's confidence rule.
   const db = getDb();
   await syncObservations({ db });
+
+  // Every read joins `tasks` and keeps only completed ones. T-17 writes `obs-<task_id>` at
+  // submit time, so the table also holds rows for tasks that are open, disputed, refunded or
+  // resolved to the buyer — and a wall that showed those, or a sentence that counted them,
+  // would be claiming somebody finished checking a place when nobody has.
+  const completed = await completedTaskFilter(db);
 
   // The sentence is about the whole corpus and never about the filter — `place_id` narrows
   // the rows a reader is looking at, not the number the deck reads out loud.
   const real = (
     await db
-      .select()
+      .select({ row: observations })
       .from(observations)
-      .where(and(eq(observations.seeded, false), eq(observations.claimType, 'open_now')))
+      .innerJoin(tasks, eq(tasks.taskId, observations.taskId))
+      .where(and(eq(observations.seeded, false), eq(observations.claimType, 'open_now'), completed))
       .orderBy(desc(observations.observedAt))
       .limit(DELTA_SCAN)
-  ).map(toObservation);
+  ).map(({ row }) => toObservation(row));
 
-  const specs = await listingSpecsFor(db, real.map((row) => BigInt(row.task_id)));
+  const specs = await listingSpecsFor(db, real.map((row) => BigInt(row.task_id)), completed);
   const delta = listingDelta(real, specs);
 
-  const filters = [
-    ...(placeId === null ? [] : [eq(observations.placeKey, placeId)]),
-    ...(includeSeeded ? [] : [eq(observations.seeded, false)]),
-  ];
   const rows = await db
-    .select()
+    .select({ row: observations })
     .from(observations)
-    .where(filters.length > 0 ? and(...filters) : undefined)
+    .innerJoin(tasks, eq(tasks.taskId, observations.taskId))
+    .where(
+      and(
+        completed,
+        ...(placeId === null ? [] : [eq(observations.placeKey, placeId)]),
+        ...(includeSeeded ? [] : [eq(observations.seeded, false)]),
+      ),
+    )
     .orderBy(desc(observations.observedAt))
     .limit(PAGE_SIZE);
 
   const body: ObservationsResponse = {
     ...(placeId === null ? {} : { place_id: placeId }),
     delta,
-    observations: rows.map((row) => publicView(toObservation(row))),
+    observations: rows.map(({ row }) => publicView(toObservation(row))),
     disclosure: DELTA_DISCLOSURE,
   };
   return Response.json(body, { headers: { 'cache-control': CACHE_CONTROL } });

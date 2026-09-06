@@ -453,6 +453,30 @@ async function seedCompleted(
   return taskId;
 }
 
+/**
+ * The row T-17's submit route writes the moment a proof is handed in: same key, its own
+ * confidence, before the dispute window has run. The fixture this task has to survive.
+ */
+async function insertSubmitTimeRow(
+  taskId: bigint,
+  placeKey: string,
+  over: { confidence?: string; evidenceHash?: Hex } = {},
+): Promise<void> {
+  await fixture.db.insert(observations).values({
+    observationId: `obs-${taskId}`,
+    placeKey,
+    claimType: 'open_now',
+    claimValue: 'closed',
+    evidenceHash: over.evidenceHash ?? null,
+    workerNullifier: NULLIFIER_HEX,
+    observedAt: CAPTURED_AT,
+    confidence: over.confidence ?? '0.9',
+    taskId,
+    seeded: false,
+    geohash5: AREA,
+  });
+}
+
 async function body(url: string): Promise<{ res: Response; text: string; json: Record<string, unknown> }> {
   const res = await call(observationsRoute, { url });
   const text = await res.text();
@@ -597,8 +621,10 @@ describe('publicObservationShape', () => {
     expect(first).toHaveLength(1);
     expect(await fixture.db.select().from(observations)).toHaveLength(1);
 
+    // The pass reconciles rather than backfills, so it revisits the task and rewrites the
+    // same key — which is what "inserts none" has to mean: still one row, never a second.
     const second = await syncObservations({ db: fixture.db });
-    expect(second).toHaveLength(0);
+    expect(second.map((row) => row.observation_id)).toEqual(['obs-1']);
     expect(await fixture.db.select().from(observations)).toHaveLength(1);
 
     // The upsert is keyed on `obs-<task_id>`, so a direct re-record is a no-op too.
@@ -607,6 +633,85 @@ describe('publicObservationShape', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.observationId).toBe('obs-1');
     expect(rows[0]?.geohash5).toBe(AREA);
+  });
+
+  it('keeps a submit-time row for an unfinished task out of the wall and out of the sentence', async () => {
+    // What T-17 writes the moment a worker hands the proof in: `obs-<task_id>`, at 0.9,
+    // for a task that is only submitted. Four of them, each ending somewhere that is not
+    // the worker being paid.
+    const unfinished = [
+      { id: 11n, state: 'submitted' },
+      { id: 12n, state: 'disputed' },
+      { id: 13n, state: 'refunded' },
+      { id: 14n, state: 'resolved' },
+    ];
+    for (const { id, state } of unfinished) {
+      const place = `node/${9000000 + Number(id)}`;
+      await insertTask(
+        mkTask({
+          taskId: id,
+          state,
+          answer: 'closed',
+          proofHash: hashOf(2000 + Number(id)),
+          spec: verifyOpenSpec({ place: { ...PLACE, place_id: place } }),
+          txRelease: state === 'resolved' ? hashOf(3000 + Number(id)) : null,
+        }),
+      );
+      await insertSubmitTimeRow(id, place);
+    }
+    // The resolved one went to the buyer, which is the operator judging the proof worthless.
+    await fixture.db.insert(adminAudit).values({
+      id: 'a-14',
+      action: '/admin/resolve',
+      tx: hashOf(3014),
+      payload: { route: '/admin/resolve', body: { task_id: '14', to_buyer: true }, outcome: 'ok' },
+    });
+
+    const before = await body('http://localhost/public/observations');
+    expect(before.json.observations).toHaveLength(0);
+    expect(before.json.delta).toMatchObject({
+      checked_places: 0,
+      wrong_listings: 0,
+      sentence: 'we checked 0 places; the listing was wrong about 0',
+    });
+    // The rows are still in the table — this task deletes nothing, it just refuses to read them.
+    expect(await fixture.db.select().from(observations)).toHaveLength(4);
+
+    // One completed task beside them, to show the filter is a filter and not an empty query.
+    await seedCompleted(1, 'closed');
+    const after = await body('http://localhost/public/observations');
+    expect(after.json.observations).toHaveLength(1);
+    expect(after.json.delta).toMatchObject({ checked_places: 1, wrong_listings: 1 });
+  });
+
+  it('rewrites a submit-time 0.9 row at 0.6 when the capture sat outside the TTL window', async () => {
+    const taskId = 21n;
+    const hash = hashOf(2021);
+    await insertTask(
+      mkTask({
+        taskId,
+        answer: 'closed',
+        proofHash: hash,
+        spec: verifyOpenSpec({ place: { ...PLACE, place_id: 'node/9100021' } }),
+      }),
+    );
+    // Inside the fence and precise, but captured ten minutes before the claim — which the
+    // submit route cannot know is wrong yet, and which this task's rule downgrades.
+    await insertProof(
+      mkProof({ hash, taskId, capturedAt: new Date(CLAIMED_AT.getTime() - 600_000) }),
+    );
+    await insertSubmitTimeRow(taskId, 'node/9100021', { confidence: '0.9', evidenceHash: hash });
+
+    const [provisional] = await fixture.db.select().from(observations);
+    expect(Number(provisional?.confidence)).toBe(0.9);
+
+    const written = await syncObservations({ db: fixture.db });
+    expect(written.map((row) => row.confidence)).toEqual([0.6]);
+
+    const rows = await fixture.db.select().from(observations);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.observationId).toBe('obs-21');
+    expect(Number(rows[0]?.confidence)).toBe(0.6);
   });
 
   it('observes a dispute resolved to the worker and never one resolved to the buyer', async () => {
