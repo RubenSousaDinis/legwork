@@ -6,11 +6,11 @@
  * claim that surfaces the right 409 is only worth something if the happy path it guards
  * actually completes.
  *
- * `spyChain` is a thin recorder around `FakeChain`: it keeps the ordered list of relayer calls
- * a route made, and can arm one of them to revert with a contract error name. Both live here
- * rather than in `@legwork/chain` because `packages/**` belongs to T-07.
+ * `FakeChain.calls` is the ordered list of writes a route made and `failNextWith` arms one to
+ * revert with a contract error name; both landed in #82, so the recording Proxy this file used
+ * to carry is gone.
  */
-import { ChainRevert, FakeChain, type ChainAdapter } from '@legwork/chain';
+import { FakeChain } from '@legwork/chain';
 import {
   DEMO_DISPUTE_WINDOW_S,
   TASK_TYPE_BIT,
@@ -34,6 +34,7 @@ import { resetConfigForTests } from '../config';
 import { observations, proofs, screeningLog, tasks } from '../db/schema';
 import { issueWorkerSession } from '../session';
 import { dbState, secondsToDate, titleOf, workerBrief } from './lifecycle';
+import { resetSweepClockForTests } from './sweeper';
 
 const AREA = 'ez5ku';
 const CLAIM_TTL = 1800;
@@ -86,47 +87,16 @@ const OTHER_BUYER = '0x00000000000000000000000000000000000000b2' as Address;
 
 const NULLIFIER = '1001';
 
-interface Recorded {
-  name: string;
-  args: unknown[];
-}
+/** The writes a route made since the last `arrange()`, in order, by adapter method name. */
+const writes = (): string[] => fake.calls.map((c) => c.fn);
 
-/** Every relayer write a route can make. Reads are not recorded; they are not evidence. */
-const WRITES = new Set(['claimFor', 'releaseClaimFor', 'submitFor', 'dispute', 'expire', 'autoRelease']);
-
-interface Spy {
-  chain: ChainAdapter;
-  calls: Recorded[];
-  /** Arms the next call to `method` to revert with the contract's own error name. */
-  failNext: (method: string, revert: string) => void;
-}
-
-function spyChain(inner: FakeChain): Spy {
-  const calls: Recorded[] = [];
-  const armed = new Map<string, string>();
-
-  const chain = new Proxy(inner, {
-    get(target, property, receiver) {
-      const value = Reflect.get(target, property, receiver);
-      if (typeof value !== 'function' || typeof property !== 'string') return value;
-      return (...args: unknown[]) => {
-        if (WRITES.has(property)) calls.push({ name: property, args });
-        const revert = armed.get(property);
-        if (revert !== undefined) {
-          armed.delete(property);
-          return Promise.reject(new ChainRevert(revert));
-        }
-        return (value as (...a: unknown[]) => unknown).apply(target, args);
-      };
-    },
-  }) as unknown as ChainAdapter;
-
-  return { chain, calls, failNext: (method, revert) => armed.set(method, revert) };
-}
+/** Draws the line between fixture setup and the call under test. */
+const arrange = (): void => {
+  fake.calls.length = 0;
+};
 
 let fixture: TestDb;
 let fake: FakeChain;
-let spy: Spy;
 
 /** `Authorization: Bearer` rather than a cookie — the CLI worker has no cookie jar either. */
 async function sessionFor(worker: Address, nullifier = NULLIFIER): Promise<string> {
@@ -139,9 +109,17 @@ const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 /** Posts on the fake and mirrors the row, the way T-16's `POST /tasks` will. */
 async function postTask(
   type: TaskType,
-  options: { buyer?: Address; payer?: Address; lat?: number; lon?: number } = {},
+  options: {
+    buyer?: Address;
+    payer?: Address;
+    lat?: number;
+    lon?: number;
+    /** The list route sweeps before it reads, so a fixture that must stay open says so. */
+    claimTtl?: number;
+  } = {},
 ): Promise<bigint> {
   const buyer = options.buyer ?? BUYER;
+  const claimTtl = options.claimTtl ?? CLAIM_TTL;
   const spec = SPECS[type];
   const { taskId } = await fake.post({
     taskType: TASK_TYPE_BIT[type],
@@ -150,7 +128,7 @@ async function postTask(
     buyer,
     buyerAgentId: 0n,
     area: AREA,
-    claimTTL: CLAIM_TTL,
+    claimTTL: claimTtl,
     submitTTL: SUBMIT_TTL,
     disputeWindow: DEMO_DISPUTE_WINDOW_S,
   });
@@ -166,7 +144,7 @@ async function postTask(
     area: AREA,
     state: dbState(chainTask.state),
     postedAt: secondsToDate(chainTask.postedAt),
-    claimTtlS: CLAIM_TTL,
+    claimTtlS: claimTtl,
     submitTtlS: SUBMIT_TTL,
     disputeWindowS: DEMO_DISPUTE_WINDOW_S,
     specJson: spec,
@@ -189,6 +167,7 @@ async function syncRow(taskId: bigint): Promise<void> {
       worker: /^0x0{40}$/.test(chainTask.worker) ? null : chainTask.worker,
       claimedAt: chainTask.claimedAt === 0n ? null : secondsToDate(chainTask.claimedAt),
       submittedAt: chainTask.submittedAt === 0n ? null : secondsToDate(chainTask.submittedAt),
+      proofHash: /^0x0{64}$/.test(chainTask.proofHash) ? null : chainTask.proofHash,
     })
     .where(eq(tasks.taskId, taskId));
 }
@@ -205,8 +184,8 @@ beforeEach(async () => {
   fake.mintUsdc(fake.relayerAddress, 1_000_000_000n);
   fake.setWorker(WORKER, { nullifier: BigInt(NULLIFIER), seeded: false, area: AREA, taskTypes: 15 });
   fake.setWorker(OTHER_WORKER, { nullifier: 1002n, seeded: false, area: AREA, taskTypes: 15 });
-  spy = spyChain(fake);
-  setChainForTests(spy.chain);
+  setChainForTests(fake);
+  resetSweepClockForTests();
 });
 
 afterEach(async () => {
@@ -278,7 +257,7 @@ describe('POST /tasks/:id/claim', () => {
     expect(await fake.cooldownUntil(WORKER)).toBe(now + 900n);
 
     const target = await postTask('photo-of');
-    spy.calls.length = 0;
+    arrange();
 
     const cooling = await call(claimRoute, {
       method: 'POST',
@@ -291,11 +270,12 @@ describe('POST /tasks/:id/claim', () => {
       cooldown_until: secondsToDate(now + 900n).toISOString(),
     });
     // Refused before the relayer was ever asked: no gas spent to learn what a read told us.
-    expect(spy.calls).toEqual([]);
+    expect(writes()).toEqual([]);
 
     // Past the cooldown, but the contract itself reverts `InCooldown` — the same 409.
     await fake.warp(901);
-    spy.failNext('claimFor', 'InCooldown');
+    fake.failNextWith('InCooldown');
+    arrange();
     const raced = await call(claimRoute, {
       method: 'POST',
       params: { id: target.toString() },
@@ -303,7 +283,7 @@ describe('POST /tasks/:id/claim', () => {
     });
     expect(raced.status).toBe(409);
     expect((await raced.json()).error).toBe('InCooldown');
-    expect(spy.calls.map((c) => c.name)).toEqual(['claimFor']);
+    expect(writes()).toEqual(['claimFor']);
 
     // A seeded worker may only take an allowlisted payer's work.
     fake.setWorker(SEEDED_WORKER, { nullifier: 1003n, seeded: true, area: AREA, taskTypes: 15 });
@@ -318,7 +298,7 @@ describe('POST /tasks/:id/claim', () => {
     expect(await refused.json()).toEqual({ error: 'SeededCannotClaimExternal' });
 
     // The happy path, and the row that follows it.
-    spy.calls.length = 0;
+    arrange();
     const ok = await call(claimRoute, {
       method: 'POST',
       params: { id: target.toString() },
@@ -334,7 +314,7 @@ describe('POST /tasks/:id/claim', () => {
     expect(body.tx).toMatch(/^0x[0-9a-f]{64}$/);
     expect(body.claim_expires_at).toBe(secondsToDate(claimedAt + BigInt(CLAIM_TTL)).toISOString());
     expect(body.submit_deadline).toBe(secondsToDate(claimedAt + BigInt(SUBMIT_TTL)).toISOString());
-    expect(spy.calls.map((c) => c.name)).toEqual(['claimFor']);
+    expect(writes()).toEqual(['claimFor']);
 
     const row = await rowOf(target);
     expect(row?.state).toBe('claimed');
@@ -379,7 +359,8 @@ describe('POST /tasks/:id/claim', () => {
 describe('GET /tasks/list', () => {
   it('shows open work, the caller own claim, and a stale claim as open', async () => {
     const token = await sessionFor(WORKER);
-    const open = await postTask('verify-open', { lat: 39.74362, lon: -8.80713 });
+    // Posted with a long claim TTL: the list sweeps first, and this row must still be open.
+    const open = await postTask('verify-open', { lat: 39.74362, lon: -8.80713, claimTtl: 7200 });
     const mine = await postTask('photo-of');
     const stale = await postTask('call-confirm');
 
@@ -459,6 +440,7 @@ describe('POST /tasks/:id/release-claim', () => {
     await fake.claimFor(taskId, WORKER);
     await syncRow(taskId);
 
+    arrange();
     const res = await call(releaseClaimRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -466,7 +448,7 @@ describe('POST /tasks/:id/release-claim', () => {
     });
     expect(res.status).toBe(200);
     expect((await res.json()).tx).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(spy.calls.map((c) => c.name)).toEqual(['releaseClaimFor']);
+    expect(writes()).toEqual(['releaseClaimFor']);
 
     const row = await rowOf(taskId);
     expect(row?.state).toBe('open');
@@ -531,6 +513,7 @@ describe('POST /tasks/:id/submit', () => {
     const hash = keccak256(toBytes('a photo of a storefront')) as Hex;
     await insertProofRow(hash, WORKER);
 
+    arrange();
     const res = await call(submitRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -539,7 +522,7 @@ describe('POST /tasks/:id/submit', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: 'submitted' });
-    expect(spy.calls.map((c) => c.name)).toEqual(['submitFor']);
+    expect(writes()).toEqual(['submitFor']);
 
     const row = await rowOf(taskId);
     expect(row?.state).toBe('submitted');
@@ -574,6 +557,7 @@ describe('POST /tasks/:id/submit', () => {
     const hash = keccak256(toBytes('someone else photo')) as Hex;
     await insertProofRow(hash, OTHER_WORKER);
 
+    arrange();
     const res = await call(submitRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -582,7 +566,7 @@ describe('POST /tasks/:id/submit', () => {
     });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: 'invalid_request', field: 'proofHash' });
-    expect(spy.calls).toEqual([]);
+    expect(writes()).toEqual([]);
   });
 
   it('400s when proofHash and photo_hash disagree', async () => {
@@ -616,6 +600,7 @@ describe('POST /tasks/:id/submit', () => {
       called_at: CAPTURED_AT,
       note: 'they had two trays left',
     };
+    arrange();
     const res = await call(submitRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -626,7 +611,7 @@ describe('POST /tasks/:id/submit', () => {
 
     const expected = keccak256(toBytes(canonicalJson(proof)));
     expect((await rowOf(taskId))?.proofHash).toBe(expected);
-    expect(spy.calls[0]?.args[2]).toBe(expected);
+    expect(fake.calls[0]?.args[2]).toBe(expected);
 
     const [observation] = await fixture.db.select().from(observations);
     expect(observation).toMatchObject({ claimType: 'item_in_stock', claimValue: 'yes' });
@@ -644,6 +629,7 @@ describe('POST /tasks/:id/submit', () => {
     const hash = keccak256(toBytes('not mine')) as Hex;
     await insertProofRow(hash, WORKER);
 
+    arrange();
     const res = await call(submitRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -651,7 +637,7 @@ describe('POST /tasks/:id/submit', () => {
       body: photoProof(hash),
     });
     expect(res.status).toBe(409);
-    expect(spy.calls).toEqual([]);
+    expect(writes()).toEqual([]);
   });
 
   it('409s once the submit window has closed', async () => {
@@ -664,6 +650,7 @@ describe('POST /tasks/:id/submit', () => {
     const hash = keccak256(toBytes('too late')) as Hex;
     await insertProofRow(hash, WORKER);
 
+    arrange();
     const res = await call(submitRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
@@ -671,7 +658,7 @@ describe('POST /tasks/:id/submit', () => {
       body: photoProof(hash),
     });
     expect(res.status).toBe(409);
-    expect(spy.calls).toEqual([]);
+    expect(writes()).toEqual([]);
   });
 });
 
