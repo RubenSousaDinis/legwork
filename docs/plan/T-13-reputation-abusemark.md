@@ -153,3 +153,4 @@ Open `mark` first: idempotency (`return false`) must come **before** the cooldow
 
 ## 15. Round 2+
 —
+Post-merge finding (Sept 7): `AbuseMark` lacked `onERC721Received`, so the live registry's `_safeMint` rejected `registerIdentity` — the S5 constraint this brief was held to. Fixed in lead PR #125 with a mock that enforces the receiver check.

@@ -186,6 +186,15 @@ else
 fi
 
 RELAYER_AFTER=$(usdc_balance "$RELAYER")
+# Base Sepolia reads can lag their own receipt by a block. When this run seeded, wait (up to a
+# minute) for the last release to show on the treasury before reading the deltas, so a slow node
+# does not fail a run whose transactions all succeeded.
+if [ "$TASKS_BEFORE" -lt 5 ]; then
+  for _ in $(seq 1 20); do
+    if [ "$(usdc_balance "$TREASURY")" -ge $(( TREASURY_BEFORE + 2250000 )) ]; then break; fi
+    sleep 3
+  done
+fi
 TREASURY_AFTER=$(usdc_balance "$TREASURY")
 
 # ----------------------------------------------------------------------------- 5. the ABIs
