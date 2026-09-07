@@ -8,10 +8,13 @@ import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
 import { Countdown } from './Countdown';
 import { MonoTag } from './ui/MonoTag';
-import { StatusBadge } from './ui/StatusBadge';
 
 /**
  * One row of `GET /tasks`, in its three states: collapsed, expanded, and claimed.
+ *
+ * The expanded card is a stack of labelled rows — `type`, `name`, `meta`, `question`,
+ * `proof`, `claim`, `relayed` — each marked `data-row`, in that order and no other. The
+ * collapsed row is one mono line, its meta and the price.
  *
  * The price shown is `price_usdc` — the posted rate the worker keeps, never a figure with the
  * fee taken out of it. The agent pays 3.45, escrow locks 3.45, the worker receives 3.00 and
@@ -81,11 +84,15 @@ const QUESTION: Record<TaskType, string> = {
   'compare-two': 'Pick A or B against the criterion shown after you claim',
 };
 
-const PROOF_REQUIREMENTS: Record<TaskType, string> = {
-  'verify-open': 'photo of the door + hours sign · location · timestamp',
-  'photo-of': 'photo of the door + hours sign · location · timestamp',
-  'call-confirm': 'your answer + the time you called — self-reported, unverified',
-  'compare-two': 'one choice + one line',
+/**
+ * What has to come back with the answer, as `·` lines. The two photograph types ask for the
+ * same three things; the other two ask for what they ask for and say what is unverified.
+ */
+const PROOF_LINES: Record<TaskType, readonly string[]> = {
+  'verify-open': ['photo of the door + hours sign', 'location · timestamp'],
+  'photo-of': ['photo of the door + hours sign', 'location · timestamp'],
+  'call-confirm': ['your answer + the time you called — self-reported, unverified'],
+  'compare-two': ['one choice + one line'],
 };
 
 /** `~180 m` at street scale, `~1.2 km` beyond it — never a raw metre count, never a coordinate. */
@@ -98,6 +105,12 @@ export function formatDistance(distance_m?: number): string {
 /** First 6 characters, then the last 4 — the hash is a link, not something to read out. */
 export function shortTx(tx: string): string {
   return `${tx.slice(0, 6)}…${tx.slice(-4)}`;
+}
+
+/** `Rua de Alcobaça 12, Leiria` when the brief carries a place, nothing when it does not. */
+export function placePrefix(row: TaskRow): string | null {
+  const place = row.brief?.place;
+  return place === undefined ? null : `${place.street_address}, ${place.locality}`;
 }
 
 export function TaskCard({
@@ -115,116 +128,117 @@ export function TaskCard({
 
   return (
     <li
-      className="lw-card"
+      className={open ? 'lw-card' : 'lw-card lw-card--tight'}
       data-task={row.task_id}
       data-claimed={claimed ? 'true' : 'false'}
-      style={{ listStyle: 'none', marginBottom: 'var(--s-4)' }}
     >
       <button
         aria-expanded={open}
-        className="lw-task-summary"
+        className="lw-task-summary lw-plain-button"
         data-hit="44"
         onClick={onToggle}
-        style={{
-          background: 'transparent',
-          border: 0,
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: 'var(--s-2)',
-          font: 'inherit',
-          padding: 0,
-          textAlign: 'left',
-          width: '100%',
-        }}
         type="button"
       >
-        <span style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', alignItems: 'center' }}>
-          <MonoTag>{row.task_type}</MonoTag>
-          <StatusBadge status={row.state} size="sm" />
-          {row.seeded ? (
-            <Chip tone="seeded" floor={20}>
-              seeded
-            </Chip>
-          ) : null}
-        </span>
+        {open ? (
+          <>
+            <span className="lw-task-row" data-row="type">
+              <span className="lw-chips">
+                <MonoTag>{row.task_type}</MonoTag>
+                {row.seeded ? (
+                  <Chip tone="seeded" floor={20}>
+                    seeded
+                  </Chip>
+                ) : null}
+              </span>
+              {/* Not amber: DESIGN-SPEC reserves amber for refusals, and a claim window
+                  running out is neither a refusal nor an error. */}
+              <span className="lw-meta lw-meta--flush" data-ttl="true">
+                {TTL_LINE}
+              </span>
+            </span>
 
-        <span
-          className="lw-task-title"
-          {...(claimed ? { 'data-floor': '20' } : {})}
-          style={{ fontFamily: 'var(--font-body)', fontSize: claimed ? '20px' : '16px', fontWeight: 600 }}
-        >
-          {row.title}
-        </span>
+            <span className="lw-task-row" data-row="name">
+              <span
+                className="lw-task-title lw-task-name"
+                {...(claimed ? { 'data-floor': '20' } : {})}
+              >
+                {row.title}
+              </span>
+              <PriceTag price={row.price_usdc} />
+            </span>
 
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
-          <span
-            data-floor="20"
-            data-price="usdc"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '28px',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {row.price_usdc.toFixed(2)}
+            <span className="lw-meta" data-row="meta">
+              {placePrefix(row) === null ? null : `${placePrefix(row)} · `}
+              <span data-distance="true">{formatDistance(row.distance_m)}</span>
+              {` · you keep the full ${row.price_usdc.toFixed(2)}`}
+            </span>
+          </>
+        ) : (
+          <span className="lw-task-row lw-task-row--collapsed">
+            <span className="lw-task-summary__left">
+              <span className="lw-chips">
+                <span className="lw-task-line">
+                  {`${row.task_type} · `}
+                  <span className="lw-task-title">{row.title}</span>
+                </span>
+                {row.seeded ? (
+                  <Chip tone="seeded" floor={20}>
+                    seeded
+                  </Chip>
+                ) : null}
+              </span>
+              <span className="lw-meta lw-meta--flush">
+                <span data-distance="true">{formatDistance(row.distance_m)}</span>
+                {' · '}
+                <span data-ttl="true">{TTL_LINE}</span>
+              </span>
+            </span>
+            <PriceTag price={row.price_usdc} small />
           </span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', color: 'var(--ink-text-2)' }}>
-            USDC
-          </span>
-        </span>
-
-        <span
-          style={{
-            color: 'var(--ink-text-2)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--s-3)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '15px',
-          }}
-        >
-          <span data-distance="true">{formatDistance(row.distance_m)}</span>
-          <span data-ttl="true">{TTL_LINE}</span>
-        </span>
+        )}
       </button>
 
       {open ? (
-        <div className="lw-task-body" style={{ marginTop: 'var(--s-4)' }}>
-          <p className="lw-section-label">Address</p>
-          <p style={{ margin: '0 0 var(--s-3)' }}>{row.title}</p>
+        <div className="lw-task-body">
+          <hr className="lw-rule" />
 
-          <p className="lw-section-label">The question</p>
-          <p style={{ margin: '0 0 var(--s-2)' }}>{QUESTION[row.task_type]}</p>
+          <p className="lw-question" data-row="question">
+            {QUESTION[row.task_type]}
+          </p>
           <BriefDetail row={row} />
 
-          <p className="lw-section-label">Proof required</p>
-          <p style={{ margin: '0 0 var(--s-3)' }}>{PROOF_REQUIREMENTS[row.task_type]}</p>
-
-          <p style={{ margin: '0 0 var(--s-4)', color: 'var(--ink-text-2)' }}>{PAID_FOR_THE_PROOF}</p>
+          <div data-row="proof">
+            {PROOF_LINES[row.task_type].map((line) => (
+              <p className="lw-fact" key={line}>
+                {line}
+              </p>
+            ))}
+            <p className="lw-note">{PAID_FOR_THE_PROOF}</p>
+          </div>
 
           {claimed ? (
-            <ClaimedActions claim={claim} onRelease={onRelease} router={router} taskId={row.task_id} />
+            <div data-row="claim">
+              <ClaimedActions claim={claim} onRelease={onRelease} router={router} taskId={row.task_id} />
+            </div>
           ) : (
-            <div data-floor="20">
+            <div data-floor="20" data-row="claim">
               <Button variant="primary" size="lg" full onClick={onClaim}>
                 CLAIM
               </Button>
             </div>
           )}
 
-          <p style={{ marginTop: 'var(--s-3)' }}>
-            <Chip tone="neutral" floor={20}>
+          <p className="lw-chips lw-chips--centred" data-row="relayed">
+            <Chip tone="verified" floor={20}>
               {RELAYED_CHIP}
             </Chip>
           </p>
 
           {error === undefined ? null : (
             <p
+              className="lw-error-line"
               data-error="claim"
-              style={{ color: 'var(--ink-text)', fontSize: '16px', margin: 'var(--s-2) 0 0' }}
+              style={{ color: 'var(--ink-text)' }}
             >
               {error}
             </p>
@@ -232,6 +246,26 @@ export function TaskCard({
         </div>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * The posted rate: the numeral in Archivo and its unit in mono, two nodes on one baseline
+ * that never break apart. The collapsed figure carries `data-floor="20"`, so it renders at
+ * the floor rather than at the prototype's 17 px.
+ */
+function PriceTag({ price, small = false }: { price: number; small?: boolean }) {
+  return (
+    <span className="lw-price">
+      <span
+        className={small ? 'lw-price__figure lw-price__figure--sm' : 'lw-price__figure'}
+        data-floor="20"
+        data-price="usdc"
+      >
+        {price.toFixed(2)}
+      </span>
+      <span className="lw-price__unit">USDC</span>
+    </span>
   );
 }
 
@@ -250,7 +284,7 @@ function BriefDetail({ row }: { row: TaskRow }) {
   if (row.task_type === 'photo-of' && brief.subject !== undefined) {
     const detail = brief.subject_detail;
     return (
-      <p data-brief="subject" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-brief="subject">
         {detail === undefined ? brief.subject : `${brief.subject} — ${detail}`}
       </p>
     );
@@ -258,7 +292,7 @@ function BriefDetail({ row }: { row: TaskRow }) {
 
   if (row.task_type === 'call-confirm' && brief.template_question !== undefined) {
     return (
-      <p data-brief="template_question" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-brief="template_question">
         {brief.template_question}
       </p>
     );
@@ -266,7 +300,7 @@ function BriefDetail({ row }: { row: TaskRow }) {
 
   if (row.task_type === 'compare-two' && brief.criterion_id !== undefined) {
     return (
-      <p data-brief="criterion_id" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-brief="criterion_id">
         <MonoTag>{brief.criterion_id}</MonoTag>
       </p>
     );
@@ -306,17 +340,17 @@ function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProp
 
   if (clock.expired) {
     return (
-      <p data-claim="expired" data-floor="20" style={{ margin: 0 }}>
+      <p className="lw-body" data-claim="expired" data-floor="20">
         {CLAIM_EXPIRED}
       </p>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+    <div className="lw-actions">
       <Countdown label="claim expires in" onExpire={onExpire} until={claim.claim_expires_at} />
 
-      <p style={{ margin: 0 }}>
+      <p className="lw-chips">
         <Chip tone="neutral" floor={20}>
           <a data-hit="44" href={`${BASESCAN_TX}${claim.tx}`} rel="noreferrer" target="_blank">
             {`tx ${shortTx(claim.tx)} ↗`}

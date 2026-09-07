@@ -503,12 +503,32 @@ body {
   border-radius: var(--r-card-sm);
 }
 
+/* The whole tappable summary, collapsed or open. */
+.lw-task-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.lw-task-summary__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
 /* Collapsed: `<type> · <title>` in mono, one line of 16/600. */
-.lw-task-title {
+.lw-task-line {
   font-family: var(--font-mono);
   font-size: 16px;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--ink-text);
+}
+
+/* The title itself, wherever it sits — the collapsed line's, or the open card's `name` row. */
+.lw-task-title {
+  min-width: 0;
 }
 
 /* Expanded: the title itself — DESIGN-SPEC "Type": Inter, sentence case, 21/700. */
@@ -557,6 +577,36 @@ body {
   color: var(--ink-text-3);
   margin: 0 0 var(--s-3);
   overflow-wrap: anywhere;
+}
+
+/* The same meta, sitting inside a row that already spaces it. */
+.lw-meta--flush {
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* The type-derived question — DESIGN-SPEC "Type": Inter, sentence case. */
+.lw-question {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-2);
+}
+
+/* One `·` line of what has to come back with the answer. */
+.lw-fact {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-text-2);
+  margin: 0 0 var(--s-1);
+}
+
+.lw-task-body {
+  margin-top: var(--s-3);
 }
 
 /* The motif as a divider: a dashed route line, never a solid bar. */
@@ -665,6 +715,13 @@ body {
   padding-bottom: calc(var(--s-3) + env(safe-area-inset-bottom));
   color: var(--ink-text);
   text-decoration: none;
+}
+
+.lw-earnings-bar__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .lw-earnings-bar__label {
@@ -785,6 +842,39 @@ body {
   align-items: center;
   gap: var(--s-2);
   margin: 0;
+}
+
+/* The locked list's rows sit closer together than a verified worker's cards. */
+.lw-chips--stacked {
+  margin: 0 0 var(--s-2);
+}
+
+/* The visitor's banner: the same paper card, bordered in the accent. */
+.lw-card--verified {
+  border-color: var(--verified-border-light);
+  margin-bottom: var(--s-4);
+}
+
+.lw-banner-heading {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--verified-700);
+  margin: 0 0 var(--s-2);
+}
+
+/* The locked row's price: figure and unit in one text node, so it reads as one thing. */
+.lw-price__figure--locked {
+  display: block;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--s-3);
+}
+
+/* One chip on its own, centred under the block action. */
+.lw-chips--centred {
+  justify-content: center;
+  margin-top: var(--s-3);
 }
 
 /* Left, then right, on one baseline. */
