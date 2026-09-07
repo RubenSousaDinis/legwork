@@ -1,41 +1,52 @@
 'use client';
 
 import { Button } from '../../components/ui/Button';
-import { VerifiedChip } from '../../components/ui/VerifiedChip';
-import type { CredentialLevel } from '../../lib/env';
-import type { SessionState } from '../../lib/session';
 
 export type LandingProps = {
-  state: SessionState;
-  level: CredentialLevel;
   busy: boolean;
   onVerify: () => void;
 };
 
+export const LANDING_LABEL = 'WORLD ID';
+export const LANDING_TITLE = 'Verify once. Claim tasks nearby.';
+export const VERIFY_BUTTON = 'Verify with World ID';
+export const VERIFY_CAPTION = 'about 30 seconds · one account per person';
+
+/** The three facts, in the order the prototype stacks them under the button. */
+export const LANDING_FACTS = [
+  'proof: photo + location',
+  "paid after the poster approves — automatically when the task's window ends",
+  'cloud-verified, operator-attested — onchain World ID verification is Orb-only today',
+] as const;
+
 /**
- * The unverified visitor's whole screen. No task list here — T-42 adds the one a visitor sees,
- * with real prices — so everything below is either the verification state or what the worker
- * is agreeing to.
+ * The unverified visitor's whole screen: one card, one action, three facts.
+ *
+ * The button says one short thing. Everything the sentence used to carry — how long it
+ * takes, one account per person — is the caption under it, so the label fits on one line at
+ * 390 px instead of overflowing its own box. The verification state is the header's job and
+ * is not repeated here: `Verify to claim` appears once on this screen, in `<header>`.
  */
-export function Landing({ state, level, busy, onVerify }: LandingProps) {
+export function Landing({ busy, onVerify }: LandingProps) {
   return (
     <section className="lw-card" data-step="landing">
-      <VerifiedChip state={state} level={level} />
+      <p className="lw-list-label">{LANDING_LABEL}</p>
+      <p className="lw-landing-title">{LANDING_TITLE}</p>
 
       <div data-floor="20">
         <Button variant="primary" size="lg" full disabled={busy} onClick={onVerify}>
-          Verify with World ID — about 30 seconds, one account per person
+          {VERIFY_BUTTON}
         </Button>
       </div>
-
-      <ul data-floor="20">
-        <li>proof: photo + location</li>
-        <li>paid within the task&apos;s window after the poster approves, automatically after that</li>
-      </ul>
-
-      <p data-floor="20">
-        cloud-verified, operator-attested — onchain World ID verification is Orb-only today.
+      <p className="lw-cta-caption" data-cta-caption>
+        {VERIFY_CAPTION}
       </p>
+
+      <ul className="lw-facts" data-floor="20">
+        {LANDING_FACTS.map((fact) => (
+          <li key={fact}>{fact}</li>
+        ))}
+      </ul>
     </section>
   );
 }

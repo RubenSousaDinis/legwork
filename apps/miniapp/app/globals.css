@@ -77,13 +77,19 @@ body {
 }
 
 /* ---------------------------------------------------------------- chrome */
-/* Two stacked rows: the wordmark line, and (verified only) the banner under it. */
+/*
+ * Two rows without a wrapper element: row 1 is the brand and the state, side by side;
+ * row 2 is the verified banner, spanning both columns. A grid rather than nested flex
+ * rows so the header stays one flat list of children — which is what `layout.tsx` and
+ * `tests/verifiedChipAboveFold.test.tsx` both render.
+ */
 .lw-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
   padding-top: max(var(--s-3), env(safe-area-inset-top));
@@ -91,15 +97,13 @@ body {
   border-bottom: 1px solid var(--paper-border);
 }
 
-/* Row 1: wordmark + footprint left, the caption or the compact pill right. */
-.lw-header__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
+/* Row 2, full width: the `Verify to claim` chip, or the verified banner after it. */
+.lw-header__banner {
+  display: block;
+  grid-column: 1 / -1;
 }
 
+/* Row 1, left: the wordmark and the footprint glyph. */
 .lw-header__brand {
   display: inline-flex;
   align-items: center;
@@ -583,6 +587,16 @@ body {
 .lw-facts li::before {
   content: '·';
   color: var(--verified-700);
+}
+
+/* The landing's title line — DESIGN-SPEC "Type": Inter, sentence case. */
+.lw-landing-title {
+  font-family: var(--font-body);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-4);
 }
 
 /* The line under the primary button that used to be inside its label. */

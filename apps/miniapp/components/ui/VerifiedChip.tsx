@@ -3,7 +3,7 @@ import { Chip } from './Chip';
 
 export type VerifiedChipProps = {
   state: SessionState;
-  /** One line for the sticky header; the full banner is a paper card. */
+  /** One line for a page header; the full banner is the sticky header's second row. */
   compact?: boolean;
   level: 'selfie' | 'orb';
 };
@@ -14,6 +14,14 @@ const SANDBOX_LABEL: Record<VerifiedChipProps['level'], string> = {
   orb: 'sandbox World ID',
 };
 
+/**
+ * The claim and the clause behind it, as one sentence.
+ *
+ * `Verified human ✓ · World ID · one account per person` is a single inline run so the text
+ * stays exactly that sentence for anything reading it, and the phone wraps it into the
+ * prototype's two lines on its own. The sizes are the floors rather than the prototype's
+ * 17/15: the run carries `data-floor="20"`, and Inter body never renders below 16 px.
+ */
 export function VerifiedChip({ state, compact = false, level }: VerifiedChipProps) {
   if (state.status !== 'verified') {
     return (
@@ -38,7 +46,8 @@ export function VerifiedChip({ state, compact = false, level }: VerifiedChipProp
   return (
     <div className="lw-verified-banner" data-verified="true">
       <span className="lw-verified-line" data-floor="20">
-        Verified human ✓ · World ID · one account per person
+        <span className="lw-verified-line__head">Verified human ✓</span>
+        <span className="lw-verified-line__sub"> · World ID · one account per person</span>
       </span>
       <span>
         <Chip tone="verified" floor={20}>
