@@ -155,48 +155,50 @@ decision: pending
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: blocked on one operator config gap. The three defects T-29 first reported are fixed and
-live (lead PR #132, API `c861156`): `nonces.next_nonce` is nullable, `POST /session` binds a
-seeded worker from the registry, and `scripts` is a workspace package. The loop now runs
-**post → session → board → claim** against Base Sepolia and stops at `POST /proofs`. No line
-below carries a Basescan link because the loop has not finished; the
-`<HH:MM UTC>: post/claim/submit/release <links>` line is written here the moment it does.
+outcome: green. `pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
+Sepolia with no human in the loop, exits 0, and prints `RELEASED` last.
 
-evidence: `POST /proofs` answers 500 for **every** worker, the mini-app included — this is not a
-CLI-worker problem and it is on the Day-6 critical path. Production log, Sept 7 17:28 UTC,
-request `b2bc4cd8-2872-4c10-b286-be7615d89881`:
+Day-3 green loop 16:49 UTC: post/claim/submit/release https://sepolia.basescan.org/tx/0xdab710d01c9259d6919edaa4bd8f57b1b3b3c82355a87af1d3744d16c31fbb60 https://sepolia.basescan.org/tx/0x78c85e57e5ac81c58af27bdb5ef3b278df4d03d4d8adc9b8877df86924f2b544 https://sepolia.basescan.org/tx/0x58064beeb92541339090820a707dfccc2870afa50e10d7a6a34944bb0302aa0d https://sepolia.basescan.org/tx/0x395aeb59530605dae38005edd16a5aab62c39ed41514e61aaa33f211994e1238
+
+evidence: task 12, buyer `0xc1286562DCD771eD76ED59e3D2A51DCe92d349d7` paying 3.45 USDC through
+x402, worker the seeded CLI account `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`. The release
+receipt is read with viem and asserted as integers off the two USDC `Transfer` logs, never off
+the API's own `amount_usdc`:
 
 ```
-StorageApiError: mime type application/octet-stream is not supported
-    at apps/api/src/services/proofStore.ts
+release 0x395aeb59… status success, block 46515746, 2026-09-07T16:49:40Z
+  Transfer 0x7b4EB10df800881f73BC1d85BDeF02f82386271e 3000000
+  Transfer 0xABFDB572E3d6093113Cdb9c1C1599E8699226D52 450000
+  getTask(12).state = 4 (Released)
 ```
 
-The `proofs` bucket is configured `allowed_mime_types: ["image/jpeg","image/png","image/webp"]`,
-and `apps/api/app/proofs/route.ts` stores two objects per proof — the stripped copy as
-`image/jpeg` and the **retained original** as `application/octet-stream`. That second write is
-the intended behaviour, spelled out in T-18's brief: `raw/<hash>`, the original bytes, never
-served to anyone, kept so `verify` can re-hash and so a dispute has something to look at. The
-bucket has to permit it.
+Five defects had to be fixed to get here. Three were reported by T-29 and fixed by the lead in
+PR #132 — `nonces.next_nonce` was `NOT NULL` while `PgNonceLock` inserts `NULL`, so every
+relayed chain write 503'd on a database that had never sent one; `POST /session` had no path for
+a seeded worker with no `nullifiers` row; and `scripts` was not a workspace package. A fourth was
+operator config: the `proofs` bucket allowed only the three image types, so storing the retained
+original as `application/octet-stream` — which T-18 specifies, and which the mini-app upload
+needs just as much — answered 500. Nothing in the repository creates that bucket, so a fresh
+Supabase project will hit it again and the hosting notes should say so.
 
-Nothing in the repository creates the bucket, so this is operator config and a fresh Supabase
-project will hit it again. Add `application/octet-stream` to the bucket's allowed types and
-record it wherever the hosting steps live.
+The fifth is T-29's own and is worth writing down, because it will surface anywhere a script
+drives this API. **A Base Sepolia read can trail the receipt that caused it**, and each
+serverless invocation is a different connection to a different node, so the route that decides
+from `getTask` sees a state the chain has already left. It showed three faces in one afternoon:
+`POST /submit` answering `409 not_claimed_by_caller` seconds after our own claim landed; a row
+carrying `tx.claim` while `status` stayed `open`; and a row carrying `tx.submit` while `status`
+stayed `claimed`. The scripts now retry that one 409, resume a claim they already hold rather
+than stranding an errand for a 30-minute TTL, and sweep as the buyer polls — `/admin/sweep`
+reconciles every non-final row, which is the re-read those rows are waiting for. It adds urgency
+and never authority.
 
-Two facts for whoever picks this up:
+That last point is a note for T-17 as much as for this task: the mirror after a successful write
+records the transaction hash from a read that may still show the previous state, so the row can
+disagree with the chain until something sweeps. Three live tasks (9, 10, 11) were recovered
+through the resumable-claim path rather than left to expire, and all three released correctly.
 
-- **Task 9 is live and recoverable.** Onchain `state: 2` (Claimed) by the seeded CLI worker
-  `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`, `claimTTL` 1800 s, `submitTTL` 3600 s, so the
-  submit window is open for an hour from 17:28 UTC. The escrow holds 3450000 and the buyer went
-  from 49.65 to 46.20 — the x402 leg, the escrow post and the relayed claim all worked.
-  post `0xf69902309cc310bfa0da6c9757059eefd871ba6eca2735b83ed8e41f0efe58e4` ·
-  claim `0xfb65afa96cc7bd7d656298673817a18135515ee3ce4a044c89fbdd3877488141`
-- **The API row for task 9 disagrees with the chain.** `GET /tasks/9` reports `status: open`
-  with no `claimed_at`, while carrying `tx.claim` and while the chain says Claimed. The mirror
-  after a successful `claimFor` recorded the hash but not the state. Separate from the bucket,
-  and T-17's rather than T-29's.
-
-decision: hold this section open. One additive, reversible line of bucket config stands between
-here and a green loop; everything on either side of `POST /proofs` is proven to work.
+decision: the Day-3 money loop is proven three days before it meets the phone. `demo:run` is
+what `e2e.yml` (T-36) and the pre-record checklist (T-44) drive.
 
 ## Deploy
 
