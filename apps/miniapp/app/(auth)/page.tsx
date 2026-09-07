@@ -15,7 +15,12 @@ import {
   useSession,
 } from '../../lib/session';
 import { loadOrCreatePayoutKey } from '../../lib/workerKey';
-import { requestRpContext, type VerifyResponse } from '../../lib/worldid';
+import {
+  IdkitFailure,
+  requestRpContext,
+  summarizeDebugReport,
+  type VerifyResponse,
+} from '../../lib/worldid';
 import { Landing } from './Landing';
 import { PayoutKeyStep } from './PayoutKeyStep';
 import { RegisterStep } from './RegisterStep';
@@ -40,6 +45,11 @@ function describe(error: unknown): string {
   if (error instanceof ApiError) {
     const body = error.body as { error?: string } | null;
     return body?.error ? `${error.status} ${body.error}` : `api ${error.status}`;
+  }
+  if (error instanceof IdkitFailure) {
+    // The code alone is what the first phone run showed; the report says why.
+    const detail = summarizeDebugReport(error.report);
+    return detail === '' ? error.code : `${error.code} · ${detail}`;
   }
   return error instanceof Error ? error.message : String(error);
 }
