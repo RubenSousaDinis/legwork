@@ -131,11 +131,11 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 /**
- * The envelope as it goes on the wire: the five fields the caller decides and nothing else.
+ * The envelope as it goes on the wire: the fields the caller decided and nothing else.
  *
- * The TTLs are left off so `POST /tasks` applies the shared defaults, and `dispute_window_s`
- * is left off because it is not the tool's to choose — the API shortens it to
- * `DEMO_DISPUTE_WINDOW_S` for an allowlisted buyer and a number hard-coded here would
+ * A window the caller did not set is left off so `POST /tasks` applies the shared defaults;
+ * nothing here ever invents one — the API shortens the dispute window to
+ * `DEMO_DISPUTE_WINDOW_S` for an allowlisted buyer, and a number hard-coded here would
  * quietly override that.
  */
 function postBody(input: HireHumanInput): Record<string, unknown> {
@@ -148,6 +148,13 @@ function postBody(input: HireHumanInput): Record<string, unknown> {
   // Forwarded exactly as given: the API verifies it against the ERC-8004 IdentityRegistry
   // and never trusts it from the request.
   if (input.agent_id) body.agent_id = input.agent_id;
+  // The three windows are forwarded only when the caller set them — `HireHumanInput`
+  // advertises them — and never invented here: absent, the API applies the shared defaults
+  // and shortens the dispute window itself for an allowlisted buyer.
+  const windows = input as { claim_ttl_s?: unknown; submit_ttl_s?: unknown; dispute_window_s?: unknown };
+  for (const key of ['claim_ttl_s', 'submit_ttl_s', 'dispute_window_s'] as const) {
+    if (typeof windows[key] === 'number') body[key] = windows[key];
+  }
   return body;
 }
 

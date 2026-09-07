@@ -616,12 +616,31 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
       "pattern": "^\\d+$"
     },
     "buyer_token": {
-      "type": "string",
-      "minLength": 32
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 32
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "replay": {
+      "type": "boolean",
+      "const": true
     },
     "status": {
       "type": "string",
-      "const": "open"
+      "enum": [
+        "open",
+        "claimed",
+        "submitted",
+        "released",
+        "refunded",
+        "disputed",
+        "resolved"
+      ]
     },
     "spec_hash": {
       "type": "string",
