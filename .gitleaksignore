@@ -1,0 +1,5 @@
+# gitleaks fingerprints (commit:file:rule:line) that are not secrets.
+# T-14's first commit named a Solidity local `addrKey` next to the quoted JSON key
+# "erc8004Reputation" (a mixed-case literal) and `generic-api-key` matched the pair.
+# The local was renamed in 78a20eb; the old patch stays in history, so it is ignored here.
+ab0a241dcde0f8642b3b84c4050792bb1535d78a:contracts/script/Deploy.s.sol:generic-api-key:189
