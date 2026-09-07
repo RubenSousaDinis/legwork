@@ -345,7 +345,12 @@ export async function runWorkerOnce(options: RunWorkerOptions): Promise<WorkerRu
       lat: options.place.lat,
       lon: options.place.lon,
     });
-    row = rows.find((r) => r.state === 'open' && (!options.taskId || r.task_id === options.taskId));
+    // A named task is the one we came for whatever the board calls it: `demo-run` knows the id
+    // it just posted, and a row it already holds shows up as `claimed`. Without a name, only an
+    // open row is work.
+    row = options.taskId
+      ? rows.find((r) => r.task_id === options.taskId)
+      : rows.find((r) => r.state === 'open');
     if (row) break;
     if (Date.now() > deadline) {
       throw new StageError(
@@ -371,7 +376,7 @@ export async function runWorkerOnce(options: RunWorkerOptions): Promise<WorkerRu
   log(`CLAIMED tx ${claimTx}`);
 
   const proof = await uploadProof(api, session, bytes, capture);
-  const submit = await submitProof(api, session, taskId, proof);
+  const submit = await submitProof(api, session, taskId, proof, log);
   log(`SUBMITTED tx ${submit.tx}`);
 
   return {
@@ -385,6 +390,14 @@ export async function runWorkerOnce(options: RunWorkerOptions): Promise<WorkerRu
   };
 }
 
+/**
+ * `POST /tasks/:id/claim`, or the claim we are already holding.
+ *
+ * `AlreadyClaimed` naming *this* task is not a refusal — it is the answer to a question we did
+ * not need to ask. A run that died after the claim (a bad upload, a dropped connection) is
+ * resumed instead of stranding an errand nobody else may take, which on film day is the
+ * difference between one retry and waiting out a 30-minute TTL.
+ */
 async function claimTask(api: string, session: WorkerSession, taskId: string): Promise<string> {
   const res = await fetch(`${api}/tasks/${taskId}/claim`, {
     method: 'POST',
@@ -392,13 +405,27 @@ async function claimTask(api: string, session: WorkerSession, taskId: string): P
   });
   const body = await readBody(res);
   if (res.status === 409) {
-    const code = (body as { error?: string }).error ?? 'conflict';
-    throw new ClaimConflictError(code, body);
+    const conflict = body as { error?: string; active_task_id?: string };
+    if (conflict.error === 'AlreadyClaimed' && conflict.active_task_id === taskId) {
+      return await existingClaimTx(api, taskId);
+    }
+    throw new ClaimConflictError(conflict.error ?? 'conflict', body);
   }
   if (!res.ok) {
     throw new StageError('claim', `POST /tasks/${taskId}/claim answered ${res.status} ${describe(body)}`);
   }
   return (body as { tx: string }).tx;
+}
+
+/** The hash of the claim we already hold, read back off the task rather than invented. */
+async function existingClaimTx(api: string, taskId: string): Promise<string> {
+  const res = await fetch(`${api}/tasks/${taskId}`);
+  const body = await readBody(res);
+  const claim = (body as { tx?: { claim?: string } }).tx?.claim;
+  if (!claim) {
+    throw new StageError('claim', `task ${taskId} is already claimed by this worker but carries no claim transaction`);
+  }
+  return claim;
 }
 
 interface UploadedProof {
@@ -443,38 +470,61 @@ interface SubmitResult {
   auto_dispute_reason?: string;
 }
 
+/** How long to keep re-asking while the API's node catches up with our own claim. */
+const SUBMIT_LAG_ATTEMPTS = 8;
+const SUBMIT_LAG_DELAY_MS = 5000;
+
 /**
  * `POST /tasks/:id/submit`.
  *
  * The brief names three fields; `VerifyOpenProof` in `packages/shared` — frozen — asks for the
  * whole photo proof, and the route refuses a `proofHash` that does not equal `photo_hash`.
  * The superset is sent and the PR says so.
+ *
+ * `not_claimed_by_caller` is retried rather than raised, because seconds after our own claim it
+ * is almost never true. The route decides from `getTask`, and a Base Sepolia read can trail the
+ * receipt that caused it — a different serverless invocation is a different connection to a
+ * different node. Retrying asks for a fresh read; the claim either shows up or the window
+ * genuinely closed, and the last attempt says which. Nothing else is retried: every other
+ * conflict is an answer, not a lag.
  */
 async function submitProof(
   api: string,
   session: WorkerSession,
   taskId: string,
   proof: UploadedProof,
+  log: (line: string) => void,
 ): Promise<SubmitResult> {
-  const res = await fetch(`${api}/tasks/${taskId}/submit`, {
-    method: 'POST',
-    headers: { ...sessionHeaders(session), 'content-type': 'application/json' },
-    body: JSON.stringify({
-      proofHash: proof.proofHash,
-      photo_hash: proof.proofHash,
-      answer: 'closed',
-      note: 'CLI fixture — seeded worker, not an observation',
-      gps: { lat: proof.capture.lat, lon: proof.capture.lon, accuracy_m: 25 },
-      gps_unavailable: false,
-      worker_confirmed_at_place: false,
-      captured_at: proof.capturedAt,
-    }),
+  const body = JSON.stringify({
+    proofHash: proof.proofHash,
+    photo_hash: proof.proofHash,
+    answer: 'closed',
+    note: 'CLI fixture — seeded worker, not an observation',
+    gps: { lat: proof.capture.lat, lon: proof.capture.lon, accuracy_m: 25 },
+    gps_unavailable: false,
+    worker_confirmed_at_place: false,
+    captured_at: proof.capturedAt,
   });
-  const body = await readBody(res);
-  if (!res.ok) {
-    throw new StageError('submit', `POST /tasks/${taskId}/submit answered ${res.status} ${describe(body)}`);
+
+  let last = '';
+  for (let attempt = 1; attempt <= SUBMIT_LAG_ATTEMPTS; attempt += 1) {
+    const res = await fetch(`${api}/tasks/${taskId}/submit`, {
+      method: 'POST',
+      headers: { ...sessionHeaders(session), 'content-type': 'application/json' },
+      body,
+    });
+    const answer = await readBody(res);
+    if (res.ok) return answer as SubmitResult;
+
+    last = `${res.status} ${describe(answer)}`;
+    const stale =
+      res.status === 409 && (answer as { reason?: string }).reason === 'not_claimed_by_caller';
+    if (!stale || attempt === SUBMIT_LAG_ATTEMPTS) break;
+
+    log(`SUBMIT waiting for the API's node to see our claim (attempt ${attempt})`);
+    await sleep(SUBMIT_LAG_DELAY_MS);
   }
-  return body as SubmitResult;
+  throw new StageError('submit', `POST /tasks/${taskId}/submit answered ${last}`);
 }
 
 // -------------------------------------------------------------------- the CLI
