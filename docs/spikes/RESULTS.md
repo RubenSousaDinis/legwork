@@ -103,11 +103,43 @@ decision: use the live registries. No self-deploy, no T-13b. `IERC8004Identity` 
 
 _Discord answers: Studio URL as "live data from a Graph provider"; Subgraph MCP as "composable"_
 
-outcome: pending
+outcome: the subgraph is deployed to Subgraph Studio and indexing Base Sepolia at the chain head. The Discord question is **open** — see "Discord" below; nothing here claims it is settled.
 
-evidence: pending
+**Deployment.** Slug `legwork-base-sepolia`, version label `6653cb4` (the git short SHA of the manifest commit), deployment id `QmQfhYXvMH7hTvtp3inckP2662USA9c5Nbd2gvFaKUiTcv`.
+Studio: https://thegraph.com/studio/subgraph/legwork-base-sepolia
+Query URL: https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4
+All four data sources start at block `46506271`, the deploy block from `contracts/deployments/base-sepolia.json`.
 
-decision: pending
+**Sync time.** Deployed 2026-09-07T14:57Z. The first status read one minute later already had `_meta.block.number = 46512377` against a chain head of ~46512380 — roughly **60 seconds** from `graph deploy` to the head, over the ~6,100 blocks since the deploy block. `hasIndexingErrors` was `false` at every read and has stayed `false`; no handler threw, so nothing goes back to T-09.
+
+**Status check, and what it is not.** The brief asks for the Studio indexing status (`synced`, `fatalError`, `latestBlock == chainHeadBlock`). Studio no longer exposes that from a shell: `https://api.studio.thegraph.com/index-node/graphql` returns 404, and the `subgraphIndexingStatus` field on `https://api.studio.thegraph.com/graphql` answers `UNAUTHENTICATED — "Please login first."` to a deploy key, because it wants a browser session. The equivalent from public data is `_meta` on the query URL against an `eth_blockNumber` on Base Sepolia. Four consecutive samples:
+
+```
+chainHead=46512446  _meta={"block":{"number":46512444},"hasIndexingErrors":false}
+chainHead=46512447  _meta={"block":{"number":46512444},"hasIndexingErrors":false}
+chainHead=46512447  _meta={"block":{"number":46512446},"hasIndexingErrors":false}
+chainHead=46512447  _meta={"block":{"number":46512446},"hasIndexingErrors":false}
+```
+
+One to three blocks behind a 2-second chain, moving with it: at the head, not catching up.
+
+**Query 1 — the seeded pool.** `{ workers(where: {seeded: true}) { id seeded area completed lastCompletedAt } }` returns **20 rows, every one `seeded: true`**. These are 20 seeded workers (demo data) written by T-14, not people. The subgraph holds 20 workers in total, so the pool reads 0 real and +20 seeded (demo data) until a real worker registers.
+
+**Query 2 — released lifecycles.** `{ tasks(where: {state: "Released"}) { id state amount fee worker { id seeded } txRelease } }` returns **6 rows**, not the 5 the brief predicted. Tasks 1–5 are T-14's seeded lifecycles (demo data); task 6 is the live one T-32 posted and released while proving the ERC-8004 identity path, and it landed after this brief was written. Every one of the six carries `amount: "3000000"` and `fee: "450000"` — the worker receives 3.00, the fee is 0.45, the agent pays 3.45 and the escrow locks 3.45. Six for five is a state change, not a mapping fault.
+
+**Query 3 — the external-poster counter.** `{ posterStats(id: "global") { distinctExternalBuyers externalTasks } }` returns `distinctExternalBuyers: 0, externalTasks: 0`. Both buyers who have posted so far are on the operator allowlist — `0x436cA229…` for the seeded five, `0xc1286562…` for task 6 — and `PosterStats` excludes allowlisted buyers by design. Zero is the honest Day-2 answer for the W3 gate, reported as zero.
+
+**Discord: not asked, no answer.** The question — whether a Subgraph Studio query URL on a testnet counts as "consuming live data from a Graph provider" for the Graph track — was **not put to the Graph Discord as of 2026-09-07T15:06Z**: this deploy ran from a non-interactive shell with no Discord access. It stays open and it is the operator's to ask. Nothing in this repo asserts the track is satisfied.
+
+What the public docs do and do not settle, from reading them rather than from an answer:
+
+- The Studio development query URL is documented as rate-limited to 3,000 queries per day, which is the endpoint the dashboard and `preflight_workers` will be pointed at.
+- Neither the Studio page nor the publishing page states that a testnet subgraph cannot be published to the decentralized network — the pages simply do not address testnets.
+- A separate testnet Graph Network exists (Graph Explorer at `testnet.thegraph.com`, protocol network `arbitrum-sepolia`) and carries published Base Sepolia subgraphs, so "a testnet subgraph can never be published" is looser than the brief's premise. Whether publishing there would read as a Graph provider for the track is precisely the unanswered question.
+
+evidence: `pnpm graph codegen && pnpm graph build` green on the filled manifest; `graph deploy` output and all three query responses pasted verbatim into the T-23 PR. The four addresses in `subgraph/subgraph.yaml` match `contracts/deployments/base-sepolia.json` character for character.
+
+decision: Studio is where the subgraph lives for the demo and its query URL is what every consumer reads. The Graph-track question stays **open** pending a Discord answer; anyone writing it up must say "Subgraph Studio, Base Sepolia" and not claim more.
 
 ## Preflight
 

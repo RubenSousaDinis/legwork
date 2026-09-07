@@ -8,8 +8,8 @@ dataSources:
     network: base-sepolia
     source:
       abi: WorkerRegistry
-      address: "0x0000000000000000000000000000000000000000" # T-23
-      startBlock: 0 # T-23
+      address: "0xc33d229046507f4C2E664cbf974542c92eEAbAf4"
+      startBlock: 46506271
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -33,8 +33,8 @@ dataSources:
     network: base-sepolia
     source:
       abi: TaskEscrow
-      address: "0x0000000000000000000000000000000000000000" # T-23
-      startBlock: 0 # T-23
+      address: "0x641B56dfA3A033D84a75588c18579347A0DE3c6B"
+      startBlock: 46506271
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -75,8 +75,8 @@ dataSources:
     network: base-sepolia
     source:
       abi: Reputation
-      address: "0x0000000000000000000000000000000000000000" # T-23
-      startBlock: 0 # T-23
+      address: "0x2f731B56D02080190fa2ef7813887B2743551E43"
+      startBlock: 46506271
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -97,8 +97,8 @@ dataSources:
     network: base-sepolia
     source:
       abi: AbuseMark
-      address: "0x0000000000000000000000000000000000000000" # T-23
-      startBlock: 0 # T-23
+      address: "0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608"
+      startBlock: 46506271
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
