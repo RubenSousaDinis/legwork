@@ -180,13 +180,13 @@ contract Deploy is Env {
     function _write(string memory path, Record memory r) internal {
         string memory previous = vm.exists(path) ? vm.readFile(path) : "";
 
-        string memory addrKey = "legwork.deployment.addresses";
-        vm.serializeAddress(addrKey, "workerRegistry", r.registry);
-        vm.serializeAddress(addrKey, "taskEscrow", r.escrow);
-        vm.serializeAddress(addrKey, "reputation", r.reputation);
-        vm.serializeAddress(addrKey, "abuseMark", r.abuseMark);
-        vm.serializeAddress(addrKey, "erc8004Identity", r.identity);
-        string memory addresses = vm.serializeAddress(addrKey, "erc8004Reputation", r.reputationRegistry);
+        string memory addrObj = "legwork.deployment.addresses";
+        vm.serializeAddress(addrObj, "workerRegistry", r.registry);
+        vm.serializeAddress(addrObj, "taskEscrow", r.escrow);
+        vm.serializeAddress(addrObj, "reputation", r.reputation);
+        vm.serializeAddress(addrObj, "abuseMark", r.abuseMark);
+        vm.serializeAddress(addrObj, "erc8004Identity", r.identity);
+        string memory addresses = vm.serializeAddress(addrObj, "erc8004Reputation", r.reputationRegistry);
 
         string memory root = "legwork.deployment";
         vm.serializeUint(root, "chainId", block.chainid);
@@ -235,11 +235,11 @@ contract Deploy is Env {
         string[] memory names = vm.parseJsonKeys(previous, ".txs");
         if (names.length == 0) return "{}";
 
-        string memory key = "legwork.deployment.txs";
+        string memory txObj = "legwork.deployment.txs";
         string memory out;
         for (uint256 i = 0; i < names.length; i++) {
             out = vm.serializeString(
-                key, names[i], vm.parseJsonString(previous, string.concat(".txs.", names[i]))
+                txObj, names[i], vm.parseJsonString(previous, string.concat(".txs.", names[i]))
             );
         }
         return out;
