@@ -12,6 +12,7 @@ import { clearActiveClaim, type ActiveClaim } from '../tasks/activeClaim';
 import {
   AnswerToggle,
   CharacterField,
+  clockTime,
   EMPTY_ANSWER,
   isAnswerComplete,
   type AnswerState,
@@ -48,6 +49,7 @@ export const PAID_FOR_THE_PROOF =
 export const NO_PEOPLE = "don't photograph people";
 
 export const WAITING_LINE = 'Submitted · waiting for release';
+export const APPROVAL_CAPTION = "after approval · or auto-release when the task's window ends";
 export const REENCODE_FAILED =
   'That photo could not be prepared on this phone. Take it again.';
 export const UPLOAD_FAILED = 'The upload did not go through. Try again in a moment.';
@@ -104,6 +106,8 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   const [title, setTitle] = useState<string | null>(null);
 
   const [photo, setPhoto] = useState<Photo | null>(null);
+  /** The phone's clock when the shutter went, for the readout — never sent anywhere. */
+  const [photoAt, setPhotoAt] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'done'>('idle');
   const [gps, setGps] = useState<GpsResult | null>(null);
   const [confirmedAtPlace, setConfirmedAtPlace] = useState(false);
@@ -181,6 +185,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
       const url = URL.createObjectURL(blob);
       photoUrl.current = url;
       setPhoto({ blob, url });
+      setPhotoAt(clockTime(new Date().toISOString()));
       // Step 2 starts on its own — the worker is standing at the door, not reading a menu.
       locate();
     },
@@ -191,6 +196,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     if (photoUrl.current !== null) URL.revokeObjectURL(photoUrl.current);
     photoUrl.current = null;
     setPhoto(null);
+    setPhotoAt(null);
     setGps(null);
     setGpsStatus('idle');
     setConfirmedAtPlace(false);
@@ -301,17 +307,19 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
 
   return (
     <div data-screen="proof">
-      <header style={{ marginBottom: 'var(--s-5)' }}>
-        <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', margin: '0 0 var(--s-2)' }}>
+      <header className="lw-proof-header">
+        <p className="lw-proof-head">
           <MonoTag>{taskType ?? 'task'}</MonoTag>
+          <span className="lw-proof-head__sep"> · </span>
+          <span className="lw-proof-head__title" data-proof="title">
+            {title ?? `Task ${taskId}`}
+          </span>
+          <span className="lw-proof-head__aside">proof</span>
         </p>
-        <h1 className="lw-h1" data-proof="title" style={{ marginBottom: 'var(--s-3)' }}>
-          {title ?? `Task ${taskId}`}
-        </h1>
         <Countdown label={SUBMIT_WITHIN} until={claim.submit_deadline} />
         {/* T-42's way out of a task that should not have been posted: release, then report. */}
-        <p style={{ margin: 'var(--s-3) 0 0' }}>
-          <a data-hit="44" data-link="report" href={`/report/${taskId}`} style={{ color: 'var(--ink-text-2)' }}>
+        <p className="lw-chips lw-chips--stacked">
+          <a className="lw-quiet-link" data-hit="44" data-link="report" href={`/report/${taskId}`}>
             {REPORT_TASK_LABEL}
           </a>
         </p>
@@ -336,13 +344,29 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
         <div className="lw-card">
           <Capture onCapture={onCapture} onRetake={onRetake} photo={photo} />
 
-          <LocationStep
-            confirmed={confirmedAtPlace}
-            onConfirm={() => setConfirmedAtPlace(true)}
-            onRetry={locate}
-            result={gps}
-            status={gpsStatus}
-          />
+          {/* What will travel with the photo, as the two-column mono list of the design. */}
+          <dl className="lw-kv" data-readouts="proof">
+            <dt>GPS</dt>
+            <dd>
+              {gpsStatus === 'idle' ? (
+                '—'
+              ) : (
+                <LocationStep
+                  confirmed={confirmedAtPlace}
+                  onConfirm={() => setConfirmedAtPlace(true)}
+                  onRetry={locate}
+                  result={gps}
+                  status={gpsStatus}
+                />
+              )}
+            </dd>
+            <dt>timestamp</dt>
+            {/* The phone's own clock, for the worker. The instant that reaches the receipt is
+                the server's `captured_at` and is written by `POST /proofs`, not by this. */}
+            <dd data-proof-clock="local">{photoAt ?? '—'}</dd>
+          </dl>
+
+          <hr className="lw-rule" />
 
           {photo !== null && taskType !== null ? (
             <>
@@ -357,6 +381,13 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
             </>
           ) : null}
 
+          <p className="lw-note" data-copy="paid-for-the-proof">
+            {PAID_FOR_THE_PROOF}
+          </p>
+          <p className="lw-note" data-copy="no-people">
+            {NO_PEOPLE}
+          </p>
+
           <div data-floor="20">
             <Button disabled={!canSubmit} full onClick={() => void onSubmit()} size="lg" variant="primary">
               {SUBMIT_LABEL}
@@ -364,7 +395,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
           </div>
 
           {error === null ? null : (
-            <p data-error="proof" style={{ color: 'var(--ink-text)', margin: 'var(--s-3) 0 0' }}>
+            <p className="lw-error-line" data-error="proof">
               {error}
             </p>
           )}
@@ -388,54 +419,44 @@ function Capture({
   onRetake: () => void;
 }) {
   return (
-    <div style={{ marginBottom: 'var(--s-4)' }}>
+    <div className="lw-answer-group">
       {photo === null ? (
-        <label className="lw-file-label" data-floor="20" data-hit="44">
-          {CAPTURE_LABEL}
-          <input
-            accept="image/*"
-            capture="environment"
-            className="lw-file-input"
-            data-capture="photo"
-            data-hit="44"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file !== undefined) void onCapture(file);
-            }}
-            type="file"
-          />
-        </label>
+        <div className="lw-photo-slot">
+          <label className="lw-file-label" data-floor="20" data-hit="44">
+            {CAPTURE_LABEL}
+            <input
+              accept="image/*"
+              capture="environment"
+              className="lw-file-input"
+              data-capture="photo"
+              data-hit="44"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file !== undefined) void onCapture(file);
+              }}
+              type="file"
+            />
+          </label>
+        </div>
       ) : (
         <div>
-          {/* A plain `img`: an object URL for a blob this phone holds in memory. */}
+          {/* A plain `img`: an object URL for a blob this phone holds in memory, which
+              `next/image` cannot fetch, size or optimise. Its box is the one inline style
+              this screen keeps. */}
           <img
             alt="the photo you just took"
+            className="lw-thumb"
             data-thumbnail="proof"
             src={photo.url}
-            style={{
-              aspectRatio: '4 / 3',
-              borderRadius: 'var(--r-button)',
-              display: 'block',
-              maxHeight: '320px',
-              objectFit: 'cover',
-              width: '100%',
-            }}
+            style={{ aspectRatio: '4 / 3', maxHeight: '320px' }}
           />
-          <div style={{ marginTop: 'var(--s-3)' }}>
+          <div className="lw-chips lw-chips--stacked-top">
             <Button variant="ghost" onClick={onRetake}>
               {RETAKE_LABEL}
             </Button>
           </div>
         </div>
       )}
-
-      {/* Directly under the button, before submit, and never behind a step. */}
-      <p data-copy="paid-for-the-proof" style={{ fontSize: '16px', margin: 'var(--s-3) 0 0' }}>
-        {PAID_FOR_THE_PROOF}
-      </p>
-      <p data-copy="no-people" style={{ fontSize: '16px', margin: 'var(--s-2) 0 0' }}>
-        {NO_PEOPLE}
-      </p>
     </div>
   );
 }
@@ -453,9 +474,12 @@ function TxChip({ tx }: { tx: string }) {
 function Waiting({ submission }: { submission: SubmitResponse | null }) {
   return (
     <div className="lw-card" data-state="waiting">
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-floor="20">
         {WAITING_LINE}
       </p>
+      <hr className="lw-rule" />
+      <p className="lw-waiting-caption">{APPROVAL_CAPTION}</p>
+      <hr className="lw-rule" />
       {submission === null ? null : <TxChip tx={submission.tx} />}
     </div>
   );
@@ -482,7 +506,7 @@ function SettledWithoutRelease({
 
   return (
     <div className="lw-card" data-state="settled">
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-floor="20">
         {line}
       </p>
       {submission === null ? null : <TxChip tx={submission.tx} />}

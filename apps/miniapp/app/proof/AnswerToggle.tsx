@@ -95,18 +95,24 @@ type SegmentedProps = {
   onSelect: (value: string) => void;
 };
 
-/** One row of 44 px buttons, one of them selected. Selection is the ink fill, never a colour. */
+/**
+ * The question and its answers on one row: 44 px segments inside a `--paper-100` track.
+ * The chosen segment is the verified teal — these are answers and a confirmation, never a
+ * refusal, and teal is the confirm accent on the paper ground.
+ */
 function Segmented({ label, name, options, value, onSelect }: SegmentedProps) {
   return (
-    <div data-answer={name} style={{ marginBottom: 'var(--s-4)' }}>
-      <p className="lw-section-label" style={{ margin: '0 0 var(--s-2)' }}>
-        {label}
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+    <div className="lw-answer-row" data-answer={name}>
+      <p className="lw-answer-question">{label}</p>
+      <div className="lw-segmented">
         {options.map((option) => (
           <button
             aria-pressed={value === option}
-            className={`lw-button ${value === option ? 'lw-button--primary' : 'lw-button--ghost'}`}
+            className={
+              value === option
+                ? 'lw-segmented__option lw-segmented__option--on'
+                : 'lw-segmented__option'
+            }
             data-floor="20"
             data-hit="44"
             data-option={option}
@@ -196,10 +202,8 @@ function CallConfirmAnswer({
   const template = value.template_id === undefined ? null : CALL_CONFIRM_TEMPLATES[value.template_id];
 
   return (
-    <div data-answer="call-confirm" style={{ marginBottom: 'var(--s-4)' }}>
-      <p className="lw-section-label" style={{ margin: '0 0 var(--s-2)' }}>
-        {SELF_REPORTED_LABEL}
-      </p>
+    <div className="lw-answer-group" data-answer="call-confirm">
+      <p className="lw-list-label">{SELF_REPORTED_LABEL}</p>
 
       {value.called_at === undefined ? (
         <Button
@@ -209,7 +213,7 @@ function CallConfirmAnswer({
           {CALLED_LABEL}
         </Button>
       ) : (
-        <p data-called-at="true" style={{ fontFamily: 'var(--font-mono)', margin: '0 0 var(--s-4)' }}>
+        <p className="lw-meta" data-called-at="true">
           {`called at ${clockTime(value.called_at)} — the server timestamps the submission`}
         </p>
       )}
@@ -246,9 +250,10 @@ function CallConfirmAnswer({
       )}
 
       {value.answer === 'price' ? (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', marginBottom: 'var(--s-4)' }}>
-          <span className="lw-section-label">amount (EUR)</span>
+        <label className="lw-field-row">
+          <span className="lw-list-label lw-list-label--flush">amount (EUR)</span>
           <input
+            className="lw-input lw-input--price"
             data-hit="44"
             data-input="price"
             inputMode="decimal"
@@ -263,7 +268,6 @@ function CallConfirmAnswer({
               });
             }}
             step="0.01"
-            style={{ font: 'inherit', minHeight: '44px', padding: '0 var(--s-2)', width: '10ch' }}
             type="number"
             value={value.price === undefined ? '' : String(value.price.amount)}
           />
@@ -271,13 +275,13 @@ function CallConfirmAnswer({
       ) : null}
 
       {value.answer === 'time' ? (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', marginBottom: 'var(--s-4)' }}>
-          <span className="lw-section-label">closes at (HH:MM)</span>
+        <label className="lw-field-row">
+          <span className="lw-list-label lw-list-label--flush">closes at (HH:MM)</span>
           <input
+            className="lw-input"
             data-hit="44"
             data-input="time"
             onChange={(event) => onChange({ ...value, time: event.target.value })}
-            style={{ font: 'inherit', minHeight: '44px', padding: '0 var(--s-2)' }}
             type="time"
             value={value.time ?? ''}
           />
@@ -307,29 +311,20 @@ export function CharacterField({
   maxLength = NOTE_MAX_CHARS,
 }: CharacterFieldProps) {
   return (
-    <div style={{ marginBottom: 'var(--s-4)' }}>
-      <label style={{ display: 'block' }}>
-        <span className="lw-section-label">{label}</span>
+    <div className="lw-answer-group">
+      <label className="lw-field">
+        <span className="lw-list-label lw-list-label--flush">{label}</span>
         <textarea
+          className="lw-textarea"
           data-field={name}
           data-hit="44"
           maxLength={maxLength}
           onChange={(event) => onChange(event.target.value)}
           rows={2}
-          style={{
-            border: '1px solid var(--paper-border-2)',
-            borderRadius: 'var(--r-button)',
-            display: 'block',
-            font: 'inherit',
-            marginTop: 'var(--s-2)',
-            minHeight: '44px',
-            padding: 'var(--s-2)',
-            width: '100%',
-          }}
           value={value}
         />
       </label>
-      <p className="lw-placeholder" data-counter={name} style={{ margin: 'var(--s-1) 0 0' }}>
+      <p className="lw-count" data-counter={name}>
         {`${value.length} / ${maxLength}`}
       </p>
     </div>

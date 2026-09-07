@@ -2,7 +2,8 @@
 
 /*
  * Paper ground — the worker phone. Values are typed by hand from DESIGN-SPEC.md;
- * no token file, stylesheet or SVG is copied in. There is no red token in the product.
+ * no token file, stylesheet or SVG is copied in. The pitch deck's status-quo colour
+ * appears nowhere in the product.
  */
 :root {
   /* surfaces */
@@ -23,7 +24,7 @@
   --verified-border-light: rgba(30, 158, 119, 0.45);
   --verified-tint-light: rgba(30, 158, 119, 0.1);
 
-  /* refusals are amber, never red */
+  /* a refusal is amber — DESIGN-SPEC: "Refusals are good news." */
   --refusal-on-paper: #b8860b;
   --refusal-border-light: rgba(184, 134, 11, 0.45);
   --refusal-tint-light: rgba(184, 134, 11, 0.1);
@@ -32,6 +33,8 @@
   --r-tag: 6px;
   --r-badge: 8px;
   --r-button: 10px;
+  --r-tile: 12px; /* photo slot, warning tile — DESIGN-SPEC "Radii": tile 12 */
+  --r-card-sm: 14px; /* light card — DESIGN-SPEC "Radii": light card 14 */
   --r-card: 16px;
   --r-pill: 999px;
 
@@ -74,14 +77,19 @@ body {
 }
 
 /* ---------------------------------------------------------------- chrome */
+/*
+ * Two rows without a wrapper element: row 1 is the brand and the state, side by side;
+ * row 2 is the verified banner, spanning both columns. A grid rather than nested flex
+ * rows so the header stays one flat list of children — which is what `layout.tsx` and
+ * `tests/verifiedChipAboveFold.test.tsx` both render.
+ */
 .lw-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
   padding-top: max(var(--s-3), env(safe-area-inset-top));
@@ -89,12 +97,39 @@ body {
   border-bottom: 1px solid var(--paper-border);
 }
 
+/* Row 2, full width: the `Verify to claim` chip, or the verified banner after it. */
+.lw-header__banner {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+/* Row 1, left: the wordmark and the footprint glyph. */
+.lw-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* DESIGN-SPEC "Type": wordmark Archivo 800; the prototype tracks it +0.06 em. */
 .lw-wordmark {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 20px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--ink-text);
+}
+
+/* DESIGN-SPEC "Iconography": the in-UI glyph is the bare footprint, always in the teal. */
+.lw-footprint {
+  display: block;
+  fill: var(--verified-600);
+}
+
+/* The unverified right-hand caption — mono meta, at the 15 px floor. */
+.lw-header__caption {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
 }
 
 .lw-main {
@@ -126,6 +161,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-decoration: none; /* an anchor wearing these classes is one target, not two */
   cursor: pointer;
 }
 
@@ -258,23 +294,44 @@ body {
 }
 
 /* ---------------------------------------------------------------- verified */
+/* Row 2 of the header: the prototype's teal card — tint fill, teal border, radius 14. */
 .lw-verified-banner {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  background: var(--paper-0);
-  border: 1px solid var(--paper-border);
-  border-radius: var(--r-card);
-  box-shadow: var(--card-shadow);
-  padding: var(--s-3) var(--s-4);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  background: var(--verified-tint-light);
+  border: 1px solid var(--verified-border-light);
+  border-radius: var(--r-card-sm);
+  padding: 14px var(--s-4);
 }
 
+/*
+ * The banner sentence. One inline run, so the text stays the single sentence the spec
+ * quotes and the phone wraps it into the prototype's two lines on its own — the claim
+ * carries the weight and the colour, the clause behind it drops to body ink.
+ */
 .lw-verified-line {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
+  display: block;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+/* "Verified human ✓" — Inter 700 in the teal text colour, at the narrated 20 px floor. */
+.lw-verified-line__head {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 700;
   color: var(--verified-700);
-  font-weight: 600;
+}
+
+/* "· World ID · one account per person" — Inter 500 at the 16 px body floor. */
+.lw-verified-line__sub {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-text-2);
 }
 
 .lw-verified-compact {
@@ -388,4 +445,812 @@ body {
   gap: var(--s-2);
   margin-top: var(--s-3);
   font-size: 16px;
+}
+
+/* ================================================================ T-50 design pass
+ * The paper screens as DESIGN-SPEC.md draws them. Every rule below names the spec row
+ * it implements; the components carry `lw-*` classes and no inline colour, font, size,
+ * background or border.
+ */
+
+/* DESIGN-SPEC "Legibility floors": a visible focus ring on everything tappable. */
+:focus-visible {
+  outline: 2px solid var(--verified-600);
+  outline-offset: 2px;
+}
+
+/* Motion is decoration here; a worker who asked for none gets none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+/* DESIGN-SPEC "Type": section labels UPPERCASE mono, tracked — the label over a list. */
+.lw-list-label {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-text-3);
+  margin: 0 0 var(--s-3);
+}
+
+/* DESIGN-SPEC "TaskRow": one labelled row of the expanded card — left, then right. */
+.lw-task-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-3);
+}
+
+/* The collapsed row: the type · title line over its meta, the price held to the right. */
+.lw-task-row--collapsed {
+  align-items: flex-start;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+}
+
+/* Collapsed cards are tighter than open ones — DESIGN-SPEC "Radii": light card 14. */
+.lw-card--tight {
+  padding: 10px var(--s-4);
+  border-radius: var(--r-card-sm);
+}
+
+/* The whole tappable summary, collapsed or open. */
+.lw-task-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.lw-task-summary__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+/* Collapsed: `<type> · <title>` in mono, one line of 16/600. */
+.lw-task-line {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink-text);
+}
+
+/* The title itself, wherever it sits — the collapsed line's, or the open card's `name` row. */
+.lw-task-title {
+  min-width: 0;
+}
+
+/* Expanded: the title itself — DESIGN-SPEC "Type": Inter, sentence case, 21/700. */
+.lw-task-name {
+  font-family: var(--font-body);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink-text);
+}
+
+/* DESIGN-SPEC "TaskRow": Archivo price numeral + "USDC"; it never wraps mid-figure. */
+.lw-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-1);
+  white-space: nowrap;
+}
+
+.lw-price__figure {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* The collapsed row's figure. It carries `data-floor="20"`, so the floor wins over the
+   prototype's 17 px. */
+.lw-price__figure--sm {
+  font-size: 20px;
+}
+
+.lw-price__unit {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+}
+
+/* DESIGN-SPEC "TaskRow": mono meta. Never amber — amber is the refusal colour. */
+.lw-meta {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-text-3);
+  margin: 0 0 var(--s-3);
+  overflow-wrap: anywhere;
+}
+
+/* The same meta with the space above it, and room for a chip on the line. */
+.lw-meta--top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-text-2);
+  margin: var(--s-3) 0 0;
+}
+
+/* The same meta, sitting inside a row that already spaces it. */
+.lw-meta--flush {
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* The claim window at the weight the design gives it — still muted, still never amber. */
+.lw-meta--strong {
+  font-weight: 600;
+}
+
+/* The type-derived question — DESIGN-SPEC "Type": Inter, sentence case. */
+.lw-question {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-2);
+}
+
+/* One `·` line of what has to come back with the answer. */
+.lw-fact {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-text-2);
+  margin: 0 0 var(--s-1);
+}
+
+.lw-task-body {
+  margin-top: var(--s-3);
+}
+
+/* The motif as a divider: a dashed route line, never a solid bar. */
+.lw-rule {
+  border: 0;
+  border-top: 1px dashed var(--paper-border);
+  margin: var(--s-3) 0;
+}
+
+/* The landing's three facts. Unicode `·` markers — DESIGN-SPEC "Iconography": no icons. */
+.lw-facts {
+  list-style: none;
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-text-2);
+}
+
+.lw-facts li {
+  display: flex;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+}
+
+.lw-facts li::before {
+  content: '·';
+  color: var(--verified-700);
+}
+
+/* The landing's title line — DESIGN-SPEC "Type": Inter, sentence case. */
+.lw-landing-title {
+  font-family: var(--font-body);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-4);
+}
+
+/* The line under the primary button that used to be inside its label. */
+.lw-cta-caption {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+  text-align: center;
+  margin: var(--s-2) 0 0;
+}
+
+/* The answer control: a `--paper-100` track holding 44 px segments. */
+.lw-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  padding: 3px;
+  border-radius: var(--r-button);
+  background: var(--paper-100);
+}
+
+.lw-segmented__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Teal is the confirm accent: a chosen segment is an answer, never a refusal. */
+.lw-segmented__option--on {
+  background: var(--verified-600);
+  color: var(--paper-0);
+}
+
+/* A flat `--paper-100` tile — the warning box and the photo slot, never a nested card. */
+.lw-tile {
+  background: var(--paper-100);
+  border-radius: var(--r-tile);
+  padding: var(--s-3) var(--s-4);
+  color: var(--ink-text-2);
+}
+
+/* The bar pinned to the bottom of `/tasks`: earnings left, the released figure right. */
+.lw-earnings-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  background: var(--paper-0);
+  border-top: 1px solid var(--paper-border);
+  padding: var(--s-3) var(--s-5);
+  padding-bottom: calc(var(--s-3) + env(safe-area-inset-bottom));
+  color: var(--ink-text);
+  text-decoration: none;
+}
+
+.lw-earnings-bar__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lw-earnings-bar__label {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-text-3);
+}
+
+/* The last card has to clear the fixed bar; the spacer is what gives `main` the room. */
+.lw-earnings-bar__spacer {
+  height: 84px;
+}
+
+/* The released receipt — DESIGN-SPEC "Semantic palette": the one accent, flat, no glow. */
+.lw-paid {
+  background: var(--verified-tint-light);
+  border: 1px solid var(--verified-border-light);
+  border-radius: var(--r-card);
+  padding: var(--s-4);
+}
+
+/* The word, the figure and the unit share one baseline inside the pinned string. */
+.lw-paid__amount {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.lw-paid__word {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--verified-700);
+}
+
+/* DESIGN-SPEC "Type": numerals are Archivo, tracked −0.03 em. */
+.lw-stat {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.lw-stat--xl {
+  font-size: 56px;
+}
+
+.lw-stat--lg {
+  font-size: 38px;
+}
+
+.lw-stat--md {
+  font-size: 40px;
+}
+
+.lw-stat--released {
+  color: var(--verified-700);
+}
+
+.lw-stat__unit {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--verified-700);
+}
+
+/*
+ * A failure that is not a refusal: a claim someone else won, an upload that did not go
+ * through, a World ID code. Ink, never amber — `.lw-error` stays amber for refusals and
+ * for the payout-key import error.
+ */
+.lw-error-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink-text);
+  margin: var(--s-3) 0 0;
+}
+
+.lw-error-line[data-tone='refusal'] {
+  color: var(--refusal-on-paper);
+}
+
+.lw-error-line--roomy {
+  margin: 0 0 var(--s-4);
+}
+
+.lw-error-line code {
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+
+/* Every free-text field on the phone — DESIGN-SPEC "Radii": tile/phone button 10. */
+.lw-textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid var(--paper-border-2);
+  border-radius: var(--r-button);
+  background: var(--paper-0);
+  color: var(--ink-text);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------- supporting rules */
+
+/*
+ * The claim clock. The colour never changes with urgency: amber is the refusal colour on
+ * every Legwork surface, and a claim running out is not a refusal.
+ */
+.lw-countdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.lw-countdown__label {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-text-3);
+}
+
+.lw-countdown__clock {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--ink-text);
+}
+
+/* A stack of block actions, at the 12 px step. */
+.lw-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* The same stack, with the space above it. */
+.lw-actions--top {
+  margin-top: var(--s-4);
+}
+
+/* A row of chips or a chip beside a line. */
+.lw-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+/* The locked list's rows sit closer together than a verified worker's cards. */
+.lw-chips--stacked {
+  margin: 0 0 var(--s-2);
+}
+
+/* The visitor's banner: the same paper card, bordered in the accent. */
+.lw-card--verified {
+  border-color: var(--verified-border-light);
+  margin-bottom: var(--s-4);
+}
+
+.lw-banner-heading {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--verified-700);
+  margin: 0 0 var(--s-2);
+}
+
+/* The locked row's price: figure and unit in one text node, so it reads as one thing. */
+.lw-price__figure--locked {
+  display: block;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--s-3);
+}
+
+/* One chip on its own, centred under the block action. */
+.lw-chips--centred {
+  justify-content: center;
+  margin-top: var(--s-3);
+}
+
+/* Left, then right, on one baseline. */
+.lw-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.lw-row--top {
+  align-items: baseline;
+  margin: var(--s-4) 0 0;
+}
+
+/* Body copy that is a note rather than an instruction. */
+.lw-note {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-text-3);
+  margin: 0 0 var(--s-2);
+}
+
+.lw-note--last {
+  margin-bottom: var(--s-4);
+}
+
+.lw-body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-3);
+}
+
+.lw-body--flush {
+  margin: 0;
+}
+
+.lw-body--top {
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.lw-body--roomy {
+  margin: 0 0 var(--s-4);
+}
+
+/* The same note, with the space above it. */
+.lw-note--top {
+  margin: var(--s-3) 0 0;
+}
+
+/* A second card under the first. */
+.lw-card--top {
+  margin-top: var(--s-4);
+}
+
+/* An id, an address or a hash: mono, and it breaks rather than overflowing the card. */
+.lw-address {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink-text);
+  margin: 0 0 var(--s-3);
+  overflow-wrap: anywhere;
+}
+
+.lw-proof-header {
+  margin-bottom: var(--s-5);
+}
+
+/* A link that is a way out rather than an action. */
+.lw-quiet-link {
+  color: var(--ink-text-2);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+/* A chip row with the space above it rather than below. */
+.lw-chips--stacked-top {
+  margin-top: var(--s-3);
+}
+
+.lw-proof-head__sep {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+}
+
+/* The proof card's header row: `<type> · <title>` left, `proof` right. */
+.lw-proof-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-3);
+}
+
+.lw-proof-head__title {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-text);
+}
+
+.lw-proof-head__aside {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+}
+
+/* The photo slot: 140 px tall, radius 12, the capture control filling it until there is one. */
+.lw-photo-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border-radius: var(--r-tile);
+  background: var(--paper-100);
+  overflow: hidden;
+  margin: 0 0 var(--s-3);
+}
+
+.lw-photo-slot .lw-file-label {
+  height: 140px;
+  border-radius: var(--r-tile);
+}
+
+/* The question beside the segmented control. */
+.lw-answer-question {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-text);
+  margin: 0;
+}
+
+.lw-answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+}
+
+/* Between SUBMIT and the paid state: one mono caption between two dashed rules. */
+.lw-waiting-caption {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+  text-align: center;
+  margin: 0;
+}
+
+/* A labelled answer block — the picker, the note field. */
+.lw-answer-group {
+  margin: 0 0 var(--s-4);
+}
+
+/* A label and its short input, side by side. */
+.lw-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-4);
+}
+
+.lw-field {
+  display: block;
+}
+
+/* The same label, where the block around it already does the spacing. */
+.lw-list-label--flush {
+  display: block;
+  margin: 0 0 var(--s-2);
+}
+
+/* The counter under a capped field, and any other mono aside. */
+.lw-count {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
+  margin: var(--s-1) 0 0;
+}
+
+/* An inline number input beside its label — a phone keypad target, never below 44 px. */
+.lw-input {
+  min-height: 44px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--paper-border-2);
+  border-radius: var(--r-button);
+  background: var(--paper-0);
+  color: var(--ink-text);
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+
+.lw-input--price {
+  width: 10ch;
+}
+
+/* The compare pair, and one side of it. */
+.lw-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+}
+
+.lw-pair__card {
+  min-width: 0;
+  padding: var(--s-3);
+}
+
+.lw-pair--flush {
+  margin: 0;
+}
+
+.lw-pair__card--reference {
+  margin-bottom: var(--s-4);
+}
+
+/* The chosen side of the pair, above the money on the receipt. */
+.lw-chosen {
+  margin: 0 0 var(--s-3);
+}
+
+.lw-chosen__word {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--verified-700);
+  margin: 0;
+}
+
+.lw-pair__label {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--ink-text-3);
+  margin: 0 0 var(--s-2);
+}
+
+.lw-pair__label--picked {
+  color: var(--verified-700);
+}
+
+.lw-pair__summary {
+  border: 1px solid var(--paper-border);
+  border-radius: var(--r-button);
+  background: var(--paper-0);
+  padding: var(--s-2);
+}
+
+.lw-pair__summary--picked {
+  border-color: var(--verified-border-light);
+  background: var(--verified-tint-light);
+}
+
+/* A bare tappable wrapper: the zoom target around an image. */
+.lw-plain-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lw-thumb {
+  display: block;
+  width: 100%;
+  border-radius: var(--r-button);
+  object-fit: cover;
+}
+
+.lw-thumb--square {
+  aspect-ratio: 1 / 1;
+}
+
+.lw-thumb--full {
+  border-radius: var(--r-card);
+}
+
+.lw-thumb--tag {
+  border-radius: var(--r-tag);
+}
+
+/* The abuse-class picker: six 44 px rows separated by hairlines. */
+.lw-picker {
+  border: 0;
+  margin: var(--s-5) 0 var(--s-4);
+  padding: 0;
+}
+
+.lw-picker__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  border-bottom: 1px solid var(--paper-border);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+/* Lists on the phone are cards, not bullets. */
+.lw-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lw-list > li {
+  margin-bottom: var(--s-4);
 }

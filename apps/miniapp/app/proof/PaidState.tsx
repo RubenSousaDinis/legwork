@@ -19,6 +19,7 @@ const BASESCAN_TX = 'https://sepolia.basescan.org/tx/';
 
 export const NOT_SPENDABLE = 'testnet USDC — not spendable';
 export const COMPLETED_LINE = '+1 completed';
+export const KEPT_THE_RATE = ' · you kept the full posted rate';
 
 export type PaidStateProps = {
   /** The photo that was handed in. `null` renders nothing — see above. */
@@ -44,65 +45,51 @@ export function PaidState({ proofThumbnailUrl, amountUsdc, releaseTx, capturedAt
   if (proofThumbnailUrl === null) return <div data-paid-state="none" />;
 
   return (
-    <div className="lw-card" data-paid-state="released">
+    <div className="lw-paid" data-paid-state="released" data-tone="verified">
       {/* A plain `img`: the source is an object URL for a blob this phone holds in memory,
-          which `next/image` cannot fetch, size or optimise. */}
+          which `next/image` cannot fetch, size or optimise. Its box is the one inline style
+          this screen keeps. */}
       <img
         alt="the proof photo you handed in"
+        className="lw-thumb"
         src={proofThumbnailUrl}
-        style={{
-          borderRadius: 'var(--r-button)',
-          display: 'block',
-          maxHeight: '320px',
-          objectFit: 'cover',
-          width: '100%',
-        }}
+        style={{ maxHeight: '320px' }}
       />
 
-      <p
-        className="lw-placeholder"
-        data-proof="captured_at"
-        style={{ margin: 'var(--s-2) 0 var(--s-4)' }}
-      >
+      <p className="lw-meta lw-meta--top" data-proof="captured_at">
         {`photo · timestamp ${captureTime(capturedAt)}`}
       </p>
 
-      <p
-        data-floor="20"
-        data-released="usdc"
-        style={{
-          color: 'var(--verified-700)',
-          fontFamily: 'var(--font-display)',
-          fontSize: '40px',
-          fontWeight: 800,
-          letterSpacing: '-0.03em',
-          lineHeight: 1.1,
-          margin: 0,
-        }}
-      >
-        {`Released · ${amountUsdc.toFixed(2)} USDC`}
-      </p>
-
-      <p
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--s-2)',
-          margin: 'var(--s-3) 0 0',
-        }}
-      >
-        <Chip tone="verified" floor={20}>
-          <a data-hit="44" href={`${BASESCAN_TX}${releaseTx}`} rel="noreferrer" target="_blank">
-            {`tx ${shortTx(releaseTx)} ↗`}
-          </a>
-        </Chip>
+      {/*
+        The word, the figure and its unit are one element because the released amount's text
+        is `Released · 3.00 USDC` and `tests/proof/paidState.test.tsx` pins it as one string.
+        The scale carries the hierarchy instead: the label at the 16 px body floor, the
+        figure at 38 px.
+      */}
+      <p className="lw-row lw-row--top">
+        <span
+          className="lw-stat lw-stat--lg lw-stat--released lw-paid__amount"
+          data-floor="20"
+          data-released="usdc"
+        >
+          <span className="lw-paid__word">Released</span>
+          <span className="lw-paid__word"> · </span>
+          <span>{amountUsdc.toFixed(2)}</span>
+          <span className="lw-stat__unit"> USDC</span>
+        </span>
         <Chip tone="neutral" floor={20}>
           {NOT_SPENDABLE}
         </Chip>
       </p>
 
-      <p data-floor="20" data-completed="true" style={{ margin: 'var(--s-3) 0 var(--s-4)' }}>
-        {COMPLETED_LINE}
+      <p className="lw-meta lw-meta--top">
+        <Chip tone="verified" floor={20}>
+          <a data-hit="44" href={`${BASESCAN_TX}${releaseTx}`} rel="noreferrer" target="_blank">
+            {`tx ${shortTx(releaseTx)} ↗`}
+          </a>
+        </Chip>
+        <span data-completed="true">{COMPLETED_LINE}</span>
+        <span>{KEPT_THE_RATE}</span>
       </p>
 
       {/* The button classes on the anchor itself — a `Button` inside a link would be two
@@ -111,7 +98,6 @@ export function PaidState({ proofThumbnailUrl, amountUsdc, releaseTx, capturedAt
         className="lw-button lw-button--primary lw-button--lg lw-button--full"
         data-hit="44"
         href="/tasks"
-        style={{ textDecoration: 'none' }}
       >
         Back to tasks
       </a>

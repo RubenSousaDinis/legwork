@@ -21,6 +21,7 @@ import {
   summarizeDebugReport,
   type VerifyResponse,
 } from '../../lib/worldid';
+import { describeIdkitError, type IdkitErrorDescription } from './idkitErrors';
 import { Landing } from './Landing';
 import { PayoutKeyStep } from './PayoutKeyStep';
 import { RegisterStep } from './RegisterStep';
@@ -54,6 +55,28 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** A sentence, the raw code, and — when the widget sent one — the SDK's debug report. */
+type ScreenError = IdkitErrorDescription & { detail?: string };
+
+/**
+ * What the screen says about a failure.
+ *
+ * A widget code becomes a plain sentence with the code beside it, because a bare
+ * `verification_disabled` is not something a worker can act on and not something the
+ * operator can read out of a photograph of a phone. An API failure has no such code, so it
+ * keeps `describe()`'s text and puts the status in the chip.
+ */
+function screenError(thrown: unknown): ScreenError {
+  if (thrown instanceof IdkitFailure) {
+    return { ...describeIdkitError(thrown.code), detail: summarizeDebugReport(thrown.report) };
+  }
+  if (thrown instanceof ApiError) {
+    return { sentence: describe(thrown), code: String(thrown.status) };
+  }
+  // A widget code arrives as `Error(code)` when the SDK carried no report with it.
+  return describeIdkitError(describe(thrown));
+}
+
 /** Read at sign-in time, not at mount: the webview installs MiniKit asynchronously. */
 function miniKitInstalled(): boolean {
   try {
@@ -69,7 +92,7 @@ export default function AuthPage() {
 
   const [step, setStep] = useState<Step>('landing');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ScreenError | null>(null);
   const [conflict, setConflict] = useState(false);
   const [rpContext, setRpContext] = useState<RpContext | null>(null);
   const [widgetOpen, setWidgetOpen] = useState(false);
@@ -95,7 +118,7 @@ export default function AuthPage() {
       setRpContext(rp_context);
       setWidgetOpen(true);
     } catch (thrown) {
-      setError(describe(thrown));
+      setError(screenError(thrown));
       setSessionState({ status: 'unverified' });
       setStep('landing');
     } finally {
@@ -117,7 +140,7 @@ export default function AuthPage() {
       setStep('payout-key');
       return;
     }
-    setError(describe(thrown));
+    setError(screenError(thrown));
     setSessionState({ status: 'unverified' });
     setStep('landing');
   }, []);
@@ -150,7 +173,7 @@ export default function AuthPage() {
       });
       setStep('payout-key');
     } catch (thrown) {
-      setError(describe(thrown));
+      setError(screenError(thrown));
       setSessionState({ status: 'unverified' });
       setStep('landing');
     } finally {
@@ -178,7 +201,7 @@ export default function AuthPage() {
       });
       setTimeout(() => router.replace('/tasks'), REDIRECT_DELAY_MS);
     } catch (thrown) {
-      setError(describe(thrown));
+      setError(screenError(thrown));
       setStep('payout-key');
     } finally {
       setBusy(false);
@@ -188,11 +211,11 @@ export default function AuthPage() {
   return (
     <div data-auth-step={step}>
       {conflict ? (
-        <p className="lw-error" data-conflict="nullifier_already_registered" data-floor="20">
+        <p className="lw-error-line" data-conflict="nullifier_already_registered" data-floor="20">
           {CONFLICT_MESSAGE}
         </p>
       ) : null}
-      {error === null ? null : <p className="lw-error">{error}</p>}
+      {error === null ? null : <FailedCheck error={error} />}
 
       {mode === 'idkit' ? (
         <Chip tone="neutral" floor={20}>
@@ -200,9 +223,7 @@ export default function AuthPage() {
         </Chip>
       ) : null}
 
-      {step === 'landing' ? (
-        <Landing busy={busy} level={CREDENTIAL_LEVEL} onVerify={startVerify} state={session} />
-      ) : null}
+      {step === 'landing' ? <Landing busy={busy} onVerify={startVerify} /> : null}
 
       {step === 'verifying' ? (
         <VerifyStep
@@ -229,5 +250,28 @@ export default function AuthPage() {
 
       {step === 'register' ? <RegisterStep tx={tx} /> : null}
     </div>
+  );
+}
+
+/**
+ * The failed check: one sentence in body ink, the raw code in a neutral chip beside it, and
+ * the SDK's debug report under both when the widget sent one. Not `.lw-error` — amber is the
+ * refusal colour, and a World ID that did not answer is not a refusal.
+ */
+function FailedCheck({ error }: { error: ScreenError }) {
+  return (
+    <>
+      <p className="lw-error-line" data-error="idkit">
+        <span>{error.sentence}</span>{' '}
+        <Chip tone="neutral">
+          <code data-error-code>{error.code}</code>
+        </Chip>
+      </p>
+      {error.detail === undefined || error.detail === '' ? null : (
+        <p className="lw-count" data-error-detail>
+          {error.detail}
+        </p>
+      )}
+    </>
   );
 }

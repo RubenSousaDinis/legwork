@@ -17,6 +17,25 @@ export const viewport: Viewport = {
 const FONTS =
   'https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap';
 
+/**
+ * The in-UI glyph — DESIGN-SPEC "Iconography": no icon font, no emoji, no filled icon set.
+ * A bare footprint, typed as two ellipses, always in the verified teal.
+ */
+function Footprint() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="lw-footprint"
+      height="15"
+      viewBox="0 0 24 24"
+      width="15"
+    >
+      <ellipse cx="9" cy="9" rx="4.2" ry="6" transform="rotate(-14 9 9)" />
+      <ellipse cx="15.5" cy="19" rx="2.6" ry="3.4" transform="rotate(-14 15.5 19)" />
+    </svg>
+  );
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -28,7 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <MiniKitProvider>
           <header className="lw-header">
-            <span className="lw-wordmark">LEGWORK</span>
+            <span className="lw-header__brand">
+              <span className="lw-wordmark">LEGWORK</span>
+              <Footprint />
+            </span>
             <VerifiedState />
           </header>
           <main className="lw-main">{children}</main>
