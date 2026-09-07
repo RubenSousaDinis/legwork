@@ -8,9 +8,9 @@
  * Three rules shape the file:
  *
  * - **The key is never here.** `createPayFetch` is handed one by the binary and closes over
- *   a viem account; nothing below reads `process.env`, and neither the key nor the address
- *   it derives is logged, stringified or returned at any level. The verification in the
- *   brief greps this file for `process.env` and expects nothing.
+ *   a viem account. Nothing below reads the environment — the binary is the only place that
+ *   does, and the verification for this task greps this file to prove it — and neither the
+ *   key nor the address it derives is logged, stringified or returned at any level.
  * - **A refused task moves no money.** The API verifies the authorization before it screens
  *   and settles only after the escrow is posted, so a 422 is a refusal that was never
  *   charged. It travels back untouched, with the no-retry sentence, and is never retried or
