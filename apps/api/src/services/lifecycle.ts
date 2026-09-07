@@ -145,6 +145,9 @@ export async function mirrorFromChain(
   row: TaskRow,
   chainTask: ChainTask,
   tx?: { claim?: string; submit?: string; release?: string },
+  // A seeded worker or a seeded task makes the row demo data — the rule `observations.ts`
+  // already applies. The feed reads `tasks.seeded`, so the row has to carry it too.
+  opts?: { workerSeeded?: boolean },
 ): Promise<TaskRow> {
   const state = dbState(chainTask.state);
   const zeroHash = /^0x0{64}$/.test(chainTask.proofHash);
@@ -160,6 +163,7 @@ export async function mirrorFromChain(
     ...(tx?.claim ? { txClaim: tx.claim } : {}),
     ...(tx?.submit ? { txSubmit: tx.submit } : {}),
     ...(tx?.release ? { txRelease: tx.release } : {}),
+    ...(opts?.workerSeeded && !row.seeded ? { seeded: true } : {}),
     updatedAt: new Date(),
   };
 

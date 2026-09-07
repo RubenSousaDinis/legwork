@@ -97,7 +97,7 @@ export const POST = route(async (req, ctx) => {
 
   // Never guessed from the request: the row is whatever `getTask` says it is now.
   const settled = await chain.getTask(taskId);
-  await mirrorFromChain(row, settled, { claim: tx.hash });
+  await mirrorFromChain(row, settled, { claim: tx.hash }, { workerSeeded: isSeeded });
 
   return Response.json({ tx: tx.hash, ...claimDeadlines(settled) });
 });

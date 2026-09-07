@@ -243,6 +243,24 @@ function deepKeys(value: unknown): string[] {
 // ---------------------------------------------------------------- §8 claimCooldownSurfaced
 
 describe('POST /tasks/:id/claim', () => {
+  it('seededClaimMarksRowDemoData', async () => {
+    // A seeded worker taking an allowlisted payer's task turns the row into demo data, so the
+    // feed's `seeded` chip follows the worker as well as the seed script's own tasks.
+    fake.setWorker(SEEDED_WORKER, { nullifier: 1003n, seeded: true, area: AREA, taskTypes: 15 });
+    await fake.setAllowlistedBuyer(BUYER, true);
+    const seededToken = await sessionFor(SEEDED_WORKER, '1003');
+    const taskId = await postTask('verify-open');
+
+    const res = await call(claimRoute, {
+      method: 'POST',
+      params: { id: taskId.toString() },
+      headers: auth(seededToken),
+    });
+    expect(res.status).toBe(200);
+    const [row] = await fixture.db.select().from(tasks).where(eq(tasks.taskId, taskId));
+    expect(row?.seeded).toBe(true);
+  });
+
   it('claimCooldownSurfaced', async () => {
     const token = await sessionFor(WORKER);
 
