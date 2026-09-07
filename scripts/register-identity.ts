@@ -83,6 +83,9 @@ const FEE = 450_000n;
 const LOCKED = 3_450_000n;
 
 const OUTCOME_PAID = 1;
+const STATE_OPEN = 1;
+const STATE_CLAIMED = 2;
+const STATE_SUBMITTED = 3;
 const STATE_RELEASED = 4;
 const TAG_PAID = 'paid-on-proof';
 
@@ -158,7 +161,8 @@ function revertReason(err: unknown, abis: Abi[]): string {
     const named = errorNameOf(candidate.slice(0, 10) as Hex, abis);
     if (named) return `${named} (selector ${candidate.slice(0, 10)})`;
   }
-  return raw.split('\n')[0]!;
+  const reason = /reverted with the following reason:\s*\n(.+)/.exec(raw)?.[1];
+  return reason ? `Error("${reason.trim()}")` : raw.split('\n')[0]!;
 }
 
 /** Names a four-byte error selector against the ABIs this script already loads. */
@@ -209,6 +213,25 @@ async function main(): Promise<void> {
 
   const read = async <T>(address: Address, abi: Abi, functionName: string, args: unknown[] = []) =>
     (await pub.readContract({ address, abi, functionName, args })) as T;
+
+  interface TaskView {
+    amount: bigint;
+    fee: bigint;
+    buyerAgentId: bigint;
+    worker: Address;
+    state: number;
+  }
+  const getTask = (id: bigint) => read<TaskView>(escrow, escrowAbi, 'getTask', [id]);
+
+  /**
+   * A write is only safe once the read node has caught up with the write before it: a receipt
+   * is confirmed several seconds before `getTask` stops answering with an empty slot, and a
+   * `claimFor` simulated against that empty slot reverts. Every hop waits for its precondition.
+   */
+  const waitForState = async (id: bigint, want: number): Promise<void> => {
+    const t = await poll(`getTask(${id}).state == ${want}`, () => getTask(id), (v) => v.state === want);
+    if (t.state !== want) throw new Error(`task ${id} is in state ${t.state}, expected ${want}`);
+  };
 
   /** eth_call first so a revert is reported before a key ever signs; returns the receipt. */
   async function send(
@@ -333,7 +356,7 @@ async function main(): Promise<void> {
         agentIdSource = 'minted by this run on the IdentityRegistry';
         step('B', `BUYER_AGENT_ID=${agentId}`);
         log(`ENV REQUEST: BUYER_AGENT_ID=${agentId}`);
-        if (!(await ownedByBuyer(agentId))) fail('B: the minted id is not owned by the buyer');
+        if (!(await ownedByBuyer(agentId, true))) fail('B: the minted id is not owned by the buyer');
       }
     }
   }
@@ -380,36 +403,58 @@ async function main(): Promise<void> {
         submitTTL: 3600,
         disputeWindow: 120,
       };
-      const postReceipt = await maybeSend(
-        relayer,
-        escrow,
-        escrowAbi,
-        'post',
-        [params],
-        `TaskEscrow.post(amount ${AMOUNT}, buyerAgentId ${agentId === 0n ? '<step B id>' : agentId}, area ez1dp) from the relayer`,
-      );
+      // Resume before posting: a run that stopped between `post` and `approve` left a task of
+      // ours part-finished, and posting a second one would strand it with 3.45 locked in it.
+      const resumable = await findResumable(agentId);
+      const postReceipt = resumable
+        ? null
+        : await maybeSend(
+            relayer,
+            escrow,
+            escrowAbi,
+            'post',
+            [params],
+            `TaskEscrow.post(amount ${AMOUNT}, buyerAgentId ${agentId === 0n ? '<step B id>' : agentId}, area ez1dp) from the relayer`,
+          );
       planned(`TaskEscrow.claimFor(taskId, ${cliWorker}) from the relayer`);
       planned(`TaskEscrow.submitFor(taskId, ${cliWorker}, proofHash) from the relayer`);
       planned('TaskEscrow.approve(taskId) from the relayer');
 
-      if (postReceipt) {
-        // The id comes off the receipt's event, not off the simulation's return value: two
-        // simulations against the same block both predict the same next id.
-        const posted = parseEventLogs({ abi: escrowAbi, eventName: 'TaskPosted', logs: postReceipt.logs });
-        const args = posted[0]?.args as { taskId?: bigint } | undefined;
-        if (args?.taskId === undefined) throw new Error('no TaskPosted event in the post receipt');
-        taskId = args.taskId;
-        step('C', `taskId ${taskId}`);
+      if (DRY_RUN) {
+        if (resumable) step('C', `would resume task ${resumable.id} from state ${resumable.state} — nothing sent`);
+      } else if (postReceipt || resumable) {
+        if (postReceipt) {
+          // The id comes off the receipt's event, not off the simulation's return value: two
+          // simulations against the same block both predict the same next id.
+          const posted = parseEventLogs({ abi: escrowAbi, eventName: 'TaskPosted', logs: postReceipt.logs });
+          const args = posted[0]?.args as { taskId?: bigint } | undefined;
+          if (args?.taskId === undefined) throw new Error('no TaskPosted event in the post receipt');
+          taskId = args.taskId;
+          step('C', `taskId ${taskId}`);
+        } else {
+          taskId = resumable!.id;
+          step('C', `taskId ${taskId} — resuming, already in state ${resumable!.state}`);
+        }
 
-        await send(relayer, escrow, escrowAbi, 'claimFor', [taskId, cliWorker], `claimFor(${taskId})`);
-        await send(
-          relayer,
-          escrow,
-          escrowAbi,
-          'submitFor',
-          [taskId, cliWorker, proofHash],
-          `submitFor(${taskId})`,
-        );
+        let state = postReceipt ? STATE_OPEN : resumable!.state;
+        if (state === STATE_OPEN) {
+          await waitForState(taskId, STATE_OPEN);
+          await send(relayer, escrow, escrowAbi, 'claimFor', [taskId, cliWorker], `claimFor(${taskId})`);
+          state = STATE_CLAIMED;
+        }
+        if (state === STATE_CLAIMED) {
+          await waitForState(taskId, STATE_CLAIMED);
+          await send(
+            relayer,
+            escrow,
+            escrowAbi,
+            'submitFor',
+            [taskId, cliWorker, proofHash],
+            `submitFor(${taskId})`,
+          );
+          state = STATE_SUBMITTED;
+        }
+        await waitForState(taskId, STATE_SUBMITTED);
         const approveReceipt = await send(
           relayer,
           escrow,
@@ -438,13 +483,11 @@ async function main(): Promise<void> {
         assertEq('C Outcome.taskId', outcome?.taskId, taskId);
         assertEq('C Outcome.outcome', outcome?.outcome, OUTCOME_PAID);
 
-        const task = (await read<readonly unknown[]>(escrow, escrowAbi, 'getTask', [taskId])) as unknown as {
-          amount: bigint;
-          fee: bigint;
-          buyerAgentId: bigint;
-          worker: Address;
-          state: number;
-        };
+        const task = await poll(
+          `getTask(${taskId}).state == ${STATE_RELEASED}`,
+          () => getTask(taskId),
+          (v) => v.state === STATE_RELEASED,
+        );
         assertEq('C getTask.state', task.state, STATE_RELEASED);
         assertEq('C getTask.buyerAgentId', task.buyerAgentId, agentId);
         assertEq('C getTask.amount', task.amount, AMOUNT);
@@ -512,6 +555,25 @@ async function main(): Promise<void> {
   }
   log(DRY_RUN ? 'dry run complete — nothing was sent.' : 'done.');
 
+  /**
+   * The most recent task carrying this agent id that has not reached a terminal state. Only the
+   * last handful are looked at: this script posts one task per run and nothing else posts with
+   * an agent id yet.
+   */
+  async function findResumable(id: bigint): Promise<{ id: bigint; state: number } | null> {
+    const count = await read<bigint>(escrow, escrowAbi, 'taskCount');
+    for (let k = count; k > 0n && k > count - 20n; k--) {
+      const t = await getTask(k);
+      if (t.buyerAgentId !== id) continue;
+      if (t.state === STATE_OPEN || t.state === STATE_CLAIMED || t.state === STATE_SUBMITTED) {
+        if (t.state !== STATE_OPEN && t.worker.toLowerCase() !== cliWorker.toLowerCase()) continue;
+        step('C', `task ${k} is ours and unfinished (state ${t.state}) — resuming it`);
+        return { id: k, state: t.state };
+      }
+    }
+    return null;
+  }
+
   /** `${DASHBOARD_URL}/agent.json` when it answers with a named registration, else a data URI. */
   async function chooseAgentURI(): Promise<{ source: 'dashboard' | 'data-uri'; value: string }> {
     const base = process.env['DASHBOARD_URL'];
@@ -549,17 +611,30 @@ async function main(): Promise<void> {
     return `data:application/json;base64,${Buffer.from(JSON.stringify(doc)).toString('base64')}`;
   }
 
-  /** `ownerOf` reverts on a token that was never minted, so the miss is caught, not thrown. */
-  async function ownedByBuyer(id: bigint): Promise<boolean> {
+  /**
+   * `ownerOf` reverts on a token that was never minted, so the miss is caught, not thrown.
+   * A token minted seconds ago reverts too, on a read node that has not caught up with the
+   * receipt it just returned — so a fresh id is polled and only an old one fails on the spot.
+   */
+  async function ownedByBuyer(id: bigint, fresh = false): Promise<boolean> {
     for (const fn of ['ownerOf', 'getAgentWallet'] as const) {
-      try {
-        const who = await read<Address>(identity, identityAbi, fn, [id]);
-        step('B', `${fn}(${id}) = ${who}`);
-        if (who.toLowerCase() === buyer.toLowerCase()) return true;
-      } catch {
+      const who = await poll(
+        `${fn}(${id})`,
+        async (): Promise<Address | null> => {
+          try {
+            return await read<Address>(identity, identityAbi, fn, [id]);
+          } catch {
+            return null;
+          }
+        },
+        (v) => v !== null || !fresh,
+      );
+      if (who === null) {
         step('B', `${fn}(${id}) reverts — no such agent id`);
         return false;
       }
+      step('B', `${fn}(${id}) = ${who}`);
+      if (who.toLowerCase() === buyer.toLowerCase()) return true;
     }
     return false;
   }
