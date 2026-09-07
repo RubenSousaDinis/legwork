@@ -163,3 +163,42 @@ describe('nonceSingleUse', () => {
     expect(await third.json()).toEqual({ error: 'unauthorized', reason: 'nonce_used' });
   });
 });
+
+describe('sessionForSeededWorker', () => {
+  const SYNTHETIC = '55916856277647751260288134865712965332216244803164463756694945814632892673826';
+
+  it('binds a seeded worker with no nullifiers row to the registry synthetic nullifier', async () => {
+    chain.setWorker(worker.address, {
+      nullifier: BigInt(SYNTHETIC),
+      seeded: true,
+      area: 'ez1dp',
+      taskTypes: 15,
+    });
+
+    const nonce = await getNonce();
+    const res = await postSession(nonce, await walletAuthPayload(worker, nonce, DOMAIN));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { worker: string; nullifier: string; mode: string };
+    expect(body.worker).toBe(worker.address);
+    expect(body.nullifier).toBe(SYNTHETIC);
+    expect(body.mode).toBe('walletAuth');
+    expect(setCookies(res).lw_worker).toBeTruthy();
+  });
+
+  it('still refuses a registered human without a nullifiers row — the row is the proof record', async () => {
+    chain.setWorker(worker.address, {
+      nullifier: BigInt(NULLIFIER),
+      seeded: false,
+      area: 'ez1dp',
+      taskTypes: 15,
+    });
+
+    const nonce = await getNonce();
+    const res = await postSession(nonce, await walletAuthPayload(worker, nonce, DOMAIN));
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'forbidden', reason: 'not_registered' });
+  });
+});
+
