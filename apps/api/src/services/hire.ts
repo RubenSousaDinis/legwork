@@ -78,7 +78,10 @@ import {
   selectGateway,
   type IdempotencyStore,
   type PaymentGateway,
-} from '@legwork/payments';
+  FakeFacilitator,
+  type FacilitatorClient,
+  type X402Network,
+} from '@legwork/payments'
 import {
   KeywordFallbackClassifier,
   createLiveClassifier,
@@ -630,33 +633,49 @@ export function screener(): (body: unknown) => Promise<ScreenOutcome> {
   return (body) => screenEnvelope(body, { places: getPlaceIndex(), classifier: classifier() });
 }
 
-/** The one network this seller accepts, and the one the frozen `PaymentContext` names. */
-const X402_NETWORK = 'eip155:84532' as const;
+/** The network this seller accepts follows `CHAIN_ID`: Base Sepolia, or anvil for the harness. */
+function sellerNetwork(chainId: 84532 | 31337): X402Network {
+  return chainId === 31337 ? 'eip155:31337' : 'eip155:84532';
+}
 
 /**
  * The seller half, from config. A missing facilitator or asset is a boot-time
  * misconfiguration and says so — not a 500 on the first agent that tries to pay.
+ *
+ * `X402_FACILITATOR_MODE=fake` swaps the HTTP facilitator for the in-process `FakeFacilitator`
+ * (T-15's test double: arithmetic, no network) — the e2e harness on anvil, never production.
  */
 export function buildGateway(): PaymentGateway {
   const config = getConfig();
   if (config.PAYMENT_MODE === 'direct') return selectGateway('direct');
 
-  const url = config.X402_FACILITATOR_URL;
-  if (!url) throw new Error('PAYMENT_MODE=x402 needs X402_FACILITATOR_URL');
   const asset = config.USDC_ADDRESS;
   if (!asset) throw new Error('PAYMENT_MODE=x402 needs USDC_ADDRESS');
-  if (config.X402_NETWORK && config.X402_NETWORK !== X402_NETWORK) {
-    throw new Error(`X402_NETWORK must be ${X402_NETWORK}`);
+  const network = sellerNetwork(config.CHAIN_ID);
+  if (config.X402_NETWORK && config.X402_NETWORK !== network) {
+    throw new Error(`X402_NETWORK must be ${network} for CHAIN_ID ${config.CHAIN_ID}`);
+  }
+
+  let facilitator: FacilitatorClient;
+  if (config.X402_FACILITATOR_MODE === 'fake') {
+    facilitator = new FakeFacilitator({ networks: [network] });
+  } else {
+    const url = config.X402_FACILITATOR_URL;
+    if (!url) throw new Error('PAYMENT_MODE=x402 needs X402_FACILITATOR_URL');
+    // The handler calls the resource server, never this client directly, so the server's
+    // payment-flow rules apply to both verify and settle.
+    facilitator = new HTTPFacilitatorClient({ url });
   }
 
   return selectGateway('x402', {
     x402: {
-      // The handler calls the resource server, never this client directly, so the server's
-      // payment-flow rules apply to both verify and settle.
-      facilitator: new HTTPFacilitatorClient({ url }),
+      facilitator,
       payTo: config.relayerAddress,
       asset: asset as Hex,
-      network: X402_NETWORK,
+      network,
+      // Anvil's mock USDC is not in the library's default-asset table, so its domain is stated;
+      // the fake facilitator never checks a signature against it.
+      ...(config.CHAIN_ID === 31337 ? { assetDomain: { name: 'USD Coin', version: '2' } } : {}),
     },
   });
 }

@@ -2,6 +2,7 @@
  * The green headless loop: post → claim → submit → release, on Base Sepolia, in one command.
  *
  *   pnpm demo:run [--agent-id 9196] [--auto-release] [--place scripts/fixtures/demo-place.json]
+ *   `--agent-id` defaults to BUYER_AGENT_ID from the env; `--agent-id 0` posts without one.
  *
  * This is the money beat with no phone and no human in it. The buyer is the demo agent
  * (`BUYER_PRIVATE_KEY`, allowlisted on the escrow); the worker is the seeded CLI worker,
@@ -35,7 +36,7 @@ import {
   type Hex,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { baseSepolia, foundry } from 'viem/chains';
 
 import ngeohash from 'ngeohash';
 
@@ -72,7 +73,10 @@ export const PRICE_UNITS = priceWithFee(WORKER_UNITS);
 
 /** The library's own default is $1, which refuses the 3.45 this task costs. */
 const MAX_PAYMENT_USD = `$${fromUsdcUnits(priceWithFee(toUsdcUnits(MAX_TASK_AMOUNT_USDC))).toFixed(2)}`;
-const PAYMENT_NETWORK = 'eip155:84532' as const;
+/** `CHAIN_ID=31337` points everything at anvil (the e2e harness); anything else is Base Sepolia. */
+const CHAIN = Number(process.env['CHAIN_ID'] ?? CHAIN_ID) === 31337 ? foundry : baseSepolia;
+const PAYMENT_NETWORK = `eip155:${CHAIN.id}` as 'eip155:84532' | 'eip155:31337';
+const DEPLOYMENT_FILE = CHAIN.id === 31337 ? 'anvil.json' : 'base-sepolia.json';
 
 /**
  * The read client, named by its factory.
@@ -83,7 +87,7 @@ const PAYMENT_NETWORK = 'eip155:84532' as const;
  * return type sidesteps the whole argument.
  */
 function readClient(rpcUrl: string) {
-  return createPublicClient({ chain: baseSepolia, transport: http(rpcUrl) });
+  return createPublicClient({ chain: CHAIN, transport: http(rpcUrl) });
 }
 type ReadClient = ReturnType<typeof readClient>;
 
@@ -330,7 +334,7 @@ async function postDirect(
   agentId: string | undefined,
 ): Promise<{ taskId: string; postTx: Hex }> {
   const account = privateKeyToAccount(privateKey);
-  const wallet = createWalletClient({ account, chain: baseSepolia, transport: http(rpcUrl) });
+  const wallet = createWalletClient({ account, chain: CHAIN, transport: http(rpcUrl) });
   const publicClient = readClient(rpcUrl);
 
   const approveTx = await wallet.writeContract({
@@ -516,6 +520,11 @@ export function parseArgs(argv: readonly string[]): DemoArgs {
     else if (flag === '--place' && value) { args.place = value; i += 1; }
     else if (flag === '--auto-release') args.autoRelease = true;
   }
+  // The demo agent's own ERC-8004 id (T-32) is the default: a filmed hire must carry it, or
+  // the agent's record never gets `paid-on-proof`. `--agent-id` still overrides; `--agent-id 0` opts out.
+  if (args.agentId === undefined && process.env['BUYER_AGENT_ID']) args.agentId = process.env['BUYER_AGENT_ID'];
+  if (args.agentId === '0') args.agentId = undefined;
+
   return args;
 }
 
@@ -535,11 +544,11 @@ async function main(): Promise<void> {
   const place = loadDemoPlace(args.place);
 
   const record = JSON.parse(
-    readFileSync(new URL('../contracts/deployments/base-sepolia.json', import.meta.url), 'utf8'),
+    readFileSync(new URL(`../contracts/deployments/${DEPLOYMENT_FILE}`, import.meta.url), 'utf8'),
   ) as Record<string, unknown>;
   const deployment = parseDeployment(record);
-  if (deployment.chainId !== CHAIN_ID) {
-    throw new DemoFailure('env', `the deployment record is chain ${deployment.chainId}, not Base Sepolia`);
+  if (deployment.chainId !== CHAIN.id) {
+    throw new DemoFailure('env', `the deployment record is chain ${deployment.chainId}, not ${CHAIN.id}`);
   }
   const usdc = getAddress(String(record['usdc']));
 
