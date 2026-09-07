@@ -595,6 +595,11 @@ body {
   white-space: nowrap;
 }
 
+/* The claim window at the weight the design gives it — still muted, still never amber. */
+.lw-meta--strong {
+  font-weight: 600;
+}
+
 /* The type-derived question — DESIGN-SPEC "Type": Inter, sentence case. */
 .lw-question {
   font-family: var(--font-body);

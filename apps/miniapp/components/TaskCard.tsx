@@ -152,7 +152,7 @@ export function TaskCard({
               </span>
               {/* Not amber: DESIGN-SPEC reserves amber for refusals, and a claim window
                   running out is neither a refusal nor an error. */}
-              <span className="lw-meta lw-meta--flush" data-ttl="true">
+              <span className="lw-meta lw-meta--flush lw-meta--strong" data-ttl="true">
                 {TTL_LINE}
               </span>
             </span>

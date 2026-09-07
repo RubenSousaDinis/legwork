@@ -394,10 +394,6 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
             </Button>
           </div>
 
-          <hr className="lw-rule" />
-          <p className="lw-waiting-caption">{APPROVAL_CAPTION}</p>
-          <hr className="lw-rule" />
-
           {error === null ? null : (
             <p className="lw-error-line" data-error="proof">
               {error}
