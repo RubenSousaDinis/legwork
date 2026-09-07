@@ -8,8 +8,9 @@
  * Three things are worth knowing before reading the code.
  *
  * **Authentication is the operator's Claude Code login.** This file constructs no API client
- * and reads no `ANTHROPIC_API_KEY`; the Agent SDK spawns the `claude` binary, which uses the
- * login already on this machine. Inside a Claude Code session the child refuses to start, so
+ * and reads no Anthropic API key from anywhere — the name is deliberately not spelled in this
+ * package, so the check that it is absent cannot match the sentence saying so. The Agent SDK
+ * spawns the `claude` binary, which uses the login already on this machine. Inside a Claude Code session the child refuses to start, so
  * run the script under `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT`. If that still cannot
  * authenticate, the operator mints `CLAUDE_CODE_OAUTH_TOKEN` with `claude setup-token` and
  * puts it in `.env` — named in the README, never printed here, never committed.
