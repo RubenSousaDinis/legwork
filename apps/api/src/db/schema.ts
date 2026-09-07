@@ -169,7 +169,9 @@ export const adminAudit = pgTable('admin_audit', {
 /** TxQueue's per-role nonce row; the advisory lock key is derived from key_role. */
 export const nonces = pgTable('nonces', {
   keyRole: text('key_role').primaryKey(),
-  nextNonce: bigint('next_nonce', { mode: 'bigint' }).notNull(),
+  // Nullable on purpose: `PgNonceLock` creates the row with NULL and `TxQueue` resyncs from
+  // `getTransactionCount(pending)` whenever the store answers null (T-29 found the NOT NULL).
+  nextNonce: bigint('next_nonce', { mode: 'bigint' }),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
 });
 

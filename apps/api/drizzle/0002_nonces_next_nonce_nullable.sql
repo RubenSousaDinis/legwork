@@ -1,0 +1,1 @@
+ALTER TABLE "nonces" ALTER COLUMN "next_nonce" DROP NOT NULL;
