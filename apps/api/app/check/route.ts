@@ -8,9 +8,9 @@
  *
  * Public and rate-limited per client, because it is the one endpoint here that does real work
  * for free. Nothing in this file imports the chain, the payment gateway, the identity
- * registry or the marker — the absence is the guarantee.
+ * registry, the marker or the payments package — the absence is the guarantee.
  */
-import { quoteFor } from '@legwork/payments';
+import { fromUsdcUnits, priceWithFee, toUsdcUnits } from '@legwork/shared';
 import { route } from '@/src/http/route';
 import { ApiError } from '@/src/errors';
 import { clientKey, rateLimit } from '@/src/http/rateLimit';
@@ -90,7 +90,9 @@ export const POST = route(async (req) => {
     return Response.json(refusalPayload(verdict, { marked: false }), { status: 422 });
   }
 
-  const quote = quoteFor(verdict.envelope);
+  // The same integer arithmetic `quoteFor` in @legwork/payments runs, without that package in
+  // this route's import graph: the dry run has no gateway to reach for, by construction.
+  const priceUnits = priceWithFee(toUsdcUnits(verdict.envelope.amount_usdc));
   await writeScreeningLog(
     { db },
     {
@@ -103,11 +105,11 @@ export const POST = route(async (req) => {
       payer: null,
     },
   );
-  logDecision({ decision: 'accepted', price_units: quote.price_units.toString() });
+  logDecision({ decision: 'accepted', price_units: priceUnits.toString() });
 
   return Response.json({
     accepted: true,
     spec_hash: verdict.spec_hash,
-    price_usdc: quote.price_usdc,
+    price_usdc: fromUsdcUnits(priceUnits),
   });
 });

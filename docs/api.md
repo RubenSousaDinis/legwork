@@ -10,7 +10,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 
 | Method | Path | Auth | Summary | Responses |
 |---|---|---|---|---|
-| POST | `/tasks` | x402 | Post a task; x402 PAYMENT-SIGNATURE header; price = amount × 1.15 | 201, 400, 402, 422, 429 |
+| POST | `/tasks` | x402 | Post a task; x402 PAYMENT-SIGNATURE header; price = amount × 1.15; an unpaid call may carry the informational X-Payer header so the 402 echoes that payer's remaining budget; 409 conflict/in_progress while the same authorization is mid-post; 503 escrow_post_failed never charges | 201, 400, 402, 409, 422, 429, 503 |
 | GET | `/tasks/:id` | public | Task status; long-poll with ?wait ≤ 50; X-Buyer-Token reveals proof.url (a wrong token is the same body without it); ETag/If-None-Match; poll_after_seconds is 0 when terminal, 1 when the wait elapsed unchanged, 3 otherwise; hash_ok re-hashed per request | 200, 404 |
 | POST | `/tasks/:id/approve` | buyer-token | Approve a submitted proof; relayer executes onchain; the row moves only after the hash returns | 200, 401, 409, 503 |
 | POST | `/tasks/:id/dispute` | buyer-token | Dispute inside the window | 200, 400, 401, 409, 503 |
@@ -758,6 +758,334 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 }
 ```
 
+**409**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
 **422**
 
 ```json
@@ -864,6 +1192,334 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
     "error",
     "open_tasks",
     "daily_usdc"
+  ]
+}
+```
+
+**503**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
   ]
 }
 ```
@@ -1186,6 +1842,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -1536,6 +2209,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -1847,6 +2537,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -2158,6 +2865,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -2576,6 +3300,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -2887,6 +3628,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -3198,6 +3956,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -3548,6 +4323,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -3859,6 +4651,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -4170,6 +4979,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -5295,6 +6121,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -5755,6 +6598,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -6066,6 +6926,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -6489,6 +7366,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -6800,6 +7694,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -7111,6 +8022,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -7422,6 +8350,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -7911,6 +8856,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -8222,6 +9184,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -8554,6 +9533,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -8946,6 +9942,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -9257,6 +10270,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -9603,6 +10633,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -9914,6 +10961,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -10341,6 +11405,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -10768,6 +11849,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -11452,6 +12550,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -12462,6 +13577,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [
@@ -12773,6 +13905,23 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         },
         "reason": {
           "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
         }
       },
       "required": [

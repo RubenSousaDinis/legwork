@@ -24,6 +24,7 @@ catalog:
   viem: ^2.56.3
   jose: ^5.9.6
   ngeohash: ^0.6.4
+  "@types/ngeohash": ^0.6.8
   fastest-levenshtein: ^1.0.16
   fast-json-stable-stringify: ^2.1.0
   pino: ^9.5.0
