@@ -133,22 +133,20 @@ decision: pending
 
 _T-14 — the four contracts on Base Sepolia, wired, and the demo pool seeded_
 
-outcome: pending the live broadcast. `scripts/deploy.sh --anvil` is green end to end against a
-local anvil (chain 31337, repository mocks) and green again on a second run, which is the whole
-rehearsal the brief asks for. Base Sepolia is held on two operator decisions recorded on PR #119:
-`TREASURY_ADDRESS` currently derives to the relayer address, and `TaskEscrow.treasury` is
-immutable, so the fee the demo is built to show cannot be read off a treasury balance and cannot
-be corrected without redeploying every address downstream commits to. The rows below marked
-_pending_ are the ones only the live chain can fill; everything else is deterministic and final.
+outcome: live. The four contracts are on Base Sepolia, wired, verified on Basescan, and the demo
+pool behind them is 20 seeded workers and five released lifecycles. `scripts/deploy.sh` ran 115
+checks against the deployed addresses and every one passed. The same script against a local anvil
+(chain 31337, repository mocks) is green twice over, the second run logging `deploy: skipped` and
+broadcasting nothing — that rehearsal is what T-36 reuses.
 
 **Addresses** — each verified on Basescan ("Contract Source Code Verified").
 
 | contract | address | Basescan |
 |---|---|---|
-| `WorkerRegistry` | pending | pending |
-| `TaskEscrow` | pending | pending |
-| `Reputation` | pending | pending |
-| `AbuseMark` | pending | pending |
+| `WorkerRegistry` | `0x9011A65B89376e6cA393c3158fcB75f5a19F60a1` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x9011A65B89376e6cA393c3158fcB75f5a19F60a1#code) |
+| `TaskEscrow` | `0xDAFefc07986B3336b066B19E6DE6B76680628B52` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0xDAFefc07986B3336b066B19E6DE6B76680628B52#code) |
+| `Reputation` | `0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763#code) |
+| `AbuseMark` | `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x1848Db2d813A66b735f61a73c75456ca32b42Fb6#code) |
 
 External, not ours: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, ERC-8004 IdentityRegistry
 `0x8004A818BFB912233c491871b3d84c89A494BD9e`, ERC-8004 ReputationRegistry
@@ -158,12 +156,12 @@ External, not ours: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, ERC-8004 
 
 | contract | tx |
 |---|---|
-| `WorkerRegistry` | pending |
-| `Reputation` | pending |
-| `AbuseMark` | pending |
-| `TaskEscrow` | pending |
+| `WorkerRegistry` | [`0x9bfd8e30…`](https://sepolia.basescan.org/tx/0x9bfd8e30d787f4394cacbfae00ca76de61fe0ed35e4155dbb057e653131b910d) |
+| `Reputation` | [`0xe40a2b8e…`](https://sepolia.basescan.org/tx/0xe40a2b8e985201f03059e77d167e3970444a9012a817c9915bc5ad667256d941) |
+| `AbuseMark` | [`0x351a855b…`](https://sepolia.basescan.org/tx/0x351a855b3c8e35acd7cf395cea3d2c57ef848cf8617271ab0a43fdd1ece9758b) |
+| `TaskEscrow` | [`0xf16ab1d0…`](https://sepolia.basescan.org/tx/0xf16ab1d04777c1c712986e90b0a4da4a78bb356e71038ad618ba258e2209e9e2) |
 
-`startBlock`: pending — the `WorkerRegistry` receipt's block, merged into
+`startBlock`: **46502519** — the `WorkerRegistry` receipt's block, merged into
 `contracts/deployments/base-sepolia.json` by `scripts/deploy.sh`. The subgraph manifest and
 `packages/shared/src/addresses.ts` both read that file.
 
@@ -206,11 +204,11 @@ for. Each is 3.00 posted, 0.45 fee, 3.45 locked (`amount 3000000`, `fee 450000`)
 
 | taskId | type | area | worker | post | claimFor | submitFor | approve |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 verify-open | ez5kv | worker 1 (CLI worker) | pending | pending | pending | pending |
-| 2 | 2 photo-of | ez5ks | worker 2 | pending | pending | pending | pending |
-| 3 | 4 call-confirm | ez5kt | worker 3 | pending | pending | pending | pending |
-| 4 | 8 compare-two | ez5kg | worker 4 | pending | pending | pending | pending |
-| 5 | 1 verify-open | ez1dp | worker 5 | pending | pending | pending | pending |
+| 1 | 1 verify-open | ez5kv | worker 1 (CLI worker) | [`0x159f90f9…`](https://sepolia.basescan.org/tx/0x159f90f98a7b4bab372ac1b08b338694edbcedf17b02164df2741d6917c79991) | [`0xaab16ac9…`](https://sepolia.basescan.org/tx/0xaab16ac9065877c68db9be89df52e7969ea8e7fa607511cb1dc68db624bd13f5) | [`0xbcd09618…`](https://sepolia.basescan.org/tx/0xbcd09618843f1cca29ba24e3b5db7a89da2a0a95ce16f2b2115db0785c85ebf9) | [`0x656e2d36…`](https://sepolia.basescan.org/tx/0x656e2d369040ebc1e10b3bba94b1cbcb6e3b637ba7a949558dd3d17bec088367) |
+| 2 | 2 photo-of | ez5ks | worker 2 | [`0x0a40eba9…`](https://sepolia.basescan.org/tx/0x0a40eba92d0699a407d31949d2d214ade7208d8662b43eb86617a8cefb13a0a8) | [`0x5f82c944…`](https://sepolia.basescan.org/tx/0x5f82c94452bd7439c683d1dfb5c0442e421b6e40e3c8a3ee7c398560b501b282) | [`0x43079c17…`](https://sepolia.basescan.org/tx/0x43079c17c4cc7920ab41fad5d8512f81d1153124e098b8d9303804cacd2dfe2c) | [`0x7870ff5e…`](https://sepolia.basescan.org/tx/0x7870ff5eca8a546dbe7622cbdbb3815e90e8ac710575e29eb84f14a783d36d5e) |
+| 3 | 4 call-confirm | ez5kt | worker 3 | [`0xbd1353c1…`](https://sepolia.basescan.org/tx/0xbd1353c1e19c201d0a3cf9a9c32d08630d0881d8dc74b795a34abf5f7b50871a) | [`0x827e8634…`](https://sepolia.basescan.org/tx/0x827e863481f54854d894d6c16e24252adead6dabc8a3a71731189d6c1695b3f7) | [`0xa9a55fe6…`](https://sepolia.basescan.org/tx/0xa9a55fe6237e11ea57b8f5a650df777034bd840dcd422e7a9c9176d67912ad8a) | [`0xa9dc4bf5…`](https://sepolia.basescan.org/tx/0xa9dc4bf50d0a97d034a64140584e01df60b77ed9108d80db5c44cdeda4921993) |
+| 4 | 8 compare-two | ez5kg | worker 4 | [`0x98e6ea35…`](https://sepolia.basescan.org/tx/0x98e6ea356695d23b78f064e9ad3ca9324ccf6514fbed7bb2bda963e7b200bdc8) | [`0x9887e68e…`](https://sepolia.basescan.org/tx/0x9887e68e3e3769442db016c08c640bf32b24225de476dca091d12d038d94366f) | [`0x7005d81e…`](https://sepolia.basescan.org/tx/0x7005d81e0ebe4c6254d45cbcddfc427e56f323473b0ad7b0d269e41d5a367b96) | [`0x7ee4cff1…`](https://sepolia.basescan.org/tx/0x7ee4cff109b5d186d3b776b3ef67a50dcab346e9171a47e1984f32435a06a639) |
+| 5 | 1 verify-open | ez1dp | worker 5 | [`0x8bb49a03…`](https://sepolia.basescan.org/tx/0x8bb49a03c72d1ed61cc72df3755146d75497afede7393298e8de84e8a590dce4) | [`0x6b3c7e8e…`](https://sepolia.basescan.org/tx/0x6b3c7e8e4cf1ecf22e2e3d30be98fe6fa1f0f49169d7539cfa18691f068c74bc) | [`0x870cfbcd…`](https://sepolia.basescan.org/tx/0x870cfbcdd50fd33fc4407c220c604f85fb88fb74bd16c468fc08778cae778bc8) | [`0xe3cbe3fe…`](https://sepolia.basescan.org/tx/0xe3cbe3fe0fbda9c412750eb0830e86348e66c40565b9c61b9be6aafb5657762c) |
 
 All five end in `TaskState.Released` (4); `Reputation.completed(nullifier_k) == 1` and
 `distinctRaters == 1` for each, keyed by the synthetic nullifier, with the deployer's address as
@@ -221,16 +219,18 @@ an agent identity that never asked for the task.
 
 | account | before | after |
 |---|---|---|
-| relayer float | pending | pending |
-| treasury | pending | pending |
+| relayer float | 35350000 | 18100000 |
+| treasury `0xABFDB572…` | 0 | 2250000 |
 | each seeded worker 1–5 | 0 | 3000000 |
 
 Five lifecycles move 17250000 out of the relayer float, 15000000 to the five workers and 2250000
 to the treasury.
 
-evidence: `scripts/deploy.sh --anvil` twice against a fresh anvil — the second run logs
-`deploy: skipped, already at <taskEscrow>`, broadcasts nothing and leaves `taskCount()` at 5. Full
-output pasted in PR #119. Base Sepolia output pending.
+evidence: `scripts/deploy.sh` against Base Sepolia — 115 checks, 0 failures, all four contracts
+verified in the same run. `scripts/deploy.sh --anvil` twice against a fresh anvil — the second run
+logs `deploy: skipped, already at <taskEscrow>`, broadcasts nothing and leaves `taskCount()` at 5.
+`cast logs` over the registry from `startBlock` returns 20 `WorkerSeeded` and zero
+`WorkerRegistered` on both chains. Full output pasted in PR #119.
 
 decision: `contracts/deployments/base-sepolia.json` is the single deployment record;
 `packages/shared/src/addresses.ts`, the subgraph manifest and every app read it. Its four contract
