@@ -1,0 +1,28 @@
+{
+  "name": "scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node cli-worker.ts demo-run.ts demo-reset.ts demo-loop.test.ts",
+    "lint": "eslint . --no-error-on-unmatched-pattern",
+    "test": "vitest run --passWithNoTests",
+    "build": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node cli-worker.ts demo-run.ts demo-reset.ts demo-loop.test.ts",
+    "cli-worker": "tsx cli-worker.ts",
+    "demo:run": "tsx demo-run.ts",
+    "demo:reset": "tsx demo-reset.ts",
+    "inserts": "tsx inserts.ts"
+  },
+  "dependencies": {
+    "@x402/evm": "catalog:",
+    "@x402/fetch": "catalog:",
+    "sharp": "catalog:",
+    "viem": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
