@@ -48,7 +48,7 @@ export const HireHumanHostedResult = z.object({
   payment_required: z.literal(true),
   endpoint: z.url(),
   price_usdc: z.number(),
-  network: z.literal('eip155:84532'),
+  network: z.union([z.literal('eip155:84532'), z.literal('eip155:31337')]),
   asset: z.literal('USDC'),
   pay_to: z.string(),
   install_line: z.literal(INSTALL_LINE),

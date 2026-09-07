@@ -27,13 +27,16 @@ export type RemainingBudget = { open_tasks: number; daily_usdc: number };
  * Everything the route needs to carry from `requirePayment` to `settle`. `authNonce` — the
  * EIP-3009 authorization nonce — is the idempotency key: never the task id, never the payer.
  */
+/** The networks a seller may run on: Base Sepolia is the product, anvil is the e2e harness. */
+export type X402Network = 'eip155:84532' | 'eip155:31337';
+
 export type PaymentContext = {
   payer: Hex;
   authNonce: Hex;
   priceUnits: bigint;
   paymentHeader: string;
   requirements: unknown;
-  network: 'eip155:84532';
+  network: X402Network;
 };
 
 export type PaymentRequiredBody = {

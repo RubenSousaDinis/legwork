@@ -222,7 +222,7 @@ export async function openWorkerSession(
     statement: 'Sign in to Legwork',
     uri: apiBaseUrl,
     version: '1',
-    chainId: CHAIN_ID,
+    chainId: Number(process.env['CHAIN_ID'] ?? CHAIN_ID),
     nonce,
     issuedAt: new Date(),
   });

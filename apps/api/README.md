@@ -45,7 +45,9 @@ Every name lives in the repo's `.env.example` and is parsed once by `getConfig()
 | Variable | Notes |
 |---|---|
 | `DATABASE_URL` | Supabase Postgres. Required. |
-| `BASE_SEPOLIA_RPC_URL`, `CHAIN_ID` | `CHAIN_ID` must be `84532`. |
+| `BASE_SEPOLIA_RPC_URL`, `CHAIN_ID` | `CHAIN_ID` is `84532` (Base Sepolia, the product) or `31337` (anvil, the e2e harness). |
+| `X402_FACILITATOR_MODE` | `http` (default, `X402_FACILITATOR_URL` required) or `fake` (the in-process `FakeFacilitator`; harness only). |
+| `DATABASE_URL=pglite://memory` | Runs the API on in-process pglite with the same migrations (harness only); any `pglite://<dir>` persists to that directory. |
 | `RELAYER_PRIVATE_KEY`, `ATTESTATION_VERIFIER_PRIVATE_KEY`, `ABUSEMARK_SIGNER_PRIVATE_KEY` | Required. `relayerAddress`, `attestationVerifierAddress` and `abuseMarkSignerAddress` are derived from them with viem and are the only form the rest of the app sees. |
 | `SESSION_SECRET`, `PROOF_URL_SECRET` | At least 32 characters. |
 | `PAYMENT_MODE` | `x402` \| `direct`. |
