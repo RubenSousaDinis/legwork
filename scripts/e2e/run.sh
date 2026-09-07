@@ -240,10 +240,12 @@ export SESSION_SECRET PROOF_URL_SECRET
 export API_BASE_URL="$API_URL"
 export DASHBOARD_URL="$DASHBOARD_URL_LOCAL"
 export LONGPOLL_MAX_S=50
+# The port travels as PORT rather than as `-- -p 3001`: `pnpm --filter … dev` hands the `--`
+# to `next dev` verbatim, and next reads it as a project directory.
 export PORT="$API_PORT"
 
 say "starting the API on $API_URL"
-pnpm --filter @legwork/api dev -- -p "$API_PORT" > "$OUT/api.log" 2>&1 &
+pnpm --filter @legwork/api dev > "$OUT/api.log" 2>&1 &
 API_PID=$!
 
 api_ready() { curl -fsS "$API_URL/healthz" >/dev/null 2>&1; }

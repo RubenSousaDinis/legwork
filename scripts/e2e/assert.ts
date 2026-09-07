@@ -85,18 +85,23 @@ class Failed extends Error {}
 
 let passed = 0;
 
-/** One line per assertion, and the first failure is the last line printed. */
-function check(ok: boolean, message: string): void {
-  if (!ok) throw new Failed(message);
+/**
+ * One line per assertion, and the first failure is the last line printed.
+ *
+ * `detail` is only ever read on the way out: a passing line says what held, and what it held
+ * against is noise until it does not.
+ */
+function check(ok: boolean, message: string, detail?: string): void {
+  if (!ok) throw new Failed(detail ? `${message} — ${detail}` : message);
   passed += 1;
   console.log(`ok   ${message}`);
 }
 
 const eq = (got: unknown, want: unknown, message: string): void =>
-  check(got === want, `${message} — expected ${String(want)}, got ${String(got)}`);
+  check(got === want, message, `expected ${String(want)}, got ${String(got)}`);
 
 const sameAddress = (got: string, want: string, message: string): void =>
-  check(getAddress(got as Address) === getAddress(want as Address), `${message} — expected ${want}, got ${got}`);
+  check(getAddress(got as Address) === getAddress(want as Address), message, `expected ${want}, got ${got}`);
 
 // ------------------------------------------------------------------ the sources
 
@@ -109,7 +114,13 @@ const taskIdFromDemoLog = (log: string): string => {
 const agentIdFromDemoLog = (log: string): string | undefined => /agent_id=(\d+)/.exec(log)?.[1];
 
 async function readBody(url: string): Promise<{ status: number; body: unknown }> {
-  const res = await fetch(url);
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (error) {
+    // A dead API is an assertion failure with a name on it, not a bare "fetch failed".
+    throw new Failed(`GET ${url} — the API did not answer (${error instanceof Error ? error.message : String(error)})`);
+  }
   const text = await res.text();
   try {
     return { status: res.status, body: JSON.parse(text) as unknown };
