@@ -131,4 +131,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open Step B first: the subject id must be buyer-owned and verified by `ownerOf`/`getAgentWallet`, never `selfAgentId`. Then Step C: `buyerAgentId` is set on the `post`, the relayer pays, the CLI worker (seeded) claims a task whose buyer is allowlisted — that is the only reason it can. Then the `getSummary` call: `clients` must contain the AbuseMark address. Check the two honesty lines in RESULTS and that no `.env` value other than addresses appears anywhere.
 
 ## 15. Round 2+
-—
+— Merged first round (#124) after a real block: `AbuseMark` could not receive the ERC-721 the registry mints (fixed in #125, redeployed in #126). Rulings: relative import of `addresses.ts` accepted (root has no dependency on the shared package); the read-lag polls and the resume-a-part-run-lifecycle path accepted; `BUYER_AGENT_ID=9196` written to the operator env by the lead.
