@@ -155,62 +155,48 @@ decision: pending
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: blocked, not red. `pnpm demo:reset` is green against the hosted API. `pnpm demo:run`
-stops at `POST /tasks` and the CLI worker stops at `POST /session`, and both stop on defects
-outside T-29's owned paths. No line below carries a Basescan link because the loop has not run;
-the `<HH:MM UTC>: post/claim/submit/release <links>` line is written here the moment it does.
-Nothing was faked to make this section look finished.
+outcome: blocked on one operator config gap. The three defects T-29 first reported are fixed and
+live (lead PR #132, API `c861156`): `nonces.next_nonce` is nullable, `POST /session` binds a
+seeded worker from the registry, and `scripts` is a workspace package. The loop now runs
+**post → session → board → claim** against Base Sepolia and stops at `POST /proofs`. No line
+below carries a Basescan link because the loop has not finished; the
+`<HH:MM UTC>: post/claim/submit/release <links>` line is written here the moment it does.
 
-evidence: three blockers, each reproduced from the shipped scripts.
+evidence: `POST /proofs` answers 500 for **every** worker, the mini-app included — this is not a
+CLI-worker problem and it is on the Day-6 critical path. Production log, Sept 7 17:28 UTC,
+request `b2bc4cd8-2872-4c10-b286-be7615d89881`:
 
-1. **Every relayed chain write 503s on a database that has never sent one.**
-   `packages/chain/src/nonce-lock.ts` opens `PgNonceLock.withLock` with
-   `INSERT INTO nonces (key_role, next_nonce, locked_at) VALUES ($1, NULL, now())
-   ON CONFLICT (key_role) DO UPDATE SET locked_at = now()`, and
-   `apps/api/src/db/schema.ts:172` declares `next_nonce` `.notNull()`. The `ON CONFLICT` arm is
-   fine, so the lock works forever once a row exists — and nothing ever creates the first one.
-   The production log, `POST /tasks`, Sept 7 17:00 UTC:
+```
+StorageApiError: mime type application/octet-stream is not supported
+    at apps/api/src/services/proofStore.ts
+```
 
-   ```
-   decision: escrow_post_failed
-   err: Failed query: INSERT INTO nonces (key_role, next_nonce, locked_at) VALUES ($1, NULL, now())
-        ON CONFLICT (key_role) DO UPDATE SET locked_at = now()
-        params: relayer | null value in column "next_nonce" of relation "nonces"
-        violates not-null constraint
-   ```
+The `proofs` bucket is configured `allowed_mime_types: ["image/jpeg","image/png","image/webp"]`,
+and `apps/api/app/proofs/route.ts` stores two objects per proof — the stripped copy as
+`image/jpeg` and the **retained original** as `application/octet-stream`. That second write is
+the intended behaviour, spelled out in T-18's brief: `raw/<hash>`, the original bytes, never
+served to anyone, kept so `verify` can re-hash and so a dispute has something to look at. The
+bucket has to permit it.
 
-   `NULL` is deliberate on the lock's side: `TxQueue` reads `getTransactionCount(pending)`
-   whenever the store answers `null` (`packages/chain/src/tx-queue.ts:113`). The column is what
-   disagrees. The one-line fix is to drop `.notNull()` from `nonces.next_nonce` plus
-   `ALTER TABLE nonces ALTER COLUMN next_nonce DROP NOT NULL`. `POST /tasks` charges nothing on
-   this path (503 `escrow_post_failed` releases the idempotency nonce before it settles), so no
-   money moved in either attempt. This blocks the relayed claim, submit and approve as well —
-   it is not a `POST /tasks` problem.
+Nothing in the repository creates the bucket, so this is operator config and a fresh Supabase
+project will hit it again. Add `application/octet-stream` to the bucket's allowed types and
+record it wherever the hosting steps live.
 
-2. **A seeded worker cannot open a session** — pre-identified in the brief's §13.
-   `POST /session` `{mode:'walletAuth'}` needs no idkit cookie, but it resolves the nullifier
-   from the `nullifiers` table, which only the IDKit register flow writes
-   (`apps/api/app/session/route.ts:38`). The CLI worker was seeded onchain by `deploy.sh` and
-   has no row, so it answers `403 {"error":"forbidden","reason":"not_registered"}` — while the
-   registry says `isWorker true`, `isSeeded true`,
-   `nullifierOf 55916856277647751260288134865712965332216244803164463756694945814632892673826`
-   for `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`. The dev path §13 describes is the fix: fall
-   back to `registry.nullifierOf(worker)` when `registry.isSeeded(worker)`.
+Two facts for whoever picks this up:
 
-3. **`pnpm --filter scripts` resolves nothing.** `scripts/package.json` is T-29's to write and
-   `pnpm-workspace.yaml` does not list `scripts` under `packages:`. The manifest, the three
-   script entries and the tests are all in place and verified against a local workspace entry;
-   the entry itself is a frozen file and belongs to the lead.
+- **Task 9 is live and recoverable.** Onchain `state: 2` (Claimed) by the seeded CLI worker
+  `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`, `claimTTL` 1800 s, `submitTTL` 3600 s, so the
+  submit window is open for an hour from 17:28 UTC. The escrow holds 3450000 and the buyer went
+  from 49.65 to 46.20 — the x402 leg, the escrow post and the relayed claim all worked.
+  post `0xf69902309cc310bfa0da6c9757059eefd871ba6eca2735b83ed8e41f0efe58e4` ·
+  claim `0xfb65afa96cc7bd7d656298673817a18135515ee3ce4a044c89fbdd3877488141`
+- **The API row for task 9 disagrees with the chain.** `GET /tasks/9` reports `status: open`
+  with no `claimed_at`, while carrying `tx.claim` and while the chain says Claimed. The mirror
+  after a successful `claimFor` recorded the hash but not the state. Separate from the bucket,
+  and T-17's rather than T-29's.
 
-Everything on T-29's own side is verified: `demo:reset` runs green end to end, the eight tests
-in `scripts/demo-loop.test.ts` pass, both scripts typecheck, and the buyer's x402 leg reaches
-the escrow write — the 503 above is the API answering, which means the 402 was signed, paid and
-accepted first.
-
-decision: hold this section open. Blockers 1 and 2 are small, sit in files T-29 may not
-touch, and are on the critical path for T-36 and the Day-6 go/no-go — blocker 1 stops every
-relayed write this product makes, not just this loop. Re-run `pnpm demo:reset && pnpm demo:run`
-and fill this section in the moment they land.
+decision: hold this section open. One additive, reversible line of bucket config stands between
+here and a green loop; everything on either side of `POST /proofs` is proven to work.
 
 ## Deploy
 
