@@ -155,11 +155,62 @@ decision: pending
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: pending
+outcome: blocked, not red. `pnpm demo:reset` is green against the hosted API. `pnpm demo:run`
+stops at `POST /tasks` and the CLI worker stops at `POST /session`, and both stop on defects
+outside T-29's owned paths. No line below carries a Basescan link because the loop has not run;
+the `<HH:MM UTC>: post/claim/submit/release <links>` line is written here the moment it does.
+Nothing was faked to make this section look finished.
 
-evidence: pending
+evidence: three blockers, each reproduced from the shipped scripts.
 
-decision: pending
+1. **Every relayed chain write 503s on a database that has never sent one.**
+   `packages/chain/src/nonce-lock.ts` opens `PgNonceLock.withLock` with
+   `INSERT INTO nonces (key_role, next_nonce, locked_at) VALUES ($1, NULL, now())
+   ON CONFLICT (key_role) DO UPDATE SET locked_at = now()`, and
+   `apps/api/src/db/schema.ts:172` declares `next_nonce` `.notNull()`. The `ON CONFLICT` arm is
+   fine, so the lock works forever once a row exists — and nothing ever creates the first one.
+   The production log, `POST /tasks`, Sept 7 17:00 UTC:
+
+   ```
+   decision: escrow_post_failed
+   err: Failed query: INSERT INTO nonces (key_role, next_nonce, locked_at) VALUES ($1, NULL, now())
+        ON CONFLICT (key_role) DO UPDATE SET locked_at = now()
+        params: relayer | null value in column "next_nonce" of relation "nonces"
+        violates not-null constraint
+   ```
+
+   `NULL` is deliberate on the lock's side: `TxQueue` reads `getTransactionCount(pending)`
+   whenever the store answers `null` (`packages/chain/src/tx-queue.ts:113`). The column is what
+   disagrees. The one-line fix is to drop `.notNull()` from `nonces.next_nonce` plus
+   `ALTER TABLE nonces ALTER COLUMN next_nonce DROP NOT NULL`. `POST /tasks` charges nothing on
+   this path (503 `escrow_post_failed` releases the idempotency nonce before it settles), so no
+   money moved in either attempt. This blocks the relayed claim, submit and approve as well —
+   it is not a `POST /tasks` problem.
+
+2. **A seeded worker cannot open a session** — pre-identified in the brief's §13.
+   `POST /session` `{mode:'walletAuth'}` needs no idkit cookie, but it resolves the nullifier
+   from the `nullifiers` table, which only the IDKit register flow writes
+   (`apps/api/app/session/route.ts:38`). The CLI worker was seeded onchain by `deploy.sh` and
+   has no row, so it answers `403 {"error":"forbidden","reason":"not_registered"}` — while the
+   registry says `isWorker true`, `isSeeded true`,
+   `nullifierOf 55916856277647751260288134865712965332216244803164463756694945814632892673826`
+   for `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`. The dev path §13 describes is the fix: fall
+   back to `registry.nullifierOf(worker)` when `registry.isSeeded(worker)`.
+
+3. **`pnpm --filter scripts` resolves nothing.** `scripts/package.json` is T-29's to write and
+   `pnpm-workspace.yaml` does not list `scripts` under `packages:`. The manifest, the three
+   script entries and the tests are all in place and verified against a local workspace entry;
+   the entry itself is a frozen file and belongs to the lead.
+
+Everything on T-29's own side is verified: `demo:reset` runs green end to end, the eight tests
+in `scripts/demo-loop.test.ts` pass, both scripts typecheck, and the buyer's x402 leg reaches
+the escrow write — the 503 above is the API answering, which means the 402 was signed, paid and
+accepted first.
+
+decision: hold this section open. Blockers 1 and 2 are small, sit in files T-29 may not
+touch, and are on the critical path for T-36 and the Day-6 go/no-go — blocker 1 stops every
+relayed write this product makes, not just this loop. Re-run `pnpm demo:reset && pnpm demo:run`
+and fill this section in the moment they land.
 
 ## Deploy
 
