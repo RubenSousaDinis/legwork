@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import {IAbuseMark} from "./interfaces/IAbuseMark.sol";
 import {IERC8004Identity, IERC8004Reputation} from "./interfaces/IERC8004.sol";
@@ -32,7 +33,7 @@ import {Outcomes} from "./interfaces/Outcomes.sol";
 ///         Abuse class ids and labels are verbatim from Mehta (arXiv:2602.19514) and live in
 ///         `classLabel` only, so the strings written on chain and the strings the dashboard renders
 ///         cannot drift apart.
-contract AbuseMark is IAbuseMark, Ownable {
+contract AbuseMark is IAbuseMark, IERC721Receiver, Ownable {
     /// @notice The ERC-8004 IdentityRegistry this contract registers its own identity with.
     IERC8004Identity public immutable identityRegistry;
 
@@ -133,6 +134,15 @@ contract AbuseMark is IAbuseMark, Ownable {
         // registry's own return value, and no funds move.
         agentId = identityRegistry.register(agentURI);
         selfAgentId = agentId;
+    }
+
+    /// @notice The ERC-8004 IdentityRegistry mints with `_safeMint` (RESULTS `## S5`), so the
+    ///         contract that is to hold the Task API's identity must say it can receive an ERC-721,
+    ///         or `registerIdentity` reverts `ERC721InvalidReceiver(address(this))` before any
+    ///         state is written. Accepting unconditionally is the `ERC721Holder` behaviour: the
+    ///         identity never leaves this contract, and nothing here depends on which token arrived.
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
     }
 
     /// @inheritdoc IAbuseMark

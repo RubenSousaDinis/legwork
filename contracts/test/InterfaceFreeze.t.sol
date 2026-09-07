@@ -21,6 +21,12 @@ import {Keys} from "./utils/Keys.sol";
 /// reorders a struct still compiles and still passes its own unit tests — it just
 /// silently stops matching everything downstream. This file is what fails instead.
 contract InterfaceFreezeTest is Test {
+    /// The mock registry mints the way the live one does (`_safeMint`), so a contract that holds an
+    /// identity — this test contract included — has to answer the receiver callback.
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
     function test_Outcomes_CodesAreFrozen() public pure {
         assertEq(Outcomes.PAID, 1, "PAID must stay 1");
         assertEq(Outcomes.RESOLVED_TO_WORKER, 2, "RESOLVED_TO_WORKER must stay 2");
