@@ -54,6 +54,7 @@ import {
   toUsdcUnits,
 } from '../packages/shared/src/constants.ts';
 import {
+  DEFAULT_PLACE_PATH,
   StageError,
   ClaimConflictError,
   loadDemoPlace,
@@ -496,7 +497,7 @@ export interface DemoArgs {
 }
 
 export function parseArgs(argv: readonly string[]): DemoArgs {
-  const args: DemoArgs = { autoRelease: false, place: 'scripts/fixtures/demo-place.json' };
+  const args: DemoArgs = { autoRelease: false, place: DEFAULT_PLACE_PATH };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = argv[i + 1];

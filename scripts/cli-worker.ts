@@ -21,6 +21,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { randomInt } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 import { keccak256, type Address, type Hex } from 'viem';
@@ -46,6 +47,14 @@ export interface DemoPlace {
   lat: number;
   lon: number;
 }
+
+/**
+ * Where the fixture lives when nobody says otherwise.
+ *
+ * Resolved against this file rather than against the working directory: `pnpm demo:run` runs
+ * from `scripts/`, `pnpm --filter scripts …` from the repository root, and T-36 from neither.
+ */
+export const DEFAULT_PLACE_PATH = fileURLToPath(new URL('./fixtures/demo-place.json', import.meta.url));
 
 export function loadDemoPlace(path: string): DemoPlace {
   const place = JSON.parse(readFileSync(path, 'utf8')) as DemoPlace;
@@ -478,7 +487,7 @@ export interface CliArgs {
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {
-  const args: CliArgs = { place: 'scripts/fixtures/demo-place.json', dryRun: false };
+  const args: CliArgs = { place: DEFAULT_PLACE_PATH, dryRun: false };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = argv[i + 1];
