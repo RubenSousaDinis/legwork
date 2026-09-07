@@ -408,7 +408,9 @@ async function waitForStatus(
   for (;;) {
     const view = await readTask(apiBaseUrl, taskId, buyerToken, LONGPOLL_MAX_S);
     if (wanted.includes(view.status)) return view;
-    if (view.status === 'disputed' || view.status === 'refunded' || view.status === 'expired') {
+    // The three ways a task ends up somewhere it will never leave. `resolved` is a settled
+    // dispute: real money moved, but not down the path this loop is asserting.
+    if (view.status === 'disputed' || view.status === 'refunded' || view.status === 'resolved') {
       throw new DemoFailure(stage, `task ${taskId} is ${view.status}, which is not on the way to ${wanted.join(' or ')}`);
     }
     if (Date.now() > deadline) {
