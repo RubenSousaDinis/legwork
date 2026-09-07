@@ -97,7 +97,7 @@ graph deploy --studio "$SUBGRAPH_SLUG"
 curl -s -H "Authorization: Bearer $GRAPH_API_KEY" -H 'content-type: application/json' \
   -d '{"query":"{ posterStats(id:\"global\"){ distinctExternalBuyers externalTasks } }"}' \
   "$SUBGRAPH_QUERY_URL" | tee /tmp/posterstats.json
-grep -RniE 'graph_deploy_key|graph_api_key' subgraph/README.md docs/spikes/RESULTS.md && echo FAIL || echo OK
+grep -RnE '(GRAPH_DEPLOY_KEY|GRAPH_API_KEY)[[:space:]]*[=:][[:space:]]*[A-Za-z0-9_-]{16,}' subgraph/README.md docs/spikes/RESULTS.md && echo FAIL || echo OK   # a value next to the name; the names themselves may appear (§2 requires one sentence naming them)
 ```
 Expected: a green build; eight changed lines; a Studio URL printed by `graph deploy`; `distinctExternalBuyers: 0`; the grep prints `OK`.
 
@@ -139,4 +139,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open the `subgraph.yaml` diff first: eight lines, four addresses matching `contracts/deployments/base-sepolia.json` character for character, four identical `startBlock` values, and the `# T-23` comments gone. Then check the three pasted queries actually came back from the query URL (20 / 5 / 0) rather than from a fixture. Then scan the PR body and the RESULTS entry for anything key-shaped. Last, read the `#Graph` entry: it must say what the Discord answered or that it did not answer — an empty confident claim that Studio counts as "live data from a Graph provider" is the failure mode.
 
 ## 15. Round 2+
-—
+— Merged first round (#128). The one block — `vercel env add` refused by the auto-mode classifier — was resolved by the lead setting the three variables; the §9 grep that matched §2's own sentence is reworded above to match a value, not a name; six released tasks (T-32's live one) accepted.
