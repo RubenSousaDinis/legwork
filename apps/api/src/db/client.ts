@@ -17,13 +17,59 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 let db: Db | undefined;
 let sqlClient: ReturnType<typeof postgres> | undefined;
+let pgliteClient: { close(): Promise<void> } | undefined;
+let pgliteReady: Promise<void> | undefined;
+
+const PGLITE_PREFIX = 'pglite://';
 
 export function getDb(): Db {
   if (db) return db;
   const config = getConfig();
+  if (config.DATABASE_URL.startsWith(PGLITE_PREFIX)) {
+    // The route wrapper awaits `dbReady()` before any handler runs, so this only fires for a
+    // caller that reached the database outside a request.
+    throw new Error('pglite database not initialised — await dbReady() first');
+  }
   sqlClient = postgres(config.DATABASE_URL, { max: 5, prepare: false });
   db = drizzle(sqlClient, { schema }) as unknown as Db;
   return db;
+}
+
+/**
+ * `DATABASE_URL=pglite://memory` (or `pglite://<directory>`) runs the API on an in-process
+ * pglite with the same migration folder Supabase gets — the e2e harness on anvil (T-36),
+ * never production. Postgres URLs resolve immediately; the driver is imported only on this
+ * path, so the production bundle never carries it.
+ */
+export function dbReady(): Promise<void> {
+  if (db) return Promise.resolve();
+  let url: string;
+  try {
+    url = getConfig().DATABASE_URL;
+  } catch {
+    // No parsable environment yet: a route that never touches the database (the OpenAPI
+    // document, say) must not fail because of one, and a route that does fails as before.
+    return Promise.resolve();
+  }
+  if (!url.startsWith(PGLITE_PREFIX)) return Promise.resolve();
+  if (!pgliteReady) {
+    pgliteReady = (async () => {
+      const [{ PGlite }, { drizzle: drizzlePglite }, { migrate }, { MIGRATIONS_FOLDER }] =
+        await Promise.all([
+          import('@electric-sql/pglite'),
+          import('drizzle-orm/pglite'),
+          import('drizzle-orm/pglite/migrator'),
+          import('./migrate'),
+        ]);
+      const target = url.slice(PGLITE_PREFIX.length);
+      const client = target && target !== 'memory' ? new PGlite(target) : new PGlite();
+      const pg = drizzlePglite(client, { schema });
+      await migrate(pg, { migrationsFolder: MIGRATIONS_FOLDER });
+      pgliteClient = client;
+      db = pg as unknown as Db;
+    })();
+  }
+  return pgliteReady;
 }
 
 /**
@@ -79,6 +125,9 @@ export function setDbForTests(next: Db | undefined): void {
 /** Closes the pool. Scripts call it; a serverless instance never does. */
 export async function closeDb(): Promise<void> {
   await sqlClient?.end({ timeout: 5 });
+  await pgliteClient?.close();
   sqlClient = undefined;
+  pgliteClient = undefined;
+  pgliteReady = undefined;
   db = undefined;
 }
