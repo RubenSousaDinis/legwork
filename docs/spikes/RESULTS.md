@@ -129,6 +129,115 @@ evidence: pending
 
 decision: pending
 
+## Deploy
+
+_T-14 — the four contracts on Base Sepolia, wired, and the demo pool seeded_
+
+outcome: pending the live broadcast. `scripts/deploy.sh --anvil` is green end to end against a
+local anvil (chain 31337, repository mocks) and green again on a second run, which is the whole
+rehearsal the brief asks for. Base Sepolia is held on two operator decisions recorded on PR #119:
+`TREASURY_ADDRESS` currently derives to the relayer address, and `TaskEscrow.treasury` is
+immutable, so the fee the demo is built to show cannot be read off a treasury balance and cannot
+be corrected without redeploying every address downstream commits to. The rows below marked
+_pending_ are the ones only the live chain can fill; everything else is deterministic and final.
+
+**Addresses** — each verified on Basescan ("Contract Source Code Verified").
+
+| contract | address | Basescan |
+|---|---|---|
+| `WorkerRegistry` | pending | pending |
+| `TaskEscrow` | pending | pending |
+| `Reputation` | pending | pending |
+| `AbuseMark` | pending | pending |
+
+External, not ours: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, ERC-8004 IdentityRegistry
+`0x8004A818BFB912233c491871b3d84c89A494BD9e`, ERC-8004 ReputationRegistry
+`0x8004B663056A597Dffe9eCcC1965A193B7388713`.
+
+**Deployment transactions**
+
+| contract | tx |
+|---|---|
+| `WorkerRegistry` | pending |
+| `Reputation` | pending |
+| `AbuseMark` | pending |
+| `TaskEscrow` | pending |
+
+`startBlock`: pending — the `WorkerRegistry` receipt's block, merged into
+`contracts/deployments/base-sepolia.json` by `scripts/deploy.sh`. The subgraph manifest and
+`packages/shared/src/addresses.ts` both read that file.
+
+**Seeded workers** — 20 rows, worker 1 is the CLI worker, so the pool reads
+"1 real · +20 seeded (demo data)". Addresses and nullifiers are derived from fixed strings, so
+they are the same on anvil and on Base Sepolia.
+
+| n | address | area | taskTypes | synthetic nullifier |
+|---|---|---|---|---|
+| 1 | `0x7b4EB10df800881f73BC1d85BDeF02f82386271e` (CLI worker) | ez5kv | 15 | `0x7b9fd1b052517cadd66e16862fb6c9140aa08c04b28661c7777d585c89872f22` |
+| 2 | `0x24F9c1b734d304dD7C753C5253656C1389E076C6` | ez5ks | 15 | `0x88a1254e004805810c4609beb0a221862b6b3b13f39ec3c033762159e5b55ed4` |
+| 3 | `0x87B90a409B0a84c378F8b11903EcCdaA2cF74cAb` | ez5kt | 15 | `0xe9089d4e8b9c057f1fec1cc89a95ea6b724f11fcd030b30daead722111aebb4c` |
+| 4 | `0x98E4682f8a1a6201907eeab9f7826A0BA4E408A9` | ez5kg | 15 | `0xc0e71ee9ac4b277ecbf96216ee9cefd6e440603c5c64f9d24175b10aba5fe836` |
+| 5 | `0x1D6662ABFbCc49751235717Fd18A30242CbFAd37` | ez1dp | 15 | `0x6835a27a3ce75d1aa5271b4b453d3c2bff2919996f1fe74831211d8d7dab1933` |
+| 6 | `0xB7D752D77245f8aE8656A96dFEB4c7BE0E435b84` | ez5kv | 2 | `0xd7130cf4a5ddad397addb2b1b7a87a30e6d2dcf7c6670ea6228e46d76cc8c0a8` |
+| 7 | `0xB0d03A16631a6C7F60A514E47fC0cFaF33B06e5D` | ez5ks | 4 | `0xd20091266338a5c066db08318e26ea5d3b7a941017dd95461a250144ba51339c` |
+| 8 | `0x497b1684Efa4FAE787c9b77b33C73B8EF790bC39` | ez5kt | 8 | `0x359d187819ad3dc260e8542c934edcc7f0b1cb513bdd4b08e963c782921f0962` |
+| 9 | `0xAdEd7B6784A7a2b848c3424456567DC2F6592e51` | ez5kg | 15 | `0x27af80fc0fdd9a61ad992ffb34b1f328fde89d0b573a6956f6503334c41fc3c8` |
+| 10 | `0x79D2De6f266839da58f3467Df69104Ba037981D3` | ez1dp | 1 | `0x0bc051f955f327bbd6e74237ddb80f8f6d5fa2a2bbff46617122fb8f3f4ed919` |
+| 11 | `0xa2a07730c545b3e928ec81168C045E333A6c1362` | ez5kv | 2 | `0xce9169fce5342d41cd6a1cb1bab1f49ed809cc1fc764e9080fcac99210e1d067` |
+| 12 | `0x1ec304f5d976A8F303f71F069B3eAAB7B26dBb55` | ez5ks | 4 | `0xf89dccae922ebc663e147d54e857593be5dda4ca14073414dc90509facca0b00` |
+| 13 | `0x856FBA8C9e2130488EE8FfD28E4Ab1D66A02B2ab` | ez5kt | 8 | `0x01bf64b000c9160a62e14204db365b822590500b56a7f9b96adca943da6938d2` |
+| 14 | `0xADb7e09e86c5B5a340b11f4556A3c964e3bc5B93` | ez5kg | 15 | `0x29ca8dab8f65654360c37ed54508d5b040dd3bf2c4426d4e0cf8502e3d22c6e7` |
+| 15 | `0x244183988B0779990C4c0a581AfF797b99c87A4c` | ez1dp | 1 | `0x3b497d9da929f68ae3ede755bbee136dd5c9d6880d2c7b2f6420e785c40f26ea` |
+| 16 | `0xBB7916e6d51c51809b38fddDC1eCF2Fc4443b492` | ez5kv | 2 | `0x673c200465505ddff82547b46dee106b3a01de9f7cd07a0fb8ef4d50d01330ca` |
+| 17 | `0x02EC9dE89ba5f36c8CaF0b7A4Cea07e86591CC19` | ez5ks | 4 | `0x0fe5171907596e72ea50aaf06ce969c25af605c49e96abffa3898f1b6d08782d` |
+| 18 | `0xf97fDDF7ecED4EecB2D593CB6B1d5b80c7cf4089` | ez5kt | 8 | `0x2252558c8ddcd5206f4f5ababa3f83de405fc578d779db74108df93432017a7a` |
+| 19 | `0x30272fC453aF0345738C865680C49DA09e31EcAD` | ez5kg | 15 | `0x70cb5e9e4a56627228300d34447c46458d8ad0e2bbf661844e9fe9114216eed8` |
+| 20 | `0xbC3Eb72283DaC153951b440eed6350DC24003400` | ez1dp | 1 | `0x3f60139c63413f1bcf75f946e75387d13c34245cfa8e2f22663aa7c0f39197a2` |
+
+20 seeded (demo data) — seeded rows come from `seedWorker`, emit `WorkerSeeded`, never
+`WorkerRegistered`. On the anvil rehearsal, `cast logs` over the registry from `startBlock`
+returns 20 `WorkerSeeded(uint256,address,string,uint8)` and zero
+`WorkerRegistered(uint256,address,string,uint8)`.
+
+**Lifecycles** — five tasks posted, claimed, submitted and released, one closing before the next
+opens. Buyer of record is the deployer on all five, and the deployer is allowlisted: seeded
+completions feed the preflight medians; no seeded address can ever claim a task a real buyer paid
+for. Each is 3.00 posted, 0.45 fee, 3.45 locked (`amount 3000000`, `fee 450000`).
+
+| taskId | type | area | worker | post | claimFor | submitFor | approve |
+|---|---|---|---|---|---|---|---|
+| 1 | 1 verify-open | ez5kv | worker 1 (CLI worker) | pending | pending | pending | pending |
+| 2 | 2 photo-of | ez5ks | worker 2 | pending | pending | pending | pending |
+| 3 | 4 call-confirm | ez5kt | worker 3 | pending | pending | pending | pending |
+| 4 | 8 compare-two | ez5kg | worker 4 | pending | pending | pending | pending |
+| 5 | 1 verify-open | ez1dp | worker 5 | pending | pending | pending | pending |
+
+All five end in `TaskState.Released` (4); `Reputation.completed(nullifier_k) == 1` and
+`distinctRaters == 1` for each, keyed by the synthetic nullifier, with the deployer's address as
+the rater key because `buyerAgentId = 0` — a demo completion writes no ERC-8004 feedback against
+an agent identity that never asked for the task.
+
+**Balances** (6-decimal USDC integers)
+
+| account | before | after |
+|---|---|---|
+| relayer float | pending | pending |
+| treasury | pending | pending |
+| each seeded worker 1–5 | 0 | 3000000 |
+
+Five lifecycles move 17250000 out of the relayer float, 15000000 to the five workers and 2250000
+to the treasury.
+
+evidence: `scripts/deploy.sh --anvil` twice against a fresh anvil — the second run logs
+`deploy: skipped, already at <taskEscrow>`, broadcasts nothing and leaves `taskCount()` at 5. Full
+output pasted in PR #119. Base Sepolia output pending.
+
+decision: `contracts/deployments/base-sepolia.json` is the single deployment record;
+`packages/shared/src/addresses.ts`, the subgraph manifest and every app read it. Its four contract
+keys keep T-01a's nesting under `addresses`, with `usdc`, `treasury`, `relayer`, `deployer`,
+`startBlock`, `deployedAt` and `txs` added around that shape — `parseDeployment` ignores keys it
+does not know, so the provenance fields cost nothing downstream.
+
 ## Locked architecture
 
 - credential level: selfie | orb → narration variant: A | B — _pending_
