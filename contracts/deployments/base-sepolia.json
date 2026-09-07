@@ -1,0 +1,23 @@
+{
+  "addresses": {
+    "abuseMark": "0x1848Db2d813A66b735f61a73c75456ca32b42Fb6",
+    "erc8004Identity": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "erc8004Reputation": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+    "reputation": "0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763",
+    "taskEscrow": "0xDAFefc07986B3336b066B19E6DE6B76680628B52",
+    "workerRegistry": "0x9011A65B89376e6cA393c3158fcB75f5a19F60a1"
+  },
+  "chainId": 84532,
+  "deployedAt": "1788773318",
+  "deployer": "0x436cA2299e7fDF36C4b1164cA3e80081E68c318A",
+  "relayer": "0x436cA2299e7fDF36C4b1164cA3e80081E68c318A",
+  "startBlock": 46502519,
+  "treasury": "0xABFDB572E3d6093113Cdb9c1C1599E8699226D52",
+  "txs": {
+    "WorkerRegistry": "0x9bfd8e30d787f4394cacbfae00ca76de61fe0ed35e4155dbb057e653131b910d",
+    "Reputation": "0xe40a2b8e985201f03059e77d167e3970444a9012a817c9915bc5ad667256d941",
+    "AbuseMark": "0x351a855b3c8e35acd7cf395cea3d2c57ef848cf8617271ab0a43fdd1ece9758b",
+    "TaskEscrow": "0xf16ab1d04777c1c712986e90b0a4da4a78bb356e71038ad618ba258e2209e9e2"
+  },
+  "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+}
