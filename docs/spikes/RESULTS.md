@@ -4,15 +4,15 @@ One section per spike. Section-owned: a PR may touch only its own heading.
 
 ## S1
 
+S1: code present, proof rejected (expected)
+
 _World ID Router on Base Sepolia (feedback-doc value only)_
 
-S1: pending
+outcome: The World ID Router is deployed at `0x42FF98C4E85212a5D31358ACbFe76a621b50fC02` on Base Sepolia and answers. `cast code` returns 356 characters beginning `0x608060405236601057600e6013565b005b600e` — a 178-byte ERC-1967 proxy in front of `WorldIDRouterImplV1` at `0x379c62556c665f1edd25f2c2a0f76bc70a53b2e4`. The operator has no simulator proof for action `legwork-worker`, because S2' runs Selfie Check through the cloud verify endpoint and that path never produces an onchain proof, so the probe is a `verifyProof` staticcall with all-zero arguments. It reverts, and the two groups the router knows about revert for two different reasons: the router reports `groupCount() = 2`, `routeFor(0)` itself reverts `GroupIsDisabled()` (`0x4ac73bb8`) so group 0 is switched off on this chain, and `routeFor(1)` returns the group-1 verifier `0x163b09b4fE21177c455D850BD815B6D583732432`, against which `verifyProof` reverts `NonExistentRoot()` (`0xddae3b71`) — the all-zero root is not in the bridged root history. That is the expected shape of the answer: onchain verification is Orb-only and the identity roots it checks are the bridged ones, while Legwork's workers hold Selfie Check / Orb-level *staging* credentials that are in neither. Nothing downstream changes on this outcome, as the gate says: `WorkerRegistry` ships one cloud-verified `ATTESTED` mode.
 
-outcome: pending
+evidence: `bash scripts/spikes/s1-router.sh` — output pasted in the T-04 PR. Error selectors were decoded against the verified `WorldIDRouterImplV1` ABI, which declares exactly `CannotRenounceOwnership()`, `ExpiredRoot()`, `GroupIsDisabled()`, `ImplementationNotInitialized()`, `NoSuchGroup(uint256)` and `NonExistentRoot()`.
 
-evidence: pending
-
-decision: pending
+decision: no architecture change. `WorkerRegistry` ships one cloud-verified `ATTESTED` mode. The paragraph above is the feedback-doc text; it was posted on the T-02 issue for `FEEDBACK-WORLD.md`, which T-04 does not edit.
 
 ## S2
 
@@ -69,15 +69,35 @@ Failing step (if FAIL): — none.
 
 ## S5
 
-_ERC-8004 ABI confirmation_
+S5: PASS
 
-S5: pending
+_ERC-8004 ABI confirmation — round-trip against the deployed registries_
 
-outcome: pending
+outcome: Legwork reads and writes the production ERC-8004 registries on Base Sepolia directly. No fallback is needed, so T-13b is not dispatched and nothing is labelled a self-deployed instance. Two throwaway identities were registered from keys that existed only in the spike process; the second gave unsolicited feedback on the first; the read came back exactly as AbuseMark (T-13) will make it.
 
-evidence: pending
+**Addresses (chain 84532).** IdentityRegistry proxy `0x8004A818BFB912233c491871b3d84c89A494BD9e` → implementation `0x7274e874ca62410a93bd8bf61c69d8045e399c02`. ReputationRegistry proxy `0x8004B663056A597Dffe9eCcC1965A193B7388713` → implementation `0x16e0fa7f7c56b9a767e34b192b51f921be31da34`. Both read from the ERC-1967 implementation slot of the live proxies and both match the addresses named in the gate. Both report `getVersion() = "2.0.0"`; `ReputationRegistry.getIdentityRegistry()` returns the IdentityRegistry proxy, so the pair is wired together.
 
-decision: pending
+**Round-trip.** `agentIdA = 9192` (owner `0x80a18b9d1BC003879992588be432F86CA733b02D`), `agentIdB = 9193` (owner `0x1DAa145012FB3dcA5369192f211E533d563ba6E7`). `ownerOf(9192)` and `getAgentWallet(9192)` both return A, so an agent that never calls `setAgentWallet` has its owner as its wallet. Three transactions:
+
+- `register(A)` https://sepolia.basescan.org/tx/0x65ee1d5d66dbaa36ffa68df26ad4bfde6ddec3f624d19074373e90968bbcd77e
+- `register(B)` https://sepolia.basescan.org/tx/0x8374615958dd46d50fd9967615f08e95ee0a121d3c311213d60029c6f9b43fab
+- `giveFeedback(B → 9192, value=1, tag1="paid-on-proof")` https://sepolia.basescan.org/tx/0x576fe44739fd1383cd75433dacca6979ff40a37f736f23aa25f9a8a214e7cc10
+
+Read back: `getSummary(9192, [B], "paid-on-proof", "") → count=1 summaryValue=1 summaryValueDecimals=0`. Unsolicited feedback is legal on the deployed bytecode — B was never authorised by A and nothing was pre-registered between them.
+
+**mint mode: _safeMint.** `eth_call` of `register("probe")` with `from` = USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (an address with code and no `onERC721Received`) reverts `0x64a0ae92000000000000000000000000036cbd53842c5426634e7929541ec2318f3dcf7e` = `ERC721InvalidReceiver(0x036CbD53842c5426634e7929541eC2318f3dCF7e)`. A contract must implement `onERC721Received` before it can hold an agent id. T-13 decides from this whether AbuseMark's identity is held by a contract or by an EOA.
+
+**unregistered caller: allowed.** `eth_call` of the same `giveFeedback` from a third throwaway that was never registered succeeds. The ReputationRegistry gates on the *subject* agent id, not on the caller, so any address may rate a registered agent. Legwork cannot lean on the registry to establish who a rater is; the agent id in a request is verified against the IdentityRegistry with `ownerOf` / `getAgentWallet`, never trusted from the request.
+
+**Interface verdict: interfaces confirmed, no change.** Every function the spike used matches `contracts/src/interfaces/IERC8004.sol` exactly, in name, parameter types, return types and overload set: `register(string) → uint256`, `ownerOf(uint256) → address`, `getAgentWallet(uint256) → address`, `giveFeedback(uint256,int128,uint8,string,string,string,string,bytes32)`, `getSummary(uint256,address[],string,string) → (uint64,int128,uint8)`. No `interface-change` PR is opened and T-13 has nothing to rebase onto.
+
+**Two notes for T-13.** `getSummary` will not take an empty `clients` array — it reverts `Error("clientAddresses required")` — so a caller must always name the raters it means. And the write is visible a block later than its own receipt: reading the summary immediately after `giveFeedback` confirmed returned `count=0`, and the same read settled on the next attempt two seconds on. Anything asserting on a summary straight after a write has to poll, exactly as S3 found for x402 settle.
+
+Live, not ours: World ID, ERC-8004 identity and reputation registries on Base Sepolia, the x402 reference facilitator, USDC.
+
+evidence: `pnpm tsx scripts/spikes/s5-erc8004.ts` exits 0; full output pasted in the T-04 PR. ABIs vendored at `packages/shared/src/abi/erc8004/`.
+
+decision: use the live registries. No self-deploy, no T-13b. `IERC8004Identity` / `IERC8004Reputation` stand as frozen in T-01.
 
 ## Graph
 
