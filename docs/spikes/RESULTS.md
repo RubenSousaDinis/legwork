@@ -134,4 +134,4 @@ decision: pending
 - credential level: selfie | orb → narration variant: A | B — _pending_
 - GPS: available | downgraded (photo + server timestamp + tapped confirmation) — _pending_
 - payment: x402 — S3 PASS (Sept 6): exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas
-- ERC-8004: live registries | self-deployed reference instance — _pending_
+- ERC-8004: live registries — S5 PASS (Sept 7): production IdentityRegistry `0x8004A818…` and ReputationRegistry `0x8004B663…` on Base Sepolia, interfaces confirmed unchanged, `_safeMint` (a contract holder needs `onERC721Received`), unsolicited feedback legal, `getSummary` needs named clients and lags its receipt by a block; T-13b not dispatched

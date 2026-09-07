@@ -140,4 +140,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open RESULTS `## S5` first (verdict line, mint-mode finding, unregistered-caller finding — T-13 depends on both). Then the ABI README's commit hash and that the JSON files are bare ABI arrays. Then the script: `getSummary` must be read with `clients = [B]` (an empty client list may aggregate every rater and hide a wrong write); no private key reaches `console.log`. If PR 2 exists, diff it against the vendored ABI line by line.
 
 ## 15. Round 2+
-—
+Merged (Sept 7, #114): S5 PASS on the live registries, S1 code present and proof rejected as expected, interfaces confirmed with no PR 2, T-13b not dispatched. The three findings T-13 is held to: `_safeMint` (an EOA or an `onERC721Received` implementer holds the identity), `unregistered caller: allowed` (verify a claimed agent id against `ownerOf` / `getAgentWallet`, never trust it from a request), and `getSummary` rejects an empty `clients` array and lags its own receipt by a block.
