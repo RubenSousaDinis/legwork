@@ -189,7 +189,9 @@ export function markIfIdentified(
   agentId?: string,
   deps?: ServiceDeps,
 ): Promise<MarkResult | LegacyMarkResult> {
-  if (typeof clsOrLegacy === 'object') return legacyMark(clsOrLegacy, deps);
+  // `typeof null === 'object'`, and `class: null` is exactly what a refusal outside the six
+  // arrives as — so the null check is the one that keeps it on the `not_markable` road.
+  if (clsOrLegacy !== null && typeof clsOrLegacy === 'object') return legacyMark(clsOrLegacy, deps);
   return markByClass(clsOrLegacy, specHash as Hex, payer as Address, agentId, deps);
 }
 
