@@ -2,6 +2,7 @@
  * The green headless loop: post → claim → submit → release, on Base Sepolia, in one command.
  *
  *   pnpm demo:run [--agent-id 9196] [--auto-release] [--place scripts/fixtures/demo-place.json]
+ *   `--agent-id` defaults to BUYER_AGENT_ID from the env; `--agent-id 0` posts without one.
  *
  * This is the money beat with no phone and no human in it. The buyer is the demo agent
  * (`BUYER_PRIVATE_KEY`, allowlisted on the escrow); the worker is the seeded CLI worker,
@@ -516,6 +517,11 @@ export function parseArgs(argv: readonly string[]): DemoArgs {
     else if (flag === '--place' && value) { args.place = value; i += 1; }
     else if (flag === '--auto-release') args.autoRelease = true;
   }
+  // The demo agent's own ERC-8004 id (T-32) is the default: a filmed hire must carry it, or
+  // the agent's record never gets `paid-on-proof`. `--agent-id` still overrides; `--agent-id 0` opts out.
+  if (args.agentId === undefined && process.env['BUYER_AGENT_ID']) args.agentId = process.env['BUYER_AGENT_ID'];
+  if (args.agentId === '0') args.agentId = undefined;
+
   return args;
 }
 

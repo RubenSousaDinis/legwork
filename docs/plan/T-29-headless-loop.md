@@ -143,4 +143,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open `demo-run.ts` first: the receipt assertion must read the two `Transfer` logs (amounts `3_000_000` / `450_000`, recipients worker / treasury), not the API's `amount_usdc`. Check the fixture has a per-run timestamp in the SVG (else the second rehearsal auto-disputes on hash reuse). Check `cli-worker.ts` never imports the escrow's `claim`/`submit` write functions. Check the last stdout line is literally `RELEASED`.
 
 ## 15. Round 2+
-—
+— Merged first round (#130). Four lead-side defects met on the way, all fixed before the green run: the NOT NULL nonce column, the seeded-worker session path, the `scripts` workspace entry, the `proofs` bucket MIME list. Rulings: `agent_id` optional from `--agent-id` is what §2 says (the lead made the env id the default afterwards); the RELEASED-last contradiction resolved in favour of the three checks; recovering the stranded tasks accepted.
