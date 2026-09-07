@@ -24,7 +24,7 @@
   --verified-border-light: rgba(30, 158, 119, 0.45);
   --verified-tint-light: rgba(30, 158, 119, 0.1);
 
-  /* refusals are amber, never red */
+  /* a refusal is amber — DESIGN-SPEC: "Refusals are good news." */
   --refusal-on-paper: #b8860b;
   --refusal-border-light: rgba(184, 134, 11, 0.45);
   --refusal-tint-light: rgba(184, 134, 11, 0.1);
@@ -848,6 +848,32 @@ body {
 }
 
 /* ---------------------------------------------------------------- supporting rules */
+
+/*
+ * The claim clock. The colour never changes with urgency: amber is the refusal colour on
+ * every Legwork surface, and a claim running out is not a refusal.
+ */
+.lw-countdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.lw-countdown__label {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-text-3);
+}
+
+.lw-countdown__clock {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--ink-text);
+}
 
 /* A stack of block actions, at the 12 px step. */
 .lw-actions {
