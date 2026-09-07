@@ -135,18 +135,29 @@ _T-14 — the four contracts on Base Sepolia, wired, and the demo pool seeded_
 
 outcome: live. The four contracts are on Base Sepolia, wired, verified on Basescan, and the demo
 pool behind them is 20 seeded workers and five released lifecycles. `scripts/deploy.sh` ran 115
-checks against the deployed addresses and every one passed. The same script against a local anvil
+checks against the deployed addresses; 114 passed in the run and the one that did not, the
+treasury delta, was a read that lagged the last release by a block (the treasury held 4500000 a
+minute later, exactly before + 2250000) — the wrapper now waits for that read. The same script against a local anvil
 (chain 31337, repository mocks) is green twice over, the second run logging `deploy: skipped` and
 broadcasting nothing — that rehearsal is what T-36 reuses.
+
+**Redeployed (Sept 7, 11:33 UTC).** T-32 found that `AbuseMark.registerIdentity` could never mint:
+the ERC-8004 IdentityRegistry mints with `_safeMint` (S5) and the first AbuseMark implemented no
+`onERC721Received`, so the registry reverted `ERC721InvalidReceiver`. AbuseMark now implements the
+receiver (lead PR #125); `TaskEscrow.abuseMark` is immutable, so all four contracts were deployed
+again as one consistent set and the pool re-seeded (17250000 out of the float). The first set —
+WorkerRegistry `0x9011A65B89376e6cA393c3158fcB75f5a19F60a1`, TaskEscrow `0xDAFefc07986B3336b066B19E6DE6B76680628B52`,
+Reputation `0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763`, AbuseMark `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6` — stays verified on
+Basescan with its five released lifecycles, and nothing reads it. The tables below are the live set.
 
 **Addresses** — each verified on Basescan ("Contract Source Code Verified").
 
 | contract | address | Basescan |
 |---|---|---|
-| `WorkerRegistry` | `0x9011A65B89376e6cA393c3158fcB75f5a19F60a1` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x9011A65B89376e6cA393c3158fcB75f5a19F60a1#code) |
-| `TaskEscrow` | `0xDAFefc07986B3336b066B19E6DE6B76680628B52` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0xDAFefc07986B3336b066B19E6DE6B76680628B52#code) |
-| `Reputation` | `0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763#code) |
-| `AbuseMark` | `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x1848Db2d813A66b735f61a73c75456ca32b42Fb6#code) |
+| `WorkerRegistry` | `0xc33d229046507f4C2E664cbf974542c92eEAbAf4` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4#code) |
+| `TaskEscrow` | `0x641B56dfA3A033D84a75588c18579347A0DE3c6B` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B#code) |
+| `Reputation` | `0x2f731B56D02080190fa2ef7813887B2743551E43` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x2f731B56D02080190fa2ef7813887B2743551E43#code) |
+| `AbuseMark` | `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` | [Contract Source Code Verified](https://sepolia.basescan.org/address/0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608#code) |
 
 External, not ours: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, ERC-8004 IdentityRegistry
 `0x8004A818BFB912233c491871b3d84c89A494BD9e`, ERC-8004 ReputationRegistry
@@ -156,12 +167,12 @@ External, not ours: USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, ERC-8004 
 
 | contract | tx |
 |---|---|
-| `WorkerRegistry` | [`0x9bfd8e30…`](https://sepolia.basescan.org/tx/0x9bfd8e30d787f4394cacbfae00ca76de61fe0ed35e4155dbb057e653131b910d) |
-| `Reputation` | [`0xe40a2b8e…`](https://sepolia.basescan.org/tx/0xe40a2b8e985201f03059e77d167e3970444a9012a817c9915bc5ad667256d941) |
-| `AbuseMark` | [`0x351a855b…`](https://sepolia.basescan.org/tx/0x351a855b3c8e35acd7cf395cea3d2c57ef848cf8617271ab0a43fdd1ece9758b) |
-| `TaskEscrow` | [`0xf16ab1d0…`](https://sepolia.basescan.org/tx/0xf16ab1d04777c1c712986e90b0a4da4a78bb356e71038ad618ba258e2209e9e2) |
+| `WorkerRegistry` | [`0x9169775d…`](https://sepolia.basescan.org/tx/0x9169775d1e3d6551cfcd1d1d189a432910737b59d876bd3b1775f4535fabb142) |
+| `Reputation` | [`0xb8d35fd3…`](https://sepolia.basescan.org/tx/0xb8d35fd32ea5a99d5c7ecbcd078dfdaae7d1c5d2f67b9c2cf3b6cfc44ca1005e) |
+| `AbuseMark` | [`0x3f8dd1b2…`](https://sepolia.basescan.org/tx/0x3f8dd1b2d898c7b2a53265305e61ad8fa821ddd41285738c2a00999bf46e8c3e) |
+| `TaskEscrow` | [`0x04da18be…`](https://sepolia.basescan.org/tx/0x04da18be1d99b1f47896f1a216a05e91e9bbf49f3a119db36cb521455c93eff0) |
 
-`startBlock`: **46502519** — the `WorkerRegistry` receipt's block, merged into
+`startBlock`: **46506271** — the `WorkerRegistry` receipt's block, merged into
 `contracts/deployments/base-sepolia.json` by `scripts/deploy.sh`. The subgraph manifest and
 `packages/shared/src/addresses.ts` both read that file.
 
@@ -204,11 +215,11 @@ for. Each is 3.00 posted, 0.45 fee, 3.45 locked (`amount 3000000`, `fee 450000`)
 
 | taskId | type | area | worker | post | claimFor | submitFor | approve |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 verify-open | ez5kv | worker 1 (CLI worker) | [`0x159f90f9…`](https://sepolia.basescan.org/tx/0x159f90f98a7b4bab372ac1b08b338694edbcedf17b02164df2741d6917c79991) | [`0xaab16ac9…`](https://sepolia.basescan.org/tx/0xaab16ac9065877c68db9be89df52e7969ea8e7fa607511cb1dc68db624bd13f5) | [`0xbcd09618…`](https://sepolia.basescan.org/tx/0xbcd09618843f1cca29ba24e3b5db7a89da2a0a95ce16f2b2115db0785c85ebf9) | [`0x656e2d36…`](https://sepolia.basescan.org/tx/0x656e2d369040ebc1e10b3bba94b1cbcb6e3b637ba7a949558dd3d17bec088367) |
-| 2 | 2 photo-of | ez5ks | worker 2 | [`0x0a40eba9…`](https://sepolia.basescan.org/tx/0x0a40eba92d0699a407d31949d2d214ade7208d8662b43eb86617a8cefb13a0a8) | [`0x5f82c944…`](https://sepolia.basescan.org/tx/0x5f82c94452bd7439c683d1dfb5c0442e421b6e40e3c8a3ee7c398560b501b282) | [`0x43079c17…`](https://sepolia.basescan.org/tx/0x43079c17c4cc7920ab41fad5d8512f81d1153124e098b8d9303804cacd2dfe2c) | [`0x7870ff5e…`](https://sepolia.basescan.org/tx/0x7870ff5eca8a546dbe7622cbdbb3815e90e8ac710575e29eb84f14a783d36d5e) |
-| 3 | 4 call-confirm | ez5kt | worker 3 | [`0xbd1353c1…`](https://sepolia.basescan.org/tx/0xbd1353c1e19c201d0a3cf9a9c32d08630d0881d8dc74b795a34abf5f7b50871a) | [`0x827e8634…`](https://sepolia.basescan.org/tx/0x827e863481f54854d894d6c16e24252adead6dabc8a3a71731189d6c1695b3f7) | [`0xa9a55fe6…`](https://sepolia.basescan.org/tx/0xa9a55fe6237e11ea57b8f5a650df777034bd840dcd422e7a9c9176d67912ad8a) | [`0xa9dc4bf5…`](https://sepolia.basescan.org/tx/0xa9dc4bf50d0a97d034a64140584e01df60b77ed9108d80db5c44cdeda4921993) |
-| 4 | 8 compare-two | ez5kg | worker 4 | [`0x98e6ea35…`](https://sepolia.basescan.org/tx/0x98e6ea356695d23b78f064e9ad3ca9324ccf6514fbed7bb2bda963e7b200bdc8) | [`0x9887e68e…`](https://sepolia.basescan.org/tx/0x9887e68e3e3769442db016c08c640bf32b24225de476dca091d12d038d94366f) | [`0x7005d81e…`](https://sepolia.basescan.org/tx/0x7005d81e0ebe4c6254d45cbcddfc427e56f323473b0ad7b0d269e41d5a367b96) | [`0x7ee4cff1…`](https://sepolia.basescan.org/tx/0x7ee4cff109b5d186d3b776b3ef67a50dcab346e9171a47e1984f32435a06a639) |
-| 5 | 1 verify-open | ez1dp | worker 5 | [`0x8bb49a03…`](https://sepolia.basescan.org/tx/0x8bb49a03c72d1ed61cc72df3755146d75497afede7393298e8de84e8a590dce4) | [`0x6b3c7e8e…`](https://sepolia.basescan.org/tx/0x6b3c7e8e4cf1ecf22e2e3d30be98fe6fa1f0f49169d7539cfa18691f068c74bc) | [`0x870cfbcd…`](https://sepolia.basescan.org/tx/0x870cfbcdd50fd33fc4407c220c604f85fb88fb74bd16c468fc08778cae778bc8) | [`0xe3cbe3fe…`](https://sepolia.basescan.org/tx/0xe3cbe3fe0fbda9c412750eb0830e86348e66c40565b9c61b9be6aafb5657762c) |
+| 1 | 1 verify-open | ez5kv | worker 1 (CLI worker) | [`0x34de0941…`](https://sepolia.basescan.org/tx/0x34de094181cc267dbb2397dfb42a80888b2efee81ceed78ec9e685ae45ee44a6) | [`0xf364a735…`](https://sepolia.basescan.org/tx/0xf364a735f2fa2122115cf74c86b034e405b2a8712d46d5d79658244da7ce47dd) | [`0x5d6c412f…`](https://sepolia.basescan.org/tx/0x5d6c412f11f274e416810a94867b8088bdd8ded5998659a264a02452c29d777e) | [`0x697466e2…`](https://sepolia.basescan.org/tx/0x697466e23c0c37733e22a7b6a936890d41b4fba52483d976e5ed84d60322f2db) |
+| 2 | 2 photo-of | ez5ks | worker 2 | [`0x3a129e8a…`](https://sepolia.basescan.org/tx/0x3a129e8ab5881377dac7e3e0717e1a16eb4db7a4f488502207108b72dd6dcbb7) | [`0x00c5d8b6…`](https://sepolia.basescan.org/tx/0x00c5d8b69c039363dbb44bc69942c36aaf027661da03ea24db381affb4f1df66) | [`0xc7809c72…`](https://sepolia.basescan.org/tx/0xc7809c72a8dc728541863c66b2be555760e277851bddfc86ccc3e4c95e68382c) | [`0xd5a69665…`](https://sepolia.basescan.org/tx/0xd5a696650dff8e5ba8a8e91e4c8082a3c0b159bedb57a4c9cc1cd37a541dbf05) |
+| 3 | 4 call-confirm | ez5kt | worker 3 | [`0x45f4b837…`](https://sepolia.basescan.org/tx/0x45f4b837d670c4ca85f728bb269cb5d714a45cc804654314c3fc0a41a418d5c0) | [`0xf16b6759…`](https://sepolia.basescan.org/tx/0xf16b675948191bcff98b931c819b63dd86485d0b7013c7763be261c31f34f695) | [`0x5dc0e899…`](https://sepolia.basescan.org/tx/0x5dc0e899d245fe1daee3a21dee1537d55a8334bb1797ee390f3f3464df72583d) | [`0x1e715764…`](https://sepolia.basescan.org/tx/0x1e715764364f328ac2c3f6f944ae565e9b3cec4e65d851db00207947642f10f2) |
+| 4 | 8 compare-two | ez5kg | worker 4 | [`0x23f4bc53…`](https://sepolia.basescan.org/tx/0x23f4bc533e1fa1d05eeec467036d3e5b148a921f37759b1f5a45e82e2105f426) | [`0xacbfb6a7…`](https://sepolia.basescan.org/tx/0xacbfb6a71009bd3a0e085b56e42ed17d6928214c7434312a6ac9acdd47e9e083) | [`0xa98d04d4…`](https://sepolia.basescan.org/tx/0xa98d04d46ef269977428172837c80297300b5dc09d07d487fd7b08d7424190f4) | [`0x6b5788b0…`](https://sepolia.basescan.org/tx/0x6b5788b0006115ec3a2f8c701ddcce618ac4fe6ef0b925346af4db88b887e4ad) |
+| 5 | 1 verify-open | ez1dp | worker 5 | [`0x99d28e1e…`](https://sepolia.basescan.org/tx/0x99d28e1e4aee39b657a90962e6018a4555507eee3858b3fc8b2e6b920b6eee26) | [`0xe84ac132…`](https://sepolia.basescan.org/tx/0xe84ac13217c267a87139e2aa5331e26c468fd247d8460bae11c35cd8abbfcd85) | [`0x8796e2e5…`](https://sepolia.basescan.org/tx/0x8796e2e54f0aaf5eb131a3c85ed566566a565a732201b14b432a6fbc42b028f9) | [`0x236c0b26…`](https://sepolia.basescan.org/tx/0x236c0b26600ac5d6548bc42db2cf1d355e39191ef7f00bc66138cc0a5f9f2a04) |
 
 All five end in `TaskState.Released` (4); `Reputation.completed(nullifier_k) == 1` and
 `distinctRaters == 1` for each, keyed by the synthetic nullifier, with the deployer's address as
@@ -219,18 +230,18 @@ an agent identity that never asked for the task.
 
 | account | before | after |
 |---|---|---|
-| relayer float | 35350000 | 18100000 |
-| treasury `0xABFDB572…` | 0 | 2250000 |
-| each seeded worker 1–5 | 0 | 3000000 |
+| relayer float | 18100000 | 850000 |
+| treasury `0xABFDB572…` | 2250000 | 4500000 |
+| each seeded worker 1–5 | 3000000 | 6000000 |
 
 Five lifecycles move 17250000 out of the relayer float, 15000000 to the five workers and 2250000
 to the treasury.
 
-evidence: `scripts/deploy.sh` against Base Sepolia — 115 checks, 0 failures, all four contracts
-verified in the same run. `scripts/deploy.sh --anvil` twice against a fresh anvil — the second run
+evidence: `scripts/deploy.sh` against Base Sepolia — 115 checks, all four contracts verified in
+the same run (first deploy: 0 failures; redeploy: the one lagging treasury read above). `scripts/deploy.sh --anvil` twice against a fresh anvil — the second run
 logs `deploy: skipped, already at <taskEscrow>`, broadcasts nothing and leaves `taskCount()` at 5.
 `cast logs` over the registry from `startBlock` returns 20 `WorkerSeeded` and zero
-`WorkerRegistered` on both chains. Full output pasted in PR #119.
+`WorkerRegistered` on both chains. Full output pasted in PR #119; the redeploy is recorded in LEAD-NOTES.
 
 decision: `contracts/deployments/base-sepolia.json` is the single deployment record;
 `packages/shared/src/addresses.ts`, the subgraph manifest and every app read it. Its four contract
