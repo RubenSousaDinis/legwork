@@ -253,62 +253,99 @@ does not know, so the provenance fields cost nothing downstream.
 
 _T-32 — the Task API's ERC-8004 identity, and one released task carrying a real agent id_
 
-outcome: **blocked at step A.** `AbuseMark.registerIdentity` cannot succeed against the deployed
-AbuseMark `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6`. The ERC-8004 IdentityRegistry mints with
-`_safeMint` — S5 above established that and left T-13 the choice of holding the identity in a
-contract or in an EOA — and the deployed AbuseMark implements no `onERC721Received`, so the mint
-to `address(this)` is rejected by the registry's receiver check. `eth_call` of
-`registerIdentity(agentURI)` from the owner reverts
-`ERC721InvalidReceiver(0x1848Db2d813A66b735f61a73c75456ca32b42Fb6)` (selector `0x64a0ae92`, the
-argument is the AbuseMark address itself). Nothing was sent: `scripts/register-identity.ts`
-simulates before it signs, so both the live invocation and `--only-register` stopped on the
-simulation with `selfAgentId` still `0`, `taskCount()` still 5 and the relayer float untouched at
-18100000. Steps B–E are written and dry-run clean; they are held rather than run, because the fix
-is a new AbuseMark and `TaskEscrow.abuseMark` has no setter — so a task released against today's
-AbuseMark would be evidence about an address that is on its way out.
+outcome: live. The Task API holds ERC-8004 agent id **9195** on the canonical Base Sepolia
+IdentityRegistry, minted to `AbuseMark` itself, and the agent-side feedback pipe has been proved
+end to end: task 6 was posted with `buyerAgentId = 9196`, released to the CLI worker, and the
+release wrote `paid-on-proof` against 9196 in the ERC-8004 ReputationRegistry with `AbuseMark` as
+the rater. `getSummary` reads it back as `count=1 summaryValue=1 summaryValueDecimals=0`.
+
+This ran against the second deployment (`startBlock` 46506271). The first attempt, against the
+deployment of `## Deploy`, was blocked: the IdentityRegistry mints with `_safeMint`, `AbuseMark`
+implemented no `onERC721Received`, and `registerIdentity` reverted
+`ERC721InvalidReceiver(<abuseMark>)` in simulation, so nothing was sent. T-13 added the receiver
+and T-14 redeployed all four contracts as one set, because `TaskEscrow.abuseMark` is immutable.
+
+**Step A — the Task API's own identity.**
 
 | field | value |
 |---|---|
-| `selfAgentId` | `0` — not registered |
+| `selfAgentId` | **9195** |
+| `agentURI` source | `data-uri` — `DASHBOARD_URL` is unset, so the dashboard's `/agent.json` was never there to answer (lane D) |
 | `agentURI` | `data:application/json;base64,eyJ0eXBlIjoiaHR0cHM6Ly9laXBzLmV0aGVyZXVtLm9yZy9FSVBTL2VpcC04MDA0I3JlZ2lzdHJhdGlvbi12MSIsIm5` … (first 120 of 325 chars) |
-| `agentURI` source | `data-uri` — `DASHBOARD_URL` is unset, so the dashboard's `/agent.json` was never reachable to answer (lane D) |
-| `ownerOf(selfAgentId)` | not applicable — id `0` is a live third-party agent on the registry (`0x21fdEd74C901129977B8e28C2588595163E1e235`), not ours; `0` is the "unregistered" sentinel and must never be looked up |
-| register tx | none — the call reverts in simulation |
-| `BUYER_AGENT_ID` | not minted. `IdentityRegistry.register(agentURI)` from the buyer `0xc1286562DCD771eD76ED59e3D2A51DCe92d349d7` simulates clean, so step B is one command away once step A lands |
-| lifecycle txs | none — task 6 was not posted; `getTask(6)` is still all zeros |
-| `Outcome` event | none |
-| `getSummary` | not runnable — it needs the subject agent id from step B |
+| decoded | `{"type":"https://eips.ethereum.org/EIPS/eip-8004#registration-v1","name":"Legwork Task API","description":"Hire a verified human for a small real-world check; pays USDC on proof.","services":[{"name":"web","endpoint":""}]}` |
+| `ownerOf(9195)` | `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` — the AbuseMark address; the contract minted to itself |
+| register tx | [`0x2211390c…`](https://sepolia.basescan.org/tx/0x2211390c33742f4bc93873a65327f77bfed0cb240e715bc605b3d7b4c69a86f5) |
 
-**What the pipe needs.** `AbuseMark` must be able to receive an ERC-721, or the identity must be
-held somewhere that already can. That is a T-13 contract change plus a T-14 redeploy, and the
-redeploy reaches `TaskEscrow` too: `TaskEscrow.abuseMark` is set at construction and there is no
-`setAbuseMark`, so a new AbuseMark address cannot be wired into the deployed escrow. T-32 re-runs
-whole on the new addresses; the script is idempotent and skips any step already done.
+**Step B — the demo agent's id.** `BUYER_AGENT_ID` was empty, so one was registered directly on
+the IdentityRegistry from the buyer key: **9196**, `ownerOf(9196) =
+0xc1286562DCD771eD76ED59e3D2A51DCe92d349d7`, the buyer.
+Tx [`0x10076a44…`](https://sepolia.basescan.org/tx/0x10076a441ac83363e7f81f71d17413aeb88925c3d2d7947cb12b2787b4bb28c3).
+The operator sets `BUYER_AGENT_ID=9196` in `.env`; the demo agent passes it as `hire_human.agent_id`
+and T-16/T-30 verify it against the payer. The subject of the feedback is this buyer-owned id and
+never `selfAgentId` — the reference registry rejects feedback from an agent's own owner.
 
-**What is already proven.** The rest of the chain of reasoning holds without step A.
-`TaskEscrow._release` calls `abuseMark.outcome(buyerAgentId, taskId, 1)` whenever `buyerAgentId`
-is non-zero and never reads `selfAgentId`; the ReputationRegistry gates on the subject agent id
-and not on the caller (S5), so AbuseMark can write `paid-on-proof` against a buyer-owned id
-whether or not it holds an identity of its own. The identity is what the pitch line and the
-dashboard chip need, not what the feedback write needs.
+**Step C — task 6, one released lifecycle carrying the id.** `taskType 1`, `area ez1dp`,
+`amount 3000000`, `fee 450000`, `3450000` locked, buyer `0xc128…49d7`, worker the CLI worker
+`0x7b4EB10df800881f73BC1d85BDeF02f82386271e`, `claimTTL 1800`, `submitTTL 3600`,
+`disputeWindow 120`.
 
-**Two notes for the re-run.** `getSummary` will not take an empty `clientAddresses` array — the
-deployed registry reverts (S5) — so §2's unfiltered read is made inside a `try` and its revert is
-printed rather than hidden; `getClients(agentId)` is printed beside it and answers the same
-question. And the summary is visible a block later than its own receipt, so every read-back polls.
+| call | tx |
+|---|---|
+| `post` | [`0x340cfb9e…`](https://sepolia.basescan.org/tx/0x340cfb9e43d5ffc4ea1af1550f25c42deb50d81f127b04d792ebe8202b2c8486) |
+| `claimFor` | [`0x281dfdc5…`](https://sepolia.basescan.org/tx/0x281dfdc58e7fa304ada0bf50ff71d14c7f74e2c2ed8d7fa5cf3cd5b60d06c543) |
+| `submitFor` | [`0x69ef157a…`](https://sepolia.basescan.org/tx/0x69ef157afe3f60e67dba9da01e1c18be573528d4d31a4c0a3e46e7ad2b5cfecb) |
+| `approve` | [`0x4969dbdc…`](https://sepolia.basescan.org/tx/0x4969dbdcf5578c9f76893115faba09b5422f80c4556d60586064475f8983c2a9) |
+
+`getTask(6)` is state `4` (`Released`) with `buyerAgentId 9196`, `amount 3000000`, `fee 450000`
+and the CLI worker as `worker`. Balances moved by exactly one lifecycle: relayer float
+24850000 → 21400000, the CLI worker took 3000000, the treasury 450000.
+
+**The decoded `Outcome` event**, emitted by AbuseMark inside `approve`, in block 46506918 of
+tx `0x4969dbdc…`:
+
+```
+Outcome(agentId = 9196, taskId = 6, outcome = 1)
+  topic1 0x…23ec = 9196   topic2 0x…06 = 6   data 0x…01 = 1 (OUTCOME_PAID)
+```
+
+**Step D — read back off the ReputationRegistry.**
+
+```
+getSummary(9196, [0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608], "paid-on-proof", "")
+  -> count=1 summaryValue=1 summaryValueDecimals=0
+getSummary(9196, [], "", "")
+  -> reverts Error("clientAddresses required")
+getClients(9196)
+  -> 0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608
+```
+
+§2 asks for the unfiltered summary too. The deployed registry refuses an empty `clientAddresses`
+array, as S5 found, so the script makes the call inside a `try` and prints the revert rather than
+hiding it; `getClients` answers the same question and names AbuseMark as the only rater.
+
+after this run `taskCount()` is 6 — T-14's check of 5 predates it
+
+**Two notes for whoever runs this next.** A read lags its own receipt here, and it bites twice:
+`ownerOf` on an id minted seconds ago still reverts `ERC721NonexistentToken`, and a `claimFor`
+simulated straight after the `post` receipt reverts against a task slot the read node has not seen
+yet. Both are polled now, and `--only-register` is the cheap way to confirm a run landed. And the
+lifecycle resumes rather than restarts: a run that stops between `post` and `approve` leaves a
+task with 3.45 locked in it, so the script looks for an unfinished task carrying this agent id
+before it posts a new one. That path is not theoretical — it is how task 6 was finished.
 
 the Task API's ERC-8004 identity is operator-attested in v0
 
 the agent id is verified against the IdentityRegistry, never trusted from a request body
 
-evidence: `pnpm tsx scripts/register-identity.ts --dry-run` — chain id 84532, all six planned
-calls printed, `registerIdentity` the only simulation that reverts. `pnpm tsx
-scripts/register-identity.ts` and `… --only-register` both exit 1 on that same simulation without
-sending. Full output pasted in PR #124.
+evidence: `pnpm tsx scripts/register-identity.ts --dry-run` exits 0 and sends nothing;
+`pnpm tsx scripts/register-identity.ts` exits 0 with all twelve step-C assertions and both
+step-D bounds green; `… --only-register` prints `selfAgentId 9195 — already registered, skipping`,
+sends nothing and exits 0. `cast` confirms `selfAgentId`, `ownerOf`, `getSummary`, `getTask(6)` and
+one `Outcome` log independently of the script. `pnpm -r typecheck` green. Full output in PR #124.
 
-decision: pending the lead — T-13 makes AbuseMark an ERC-721 receiver (or the identity moves to an
-EOA and `registerIdentity` changes shape), T-14 redeploys AbuseMark and TaskEscrow, then T-32
-re-runs and fills this section in.
+decision: `AbuseMark` holds the Task API's identity as agent 9195 and is the only writer of
+agent-side feedback. `BUYER_AGENT_ID=9196` is the demo agent's id and belongs in the operator's
+`.env`.
 
 ## Locked architecture
 
