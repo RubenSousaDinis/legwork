@@ -406,6 +406,14 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 ---
 
+### T-50 — Mini-app design polish — the paper screens as the design spec draws them
+
+`T-50-miniapp-design-polish.md` · lane D · size M · class C · depends on T-42 · added Sept 8, after the first phone run
+
+> Implement the brief in issue **T-50** (`docs/plan/T-50-miniapp-design-polish.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-50` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+---
+
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO
 
 Only dispatch these once the gate is GREEN and the insurance footage is filmed.
