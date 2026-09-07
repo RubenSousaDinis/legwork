@@ -42,6 +42,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@tailwindcss/postcss": "catalog:",
+    "@types/ngeohash": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

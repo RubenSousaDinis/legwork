@@ -88,7 +88,9 @@ export const GenericError = z.discriminatedUnion('error', [
   z.object({ error: z.literal('forbidden'), reason: z.enum(['not_registered', 'not_worker']).optional() }),
   z.object({ error: z.literal('not_found') }),
   /** A precondition the row already refutes; `reason` is a contract revert name or a route's own word. */
-  z.object({ error: z.literal('conflict'), reason: z.string().optional() }),
+  z.object({ error: z.literal('conflict'), reason: z.string().optional(), retry_after_s: z.number().int().optional() }),
+  /** `POST /tasks`: `TaskEscrow.post` failed after verify, so nothing was charged and the same authorization can be sent again. */
+  z.object({ error: z.literal('escrow_post_failed') }),
   z.object({ error: z.literal('bad_state'), status: Status }),
   z.object({ error: z.literal('not_eligible'), status: Status, eligible_at: Iso.nullable() }),
   z.object({ error: z.literal('dispute_window_closed') }),
@@ -154,8 +156,8 @@ export const Preflight = z.object({
 });
 
 export const API_ROUTES = {
-  postTasks: { method: 'POST', path: '/tasks', auth: 'x402', summary: 'Post a task; x402 PAYMENT-SIGNATURE header; price = amount × 1.15',
-    request: Envelope, responses: { 201: Posted, 402: PaymentRequired, 422: RefusalPayload, 400: InvalidRequest, 429: CapExceeded } },
+  postTasks: { method: 'POST', path: '/tasks', auth: 'x402', summary: 'Post a task; x402 PAYMENT-SIGNATURE header; price = amount × 1.15; an unpaid call may carry the informational X-Payer header so the 402 echoes that payer\'s remaining budget; 409 conflict/in_progress while the same authorization is mid-post; 503 escrow_post_failed never charges',
+    request: Envelope, responses: { 201: Posted, 402: PaymentRequired, 422: RefusalPayload, 400: InvalidRequest, 429: CapExceeded, 409: GenericError, 503: GenericError } },
   getTask: { method: 'GET', path: '/tasks/:id', auth: 'public', summary: 'Task status; long-poll with ?wait ≤ 50; X-Buyer-Token reveals proof.url (a wrong token is the same body without it); ETag/If-None-Match; poll_after_seconds is 0 when terminal, 1 when the wait elapsed unchanged, 3 otherwise; hash_ok re-hashed per request',
     query: z.object({ wait: z.coerce.number().int().min(0).max(LONGPOLL_MAX_S).default(0) }), responses: { 200: TaskView, 404: GenericError } },
   approve: { method: 'POST', path: '/tasks/:id/approve', auth: 'buyer-token', summary: 'Approve a submitted proof; relayer executes onchain; the row moves only after the hash returns', responses: { 200: TxResult, 401: GenericError, 409: GenericError, 503: GenericError } },
@@ -249,4 +251,6 @@ export const HEADERS = {
   paymentSignature: 'PAYMENT-SIGNATURE',
   buyerSignature: 'X-Buyer-Signature',
   buyerTimestamp: 'X-Buyer-Timestamp',
+  /** Informational and unauthenticated: only fills the 402's `remaining_budget` for that payer. */
+  payerHint: 'X-Payer',
 } as const;

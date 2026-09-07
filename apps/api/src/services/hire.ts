@@ -87,9 +87,6 @@ import {
   type Classifier,
   type PlaceIndex,
 } from '@legwork/screening';
-// @ts-expect-error `ngeohash` ships no type declarations and `@types/ngeohash` is not in the
-// pnpm catalog (DEP REQUEST in the PR). Delete this line when the types land — TypeScript
-// reports an unused `@ts-expect-error`, so it cannot rot silently.
 import ngeohash from 'ngeohash';
 import { getChain } from '../chain';
 import { getConfig } from '../config';
