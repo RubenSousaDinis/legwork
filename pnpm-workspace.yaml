@@ -3,6 +3,7 @@ packages:
   - "apps/*"
   - "subgraph"
   - "examples"
+  - "scripts"
 
 # Every dependency the build will ever need, declared once, here.
 # Agents never edit a lockfile and never add a dependency: they raise
