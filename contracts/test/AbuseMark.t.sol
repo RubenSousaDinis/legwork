@@ -8,6 +8,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AbuseMark} from "../src/AbuseMark.sol";
 import {IAbuseMark} from "../src/interfaces/IAbuseMark.sol";
 import {MockIdentityRegistry, MockReputationRegistry} from "./mocks/MockERC8004.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {Keys} from "./utils/Keys.sol";
 
 /// @notice The agent-side writer: who may mark, idempotency, the rolling rate limit, and the
@@ -321,5 +323,35 @@ contract AbuseMarkTest is Test {
         vm.expectRevert(IAbuseMark.IdentityAlreadyRegistered.selector);
         am.registerIdentity(AGENT_URI);
         assertEq(am.selfAgentId(), id);
+    }
+
+    /// The registry mints with `_safeMint`. A holder without `onERC721Received` is rejected by the
+    /// same check the live registry runs; AbuseMark answers it, which is what `registerIdentity`
+    /// on Base Sepolia depends on.
+    function test_RegisterIdentity_RequiresReceiver() public {
+        NoReceiver holder = new NoReceiver(identity);
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721InvalidReceiver.selector, address(holder)));
+        holder.register(AGENT_URI);
+
+        assertEq(
+            am.onERC721Received(address(identity), address(0), 1, ""),
+            IERC721Receiver.onERC721Received.selector
+        );
+        vm.prank(deployer);
+        uint256 id = am.registerIdentity(AGENT_URI);
+        assertEq(identity.ownerOf(id), address(am));
+    }
+}
+
+/// A would-be identity holder that never learned to receive an ERC-721.
+contract NoReceiver {
+    MockIdentityRegistry internal immutable registry;
+
+    constructor(MockIdentityRegistry registry_) {
+        registry = registry_;
+    }
+
+    function register(string calldata agentURI) external returns (uint256) {
+        return registry.register(agentURI);
     }
 }

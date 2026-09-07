@@ -169,6 +169,11 @@ usdc_balance() { rpcnum "$USDC" "balanceOf(address)(uint256)" "$1"; }
 
 RELAYER_BEFORE=$(usdc_balance "$RELAYER")
 TREASURY_BEFORE=$(usdc_balance "$TREASURY")
+# Per-worker snapshots, so a re-seed on a redeployed escrow reads "+3000000 this run" rather
+# than an absolute balance that already carries an earlier seed's payout.
+for k in 1 2 3 4 5; do
+  eval "WORKER_BEFORE_$k=$(usdc_balance "$(seed_worker "$k")")"
+done
 TASKS_BEFORE=$(rpcnum "$TASK_ESCROW" "taskCount()(uint256)")
 
 # -------------------------------------------------------------------------------- 4. seed
@@ -262,7 +267,13 @@ for k in 1 2 3 4 5; do
   nk=$(cast to-dec "$(seed_nullifier "$k")")
   check "reputation.completed(worker $k)"      "1" "$(rpcnum "$REPUTATION" "completed(uint256)(uint256)" "$nk")"
   check "reputation.distinctRaters(worker $k)" "1" "$(rpcnum "$REPUTATION" "distinctRaters(uint256)(uint256)" "$nk")"
-  check "usdc.balanceOf(worker $k)" "3000000" "$(usdc_balance "$(seed_worker "$k")")"
+  eval "worker_before=\$WORKER_BEFORE_$k"
+  worker_delta=$(( $(usdc_balance "$(seed_worker "$k")") - worker_before ))
+  if [ "$TASKS_BEFORE" -lt 5 ]; then
+    check "usdc.balanceOf(worker $k) delta over this run" "3000000" "$worker_delta"
+  else
+    check "usdc.balanceOf(worker $k) delta over this run" "0"       "$worker_delta"
+  fi
 done
 
 TREASURY_DELTA=$(( TREASURY_AFTER - TREASURY_BEFORE ))
