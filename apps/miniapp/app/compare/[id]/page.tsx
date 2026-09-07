@@ -106,16 +106,17 @@ export default function ComparePage({ params }: { params: Promise<{ id: string }
 
   return (
     <div data-screen="compare-page">
-      <header style={{ marginBottom: 'var(--s-5)' }}>
+      <header className="lw-proof-header">
         {/* The verified chip stays in the header on this screen too: above the fold, always. */}
-        <p style={{ margin: '0 0 var(--s-3)' }}>
+        <p className="lw-chips lw-chips--stacked">
           <VerifiedChip compact level={level} state={session} />
         </p>
-        <h1 className="lw-h1" data-compare="title" style={{ marginBottom: 'var(--s-3)' }}>
-          {title ?? `Task ${id}`}
-        </h1>
-        <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', margin: '0 0 var(--s-3)' }}>
+        <p className="lw-proof-head">
           <MonoTag>compare-two</MonoTag>
+          <span className="lw-proof-head__sep"> · </span>
+          <span className="lw-proof-head__title" data-compare="title">
+            {title ?? `Task ${id}`}
+          </span>
         </p>
         <Countdown label={SUBMIT_WITHIN} until={claim.submit_deadline} />
       </header>
@@ -123,7 +124,7 @@ export default function ComparePage({ params }: { params: Promise<{ id: string }
       {spec.status === 'ready' ? <CompareView spec={spec.spec} taskId={id} /> : null}
       {spec.status === 'loading' ? <p className="lw-placeholder">{OPENING_LINE}</p> : null}
       {spec.status === 'unavailable' ? (
-        <p data-error="spec" style={{ fontSize: '16px' }}>
+        <p className="lw-error-line" data-error="spec">
           {SPEC_UNAVAILABLE}
         </p>
       ) : null}

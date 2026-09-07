@@ -37,20 +37,20 @@ export type DowngradeProps = {
 /** The panel a failed fix leaves behind. The chip is up before the worker taps anything. */
 export function Downgrade({ confirmed, onConfirm, onRetry }: DowngradeProps) {
   return (
-    <div data-downgrade="true" style={{ marginBottom: 'var(--s-4)' }}>
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+    <div className="lw-answer-group" data-downgrade="true">
+      <p className="lw-body" data-floor="20">
         {DOWNGRADE_LINE}
       </p>
 
-      <p style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-chips lw-chips--stacked">
         <Chip tone="neutral" floor={20}>
           {GPS_CHIP}
         </Chip>
       </p>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+      <div className="lw-chips">
         {confirmed ? (
-          <p data-confirmed="true" style={{ margin: 0 }}>
+          <p className="lw-chips" data-confirmed="true">
             <Chip tone="verified" floor={20}>
               {`${AT_THE_PLACE} ✓`}
             </Chip>
@@ -79,13 +79,17 @@ export type LocationStepProps = {
   onRetry: () => void;
 };
 
-/** Locating, a fix, or the downgrade. Nothing renders before the photo exists. */
+/**
+ * Locating, a fix, or the downgrade — the `GPS` row of the proof card's readouts. Nothing
+ * renders before the photo exists. The coordinate and its accuracy are two nodes: the
+ * coordinate is what the privacy rule caps at 3 decimals, the accuracy is a separate fact.
+ */
 export function LocationStep({ status, result, confirmed, onConfirm, onRetry }: LocationStepProps) {
   if (status === 'idle') return null;
 
   if (status === 'locating') {
     return (
-      <p data-location="locating" data-floor="20" style={{ margin: '0 0 var(--s-4)' }}>
+      <p className="lw-body" data-location="locating" data-floor="20">
         {LOCATING_LINE}
       </p>
     );
@@ -93,12 +97,11 @@ export function LocationStep({ status, result, confirmed, onConfirm, onRetry }: 
 
   if (result !== null && result.ok) {
     return (
-      <div data-location="fix" style={{ marginBottom: 'var(--s-4)' }}>
-        <p data-floor="20" style={{ margin: '0 0 var(--s-2)' }}>
-          {`±${Math.round(result.accuracy_m)} m`}
-        </p>
-        <p className="lw-placeholder" data-coordinate="rounded" style={{ margin: '0 0 var(--s-3)' }}>
-          {roundedCoordinate(result.lat, result.lon)}
+      <div className="lw-answer-group" data-location="fix">
+        <p className="lw-meta">
+          <span data-coordinate="rounded">{roundedCoordinate(result.lat, result.lon)}</span>
+          {' · '}
+          <span data-accuracy="m">{`±${Math.round(result.accuracy_m)} m`}</span>
         </p>
         <Button variant="ghost" onClick={onRetry}>
           {RETRY_LOCATION}

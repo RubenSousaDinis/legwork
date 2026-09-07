@@ -71,15 +71,13 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <div data-screen="report-page">
-      <header style={{ marginBottom: 'var(--s-5)' }}>
+      <header className="lw-proof-header">
         {/* The verified chip stays in the header here too: above the fold, always. */}
-        <p style={{ margin: '0 0 var(--s-3)' }}>
+        <p className="lw-chips lw-chips--stacked">
           <VerifiedChip compact level={level} state={session} />
         </p>
-        <h1 className="lw-h1" style={{ marginBottom: 'var(--s-2)' }}>
-          {REPORT_HEADING}
-        </h1>
-        <p className="lw-placeholder" data-report="title" style={{ margin: 0 }}>
+        <p className="lw-list-label">{REPORT_HEADING}</p>
+        <p className="lw-meta lw-meta--flush" data-report="title">
           {title ?? `Task ${id}`}
         </p>
       </header>

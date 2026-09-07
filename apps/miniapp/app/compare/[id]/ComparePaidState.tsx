@@ -73,56 +73,40 @@ export function ComparePaidState({
   const at = judgedTime(capturedAt);
 
   return (
-    <div className="lw-card" data-paid-state="released">
+    <div className="lw-paid" data-paid-state="released" data-tone="verified">
       {/* The proof, first and unconditionally. */}
-      <div data-chosen={choice} style={{ marginBottom: 'var(--s-3)' }}>
+      <div className="lw-chosen" data-chosen={choice}>
         {choice === 'neither' ? (
-          <p
-            data-floor="20"
-            style={{
-              color: 'var(--verified-700)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '20px',
-              margin: 0,
-            }}
-          >
+          <p className="lw-chosen__word" data-floor="20">
             {NEITHER_WORD}
           </p>
         ) : (
-          <div style={{ display: 'grid', gap: 'var(--s-3)', gridTemplateColumns: '1fr 1fr' }}>
+          <div className="lw-pair lw-pair--flush">
             <PairSummary chosen={choice === 'a'} item={a} label="A" />
             <PairSummary chosen={choice === 'b'} item={b} label="B" />
           </div>
         )}
       </div>
 
-      <p data-reason="true" style={{ fontSize: '16px', margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-reason="true">
         {`“${reason}”`}
       </p>
 
       {at === '' ? null : (
-        <p className="lw-placeholder" data-judged="at" style={{ margin: '0 0 var(--s-4)' }}>
+        <p className="lw-meta" data-judged="at">
           {`judgement · timestamp ${at}`}
         </p>
       )}
 
       <p
+        className="lw-stat lw-stat--md lw-stat--released"
         data-floor="20"
         data-released="usdc"
-        style={{
-          color: 'var(--verified-700)',
-          fontFamily: 'var(--font-display)',
-          fontSize: '40px',
-          fontWeight: 800,
-          letterSpacing: '-0.03em',
-          lineHeight: 1.1,
-          margin: 0,
-        }}
       >
         {`Released · ${amountUsdc.toFixed(2)} USDC`}
       </p>
 
-      <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', margin: 'var(--s-3) 0 0' }}>
+      <p className="lw-chips lw-chips--stacked-top">
         <Chip tone="verified" floor={20}>
           <a data-hit="44" href={`${BASESCAN_TX}${releaseTx}`} rel="noreferrer" target="_blank">
             {`tx ${shortTx(releaseTx)} ↗`}
@@ -133,7 +117,7 @@ export function ComparePaidState({
         </Chip>
       </p>
 
-      <p data-floor="20" data-completed="true" style={{ margin: 'var(--s-3) 0 var(--s-4)' }}>
+      <p className="lw-body lw-body--top" data-floor="20" data-completed="true">
         {COMPLETED_LINE}
       </p>
 
@@ -143,7 +127,6 @@ export function ComparePaidState({
         className="lw-button lw-button--primary lw-button--lg lw-button--full"
         data-hit="44"
         href="/tasks"
-        style={{ textDecoration: 'none' }}
       >
         {BACK_TO_TASKS}
       </a>
@@ -163,23 +146,11 @@ function PairSummary({
 }) {
   return (
     <div
+      className={chosen ? 'lw-pair__summary lw-pair__summary--picked' : 'lw-pair__summary'}
       data-option={label.toLowerCase()}
       data-picked={chosen ? 'true' : 'false'}
-      style={{
-        background: chosen ? 'var(--verified-tint-light)' : 'var(--paper-0)',
-        border: `1px solid ${chosen ? 'var(--verified-border-light)' : 'var(--paper-border)'}`,
-        borderRadius: 'var(--r-button)',
-        padding: 'var(--s-2)',
-      }}
     >
-      <p
-        style={{
-          color: chosen ? 'var(--verified-700)' : 'var(--ink-text-3)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '16px',
-          margin: '0 0 var(--s-2)',
-        }}
-      >
+      <p className={chosen ? 'lw-pair__label lw-pair__label--picked' : 'lw-pair__label'}>
         {label}
       </p>
       {item.kind === 'image' ? (
@@ -187,18 +158,12 @@ function PairSummary({
         // `next/image` cannot size or optimise it and the referrer never leaves the phone.
         <img
           alt={`option ${label}`}
+          className="lw-thumb lw-thumb--square lw-thumb--tag"
           referrerPolicy="no-referrer"
           src={item.url}
-          style={{
-            aspectRatio: '1 / 1',
-            borderRadius: 'var(--r-tag)',
-            display: 'block',
-            objectFit: 'cover',
-            width: '100%',
-          }}
         />
       ) : (
-        <p style={{ fontSize: '16px', margin: 0 }}>{summarize(item)}</p>
+        <p className="lw-body lw-body--flush">{summarize(item)}</p>
       )}
     </div>
   );

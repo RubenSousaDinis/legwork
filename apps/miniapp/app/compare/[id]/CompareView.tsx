@@ -213,60 +213,43 @@ export function CompareView({ taskId, spec }: CompareViewProps) {
 
   return (
     <div data-screen="compare">
-      <p className="lw-section-label" data-question="criterion" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-list-label" data-question="criterion">
         {CRITERION_QUESTION[spec.criterion_id]}
       </p>
 
       {spec.reference === undefined ? null : (
-        <div
-          className="lw-card"
-          data-reference="true"
-          style={{ marginBottom: 'var(--s-4)', padding: 'var(--s-3)' }}
-        >
-          <p
-            style={{
-              color: 'var(--ink-text-3)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '15px',
-              margin: '0 0 var(--s-2)',
-            }}
-          >
-            {REFERENCE_LABEL}
-          </p>
+        <div className="lw-card lw-pair__card lw-pair__card--reference" data-reference="true">
+          <p className="lw-meta">{REFERENCE_LABEL}</p>
           <Option item={spec.reference} label="reference" onZoom={() => setZoom('reference')} />
         </div>
       )}
 
       {/* Two equal columns. At a 390 px viewport the 16 px page padding and the 12 px gap
           leave 173 px a side, above the 160 px floor. */}
-      <div
-        data-pair="true"
-        style={{
-          display: 'grid',
-          gap: 'var(--s-3)',
-          gridTemplateColumns: '1fr 1fr',
-          marginBottom: 'var(--s-4)',
-        }}
-      >
+      <div className="lw-pair" data-pair="true">
         <PairCard item={spec.a} label="A" onZoom={() => setZoom('a')} />
         <PairCard item={spec.b} label="B" onZoom={() => setZoom('b')} />
       </div>
 
-      <p data-copy="paid-for-the-judgement" style={{ fontSize: '16px', margin: '0 0 var(--s-2)' }}>
+      <p className="lw-note" data-copy="paid-for-the-judgement">
         {PAID_FOR_THE_JUDGEMENT}
       </p>
-      <p data-copy="no-travel" style={{ fontSize: '16px', margin: '0 0 var(--s-4)' }}>
+      <p className="lw-note lw-note--last" data-copy="no-travel">
         {NO_TRAVEL}
       </p>
 
-      <div data-answer="compare-two" style={{ marginBottom: 'var(--s-4)' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+      <div className="lw-answer-group" data-answer="compare-two">
+        <div className="lw-segmented">
           {CHOICES.map((option) => (
             // The `Button` primitive is T-24's and takes no `aria-pressed`, so a segmented
-            // control uses its classes directly — the same move T-33's `Segmented` makes.
+            // control uses the same track and segment classes T-33's `Segmented` uses.
             <button
               aria-pressed={choice === option.value}
-              className={`lw-button ${choice === option.value ? 'lw-button--primary' : 'lw-button--ghost'}`}
+              className={
+                choice === option.value
+                  ? 'lw-segmented__option lw-segmented__option--on'
+                  : 'lw-segmented__option'
+              }
               data-floor="20"
               data-hit="44"
               data-option={option.value}
@@ -280,10 +263,11 @@ export function CompareView({ taskId, spec }: CompareViewProps) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 'var(--s-4)' }}>
-        <label style={{ display: 'block' }}>
-          <span className="lw-section-label">{REASON_LABEL}</span>
+      <div className="lw-answer-group">
+        <label className="lw-field">
+          <span className="lw-list-label lw-list-label--flush">{REASON_LABEL}</span>
           <textarea
+            className="lw-textarea"
             data-field="reason"
             data-hit="44"
             maxLength={NOTE_MAX_CHARS}
@@ -293,20 +277,10 @@ export function CompareView({ taskId, spec }: CompareViewProps) {
             onChange={(event) => setReason(event.target.value.slice(0, NOTE_MAX_CHARS))}
             required
             rows={2}
-            style={{
-              border: '1px solid var(--paper-border-2)',
-              borderRadius: 'var(--r-button)',
-              display: 'block',
-              font: 'inherit',
-              marginTop: 'var(--s-2)',
-              minHeight: '44px',
-              padding: 'var(--s-2)',
-              width: '100%',
-            }}
             value={reason}
           />
         </label>
-        <p className="lw-placeholder" data-counter="reason" style={{ margin: 'var(--s-1) 0 0' }}>
+        <p className="lw-count" data-counter="reason">
           {`${reason.length}/${NOTE_MAX_CHARS}`}
         </p>
       </div>
@@ -318,7 +292,7 @@ export function CompareView({ taskId, spec }: CompareViewProps) {
       </div>
 
       {error === null ? null : (
-        <p data-error="compare" style={{ color: 'var(--ink-text)', margin: 'var(--s-3) 0 0' }}>
+        <p className="lw-error-line" data-error="compare">
           {error}
         </p>
       )}
@@ -337,21 +311,8 @@ function PairCard({
   onZoom: () => void;
 }) {
   return (
-    <div
-      className="lw-card"
-      data-card={label.toLowerCase()}
-      style={{ minWidth: 0, padding: 'var(--s-3)' }}
-    >
-      <p
-        style={{
-          color: 'var(--ink-text-2)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '16px',
-          margin: '0 0 var(--s-2)',
-        }}
-      >
-        {label}
-      </p>
+    <div className="lw-card lw-pair__card" data-card={label.toLowerCase()}>
+      <p className="lw-pair__label">{label}</p>
       <Option item={item} label={label} onZoom={onZoom} />
     </div>
   );
@@ -373,7 +334,7 @@ function Option({
 }) {
   if (item.kind === 'text') {
     return (
-      <p data-text={label.toLowerCase()} style={{ fontSize: '16px', margin: 0 }}>
+      <p className="lw-body lw-body--flush" data-text={label.toLowerCase()}>
         {item.text}
       </p>
     );
@@ -381,33 +342,20 @@ function Option({
 
   return (
     <button
+      className="lw-plain-button"
       data-hit="44"
       data-zoom={label.toLowerCase()}
       onClick={onZoom}
-      style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'block',
-        padding: 0,
-        width: '100%',
-      }}
       type="button"
     >
       {/* A plain `img`: the buyer's evidence, served from wherever the buyer put it, which
           `next/image` cannot size or optimise. */}
       <img
         alt={label === 'reference' ? 'reference' : `option ${label}`}
+        className="lw-thumb lw-thumb--square"
         loading="eager"
         referrerPolicy="no-referrer"
         src={item.url}
-        style={{
-          aspectRatio: '1 / 1',
-          borderRadius: 'var(--r-button)',
-          display: 'block',
-          objectFit: 'cover',
-          width: '100%',
-        }}
       />
     </button>
   );
@@ -425,17 +373,17 @@ function Zoomed({
 }) {
   return (
     <div data-zoomed={label}>
-      <div style={{ marginBottom: 'var(--s-4)' }}>
+      <div className="lw-answer-group">
         <Button onClick={onClose} variant="ghost">
           {CLOSE_LABEL}
         </Button>
       </div>
       <img
         alt={label === 'reference' ? 'reference' : `option ${label.toUpperCase()}`}
+        className="lw-thumb lw-thumb--full"
         loading="eager"
         referrerPolicy="no-referrer"
         src={item.url}
-        style={{ borderRadius: 'var(--r-card)', display: 'block', width: '100%' }}
       />
     </div>
   );
@@ -454,7 +402,7 @@ function TxChip({ tx }: { tx: string }) {
 function Waiting({ submission }: { submission: SubmitResponse | null }) {
   return (
     <div className="lw-card" data-state="waiting">
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-floor="20">
         {WAITING_LINE}
       </p>
       {submission === null ? null : <TxChip tx={submission.tx} />}
@@ -483,7 +431,7 @@ function SettledWithoutRelease({
 
   return (
     <div className="lw-card" data-state="settled">
-      <p data-floor="20" style={{ color: 'var(--refusal-on-paper)', margin: '0 0 var(--s-3)' }}>
+      <p className="lw-error-line" data-floor="20" data-tone="refusal">
         {line}
       </p>
       {submission === null ? null : <TxChip tx={submission.tx} />}

@@ -579,6 +579,16 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* The same meta with the space above it, and room for a chip on the line. */
+.lw-meta--top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-text-2);
+  margin: var(--s-3) 0 0;
+}
+
 /* The same meta, sitting inside a row that already spaces it. */
 .lw-meta--flush {
   margin: 0;
@@ -744,6 +754,13 @@ body {
   padding: var(--s-4);
 }
 
+/* The word, the figure and the unit share one baseline inside the pinned string. */
+.lw-paid__amount {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
 .lw-paid__word {
   font-family: var(--font-body);
   font-size: 16px;
@@ -805,6 +822,10 @@ body {
   color: var(--refusal-on-paper);
 }
 
+.lw-error-line--roomy {
+  margin: 0 0 var(--s-4);
+}
+
 .lw-error-line code {
   font-family: var(--font-mono);
   font-size: 15px;
@@ -833,6 +854,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+
+/* The same stack, with the space above it. */
+.lw-actions--top {
+  margin-top: var(--s-4);
 }
 
 /* A row of chips or a chip beside a line. */
@@ -887,6 +913,11 @@ body {
   margin: 0;
 }
 
+.lw-row--top {
+  align-items: baseline;
+  margin: var(--s-4) 0 0;
+}
+
 /* Body copy that is a note rather than an instruction. */
 .lw-note {
   font-family: var(--font-body);
@@ -897,12 +928,38 @@ body {
   margin: 0 0 var(--s-2);
 }
 
+.lw-note--last {
+  margin-bottom: var(--s-4);
+}
+
 .lw-body {
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.5;
   color: var(--ink-text);
   margin: 0 0 var(--s-3);
+}
+
+.lw-body--flush {
+  margin: 0;
+}
+
+.lw-body--top {
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.lw-body--roomy {
+  margin: 0 0 var(--s-4);
+}
+
+/* The same note, with the space above it. */
+.lw-note--top {
+  margin: var(--s-3) 0 0;
+}
+
+/* A second card under the first. */
+.lw-card--top {
+  margin-top: var(--s-4);
 }
 
 /* An id, an address or a hash: mono, and it breaks rather than overflowing the card. */
@@ -913,6 +970,28 @@ body {
   color: var(--ink-text);
   margin: 0 0 var(--s-3);
   overflow-wrap: anywhere;
+}
+
+.lw-proof-header {
+  margin-bottom: var(--s-5);
+}
+
+/* A link that is a way out rather than an action. */
+.lw-quiet-link {
+  color: var(--ink-text-2);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+/* A chip row with the space above it rather than below. */
+.lw-chips--stacked-top {
+  margin-top: var(--s-3);
+}
+
+.lw-proof-head__sep {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink-text-3);
 }
 
 /* The proof card's header row: `<type> · <title>` left, `proof` right. */
@@ -982,6 +1061,29 @@ body {
   margin: 0;
 }
 
+/* A labelled answer block — the picker, the note field. */
+.lw-answer-group {
+  margin: 0 0 var(--s-4);
+}
+
+/* A label and its short input, side by side. */
+.lw-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-4);
+}
+
+.lw-field {
+  display: block;
+}
+
+/* The same label, where the block around it already does the spacing. */
+.lw-list-label--flush {
+  display: block;
+  margin: 0 0 var(--s-2);
+}
+
 /* The counter under a capped field, and any other mono aside. */
 .lw-count {
   font-family: var(--font-mono);
@@ -1017,6 +1119,26 @@ body {
 .lw-pair__card {
   min-width: 0;
   padding: var(--s-3);
+}
+
+.lw-pair--flush {
+  margin: 0;
+}
+
+.lw-pair__card--reference {
+  margin-bottom: var(--s-4);
+}
+
+/* The chosen side of the pair, above the money on the receipt. */
+.lw-chosen {
+  margin: 0 0 var(--s-3);
+}
+
+.lw-chosen__word {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--verified-700);
+  margin: 0;
 }
 
 .lw-pair__label {
@@ -1068,6 +1190,10 @@ body {
 
 .lw-thumb--full {
   border-radius: var(--r-card);
+}
+
+.lw-thumb--tag {
+  border-radius: var(--r-tag);
 }
 
 /* The abuse-class picker: six 44 px rows separated by hairlines. */
