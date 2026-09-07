@@ -25,8 +25,12 @@ contract MockIdentityRegistry is IERC8004Identity, IERC721Errors {
     /// @dev What OpenZeppelin's `_safeMint` does after minting to a contract.
     function _checkOnERC721Received(address to, uint256 tokenId) private {
         if (to.code.length == 0) return;
-        try IERC721Receiver(to).onERC721Received(msg.sender, address(0), tokenId, "") returns (bytes4 retval) {
-            if (retval != IERC721Receiver.onERC721Received.selector) revert ERC721InvalidReceiver(to);
+        try IERC721Receiver(to).onERC721Received(msg.sender, address(0), tokenId, "") returns (
+            bytes4 retval
+        ) {
+            if (retval != IERC721Receiver.onERC721Received.selector) {
+                revert ERC721InvalidReceiver(to);
+            }
         } catch {
             revert ERC721InvalidReceiver(to);
         }
