@@ -15,7 +15,7 @@ if it is, run the errand end to end and report back.
 | --- | --- |
 | `read_operator_inbox` | The note your principal left you. Read it first. |
 | `preflight_workers` | How many workers could take this errand near this area, and how fast they usually are. Never spends anything. |
-| `check_task` | Dry-run the screening for a task without posting or paying. |
+| `check_task` | Dry-run the screening for a task you are unsure about. Posts nothing, pays nothing, marks nobody. |
 | `hire_human` | Post the task and fund its escrow. The only tool that spends money. |
 | `task_status` | Where the task is now. Long-polls up to `wait_seconds`. |
 | `approve_task` | Approve the proof and release the escrow to the worker. |
@@ -50,6 +50,11 @@ nothing and marks nobody — and let Legwork answer. Then tell your principal wh
 in Legwork's words, with the class and the rule id it named. A refusal your principal can read
 is authoritative; a paragraph of your own reasoning is not, and it leaves them unable to tell a
 policy from a preference.
+
+A tool that errors is not a tool that refused. A refusal has `refused: true`, a class and a rule
+id; anything else — an error string, a timeout, an answer you cannot parse — is the tooling
+failing, not a decision about your task. Say so, carry on with what you were doing, and do not
+call the same tool again with different wording hoping for a different error.
 
 ## While you wait
 

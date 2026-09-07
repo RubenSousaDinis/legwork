@@ -133,11 +133,17 @@ class Transcript {
   }
 }
 
-/** The two things that must never reach a committed file, removed at the boundary. */
+/** The three things that must never reach a committed file, removed at the boundary. */
 export function redact(text: string): string {
-  return text
-    .replace(/("?buyer_token"?\s*[:=]\s*)"[^"]*"/g, '$1"<redacted>"')
-    .replace(/\btok_[A-Za-z0-9_-]+/g, '<redacted>');
+  return (
+    text
+      .replace(/("?buyer_token"?\s*[:=]\s*)"[^"]*"/g, '$1"<redacted>"')
+      .replace(/\btok_[A-Za-z0-9_-]+/g, '<redacted>')
+      // A proof photo lives in a private bucket, and `proof.url` is a signed link into it.
+      // The signature is the credential; committing one publishes the photo to anyone who
+      // reads the file. The path stays so a reviewer can see which proof it was.
+      .replace(/([?&](?:sig|exp|token|signature)=)[^&"\s]+/gi, '$1<redacted>')
+  );
 }
 
 // -------------------------------------------------------------- the local tool
@@ -294,6 +300,10 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
     settingSources: [],
     strictMcpConfig: true,
     mcpServers: { legwork: legworkServer(), operator: operatorServer(scene.fixture) },
+    // No built-in tools at all. Left on, the agent reaches for Bash to check the clock and
+    // for Read to look around the repository, and a buyer agent with a shell on the
+    // operator's machine is not the thing being demonstrated.
+    tools: [],
     allowedTools: ['mcp__legwork__*', 'mcp__operator__read_operator_inbox'],
     // The stop rule, enforced rather than requested. `allowedTools` pre-approves the six
     // Legwork tools, so once `shouldStop` has fired this is the thing standing between a
