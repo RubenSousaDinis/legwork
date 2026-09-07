@@ -62,8 +62,11 @@ export type TaskView = z.infer<typeof TaskView>;
 
 export const Posted = z.object({
   task_id: TaskId,
-  buyer_token: z.string().min(32),
-  status: z.literal('open'),
+  /** Issued once, on the 201 that created the row; a replayed authorization answers `null` and `replay: true`. */
+  buyer_token: z.string().min(32).nullable(),
+  /** Present and `true` only when the same authorization was sent again: the task is re-read, not re-posted. */
+  replay: z.literal(true).optional(),
+  status: Status,
   spec_hash: TxHash,
   price_usdc: z.number(),
   eta_seconds: z.number().int().nonnegative(),

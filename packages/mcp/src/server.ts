@@ -70,9 +70,14 @@ function handlers(ctx: ToolContext): Record<keyof typeof MCP_TOOLS, Handler> {
         return toolError(LOCAL_HIRE_MISSING, { dashboard_url: dashboardUrlFor(ctx) });
       }
       const result = await ctx.hireHuman(input, ctx);
+      // A local hire that failed (a 400, a cap, an unreachable API) comes back with `isError`
+      // on the payload; hoisting it onto the tool result is what lets `contractChecked` skip a
+      // shape the `hire_human` output union does not describe, and what tells the agent to stop.
+      const failed = (result as { isError?: unknown }).isError === true;
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result) }],
         structuredContent: result,
+        ...(failed ? { isError: true as const } : {}),
       };
     }) as unknown as Handler,
   };
