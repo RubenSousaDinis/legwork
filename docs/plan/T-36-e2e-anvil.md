@@ -140,4 +140,4 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open `run.sh` first: the two guards (chain id, localhost RPC) before anything starts; keys derived from the mnemonic and never echoed; `trap` cleanup; bounded waits. Then `assert.ts`: every delta is against `before.json`, not an absolute; the relayer `−3_450_000n` message states why; the public-body checks look for absent keys, not for values. Confirm nothing was added under `.github/` and that the README's workflow shape needs no repository secret.
 
 ## 15. Round 2+
-—
+— Merged first round (#134) after two lead PRs the harness asked for (#135: the API and scripts on anvil; #136: the feed's seeded flag for a seeded worker's task, and `allowedAssets` in `demo:run`). Ruled: §2.7/§2.8 the agent's way; the CI job added by the lead from the README's shape.
