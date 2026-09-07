@@ -2,10 +2,11 @@
   "name": "@legwork/examples",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "echo 'no tests'",
+    "test": "vitest run",
     "build": "tsc --noEmit"
   },
   "dependencies": {
