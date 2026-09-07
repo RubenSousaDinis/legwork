@@ -1,7 +1,8 @@
 /**
  * The green headless loop: post → claim → submit → release, on Base Sepolia, in one command.
  *
- *   pnpm demo:run [--agent-id 9196] [--auto-release] [--place scripts/fixtures/demo-place.json]
+ *   pnpm demo:run [--agent-id 9196] [--auto-release] [--no-worker] [--place scripts/fixtures/demo-place.json]
+ *   `--no-worker` posts and then waits for a real worker — the phone — to claim and submit (the rehearsal).
  *   `--agent-id` defaults to BUYER_AGENT_ID from the env; `--agent-id 0` posts without one.
  *
  * This is the money beat with no phone and no human in it. The buyer is the demo agent
@@ -516,17 +517,20 @@ export async function assertReleaseReceipt(
 export interface DemoArgs {
   agentId?: string;
   autoRelease: boolean;
+  /** The rehearsal: post, then wait for a worker on a phone instead of running the CLI worker. */
+  noWorker: boolean;
   place: string;
 }
 
 export function parseArgs(argv: readonly string[]): DemoArgs {
-  const args: DemoArgs = { autoRelease: false, place: DEFAULT_PLACE_PATH };
+  const args: DemoArgs = { autoRelease: false, noWorker: false, place: DEFAULT_PLACE_PATH };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = argv[i + 1];
     if (flag === '--agent-id' && value) { args.agentId = value; i += 1; }
     else if (flag === '--place' && value) { args.place = value; i += 1; }
     else if (flag === '--auto-release') args.autoRelease = true;
+    else if (flag === '--no-worker') args.noWorker = true;
   }
   // The demo agent's own ERC-8004 id (T-32) is the default: a filmed hire must carry it, or
   // the agent's record never gets `paid-on-proof`. `--agent-id` still overrides; `--agent-id 0` opts out.
@@ -604,33 +608,48 @@ async function main(): Promise<void> {
     });
   }
 
-  // The worker half, in-process and silent: `demo-run` owns the output.
-  let run;
-  try {
-    run = await runWorkerOnce({
-      apiBaseUrl,
-      privateKey: workerKey,
-      place,
-      taskId: posted.taskId,
-      log: () => undefined,
+  // The worker half. In-process and silent by default — `demo-run` owns the output — or, with
+  // `--no-worker`, a person on a phone: the task stays open on the board until they claim it,
+  // and the script waits at human pace (thirty minutes a step) rather than the CLI worker's.
+  let run: { worker: Address; claimTx?: string; submitTx?: string; autoDisputeReason?: string };
+  if (args.noWorker) {
+    process.stderr.write(`demo-run: task ${posted.taskId} is open — claim it on the phone (waiting up to 30 min)\n`);
+    const claimed = await waitForStatus(apiBaseUrl, posted.taskId, posted.buyerToken, ['claimed', 'submitted'], 1_800_000, 'claim');
+    const onChain = await publicClient.readContract({
+      address: deployment.addresses.taskEscrow,
+      abi: escrowAbi,
+      functionName: 'getTask',
+      args: [BigInt(posted.taskId)],
     });
-  } catch (error) {
-    if (error instanceof ClaimConflictError) throw new DemoFailure('claim', error.code);
-    const stage = error instanceof StageError ? error.stage : 'worker';
-    if (direct && stage === 'list') {
-      throw new DemoFailure(
-        'post',
-        `BLOCKED: task ${posted.taskId} was posted onchain but never listed by GET /tasks/list — reconciling a direct post into an API row is T-17's, not T-29's`,
-      );
+    run = { worker: getAddress((onChain as { worker: Address }).worker), claimTx: claimed.tx.claim ?? undefined };
+    process.stderr.write(`demo-run: claimed by ${run.worker} — submit the proof on the phone (waiting up to 30 min)\n`);
+  } else {
+    try {
+      run = await runWorkerOnce({
+        apiBaseUrl,
+        privateKey: workerKey,
+        place,
+        taskId: posted.taskId,
+        log: () => undefined,
+      });
+    } catch (error) {
+      if (error instanceof ClaimConflictError) throw new DemoFailure('claim', error.code);
+      const stage = error instanceof StageError ? error.stage : 'worker';
+      if (direct && stage === 'list') {
+        throw new DemoFailure(
+          'post',
+          `BLOCKED: task ${posted.taskId} was posted onchain but never listed by GET /tasks/list — reconciling a direct post into an API row is T-17's, not this script's`,
+        );
+      }
+      throw new DemoFailure(stage, error instanceof Error ? error.message : String(error));
     }
-    throw new DemoFailure(stage, error instanceof Error ? error.message : String(error));
-  }
-  if (run.autoDisputeReason) {
-    throw new DemoFailure('submit', `the submit auto-disputed: ${run.autoDisputeReason}`);
+    if (run.autoDisputeReason) {
+      throw new DemoFailure('submit', `the submit auto-disputed: ${run.autoDisputeReason}`);
+    }
   }
   stages.push({ stage: 'CLAIMED', tx: run.claimTx ?? '' });
 
-  const submitted = await waitForStatus(apiBaseUrl, posted.taskId, posted.buyerToken, ['submitted'], 180_000, 'submit');
+  const submitted = await waitForStatus(apiBaseUrl, posted.taskId, posted.buyerToken, ['submitted'], args.noWorker ? 1_800_000 : 180_000, 'submit');
   stages.push({ stage: 'SUBMITTED', tx: run.submitTx ?? submitted.tx.submit ?? '' });
 
   if (args.autoRelease || direct) {
