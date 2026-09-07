@@ -21,9 +21,9 @@
  * environment, and never logged, never written to the transcript and never shown to the model.
  *
  * **The loop never retries a refusal.** `loop-rules.ts` decides that, on the `refused` flag
- * alone. Once it says stop, the run is interrupted before the model can call another Legwork
- * tool — the prompt tells the model not to retry, and this is what makes that true whatever
- * the model does.
+ * alone. Once it says stop, a `PreToolUse` gate denies every Legwork tool for the rest of the
+ * run: the prompt tells the model not to retry, and the gate is what makes that true whatever
+ * the model does. The model can still write its report, which is the other half of the rule.
  */
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -257,18 +257,22 @@ async function dryRun(scene: Scene, out: Transcript): Promise<number> {
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
-/** A tool result arrives as MCP content blocks; the JSON body is the text of the first one. */
-function resultBody(block: { content?: unknown }): Record<string, unknown> | null {
+/** A tool result arrives as MCP content blocks; the body is the text of them, joined. */
+function resultText(block: { content?: unknown }): string {
   const content = block.content;
-  const text =
-    typeof content === 'string'
-      ? content
-      : Array.isArray(content)
-        ? content
-            .map((part) => (asRecord(part).type === 'text' ? String(asRecord(part).text ?? '') : ''))
-            .join('')
-        : '';
-  if (!text.trim()) return null;
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((part) => (asRecord(part).type === 'text' ? String(asRecord(part).text ?? '') : ''))
+    .join('');
+}
+
+/**
+ * The parsed body, or null when the server answered with something that is not JSON — an MCP
+ * error, for instance. The null case is written to the transcript as it stands rather than
+ * dropped: a record that quietly omits the answers it could not parse is not a record.
+ */
+function asJson(text: string): Record<string, unknown> | null {
   try {
     return asRecord(JSON.parse(text));
   } catch {
@@ -278,6 +282,8 @@ function resultBody(block: { content?: unknown }): Record<string, unknown> | nul
 
 async function runScene(scene: Scene, out: Transcript): Promise<number> {
   const insertLines: string[] = [];
+  /** Set once, by `shouldStop`, and read by the PreToolUse gate below. */
+  let refused: Record<string, unknown> | null = null;
   const options: Options = {
     model: MODEL,
     systemPrompt: readFileSync(join(HERE, 'prompt.md'), 'utf8'),
@@ -289,6 +295,29 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
     strictMcpConfig: true,
     mcpServers: { legwork: legworkServer(), operator: operatorServer(scene.fixture) },
     allowedTools: ['mcp__legwork__*', 'mcp__operator__read_operator_inbox'],
+    // The stop rule, enforced rather than requested. `allowedTools` pre-approves the six
+    // Legwork tools, so once `shouldStop` has fired this is the thing standing between a
+    // model that decides to try again and a second call the screening gate would mark.
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'mcp__legwork__.*',
+          hooks: [
+            async () =>
+              refused
+                ? {
+                    hookSpecificOutput: {
+                      hookEventName: 'PreToolUse' as const,
+                      permissionDecision: 'deny' as const,
+                      permissionDecisionReason:
+                        'that request was refused; do not rephrase and retry — report the refusal to your principal',
+                    },
+                  }
+                : {},
+          ],
+        },
+      ],
+    },
     // The binary's insert goes to stderr, which is where the terminal cards (T-44) come from.
     stderr: (data) => {
       for (const line of data.split('\n')) {
@@ -298,19 +327,12 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
   };
 
   const run = query({ prompt: scene.ask, options });
-  let refused: Record<string, unknown> | null = null;
 
   for await (const message of run) {
     if (message.type === 'assistant') {
       for (const block of message.message.content) {
         if (block.type === 'text' && block.text.trim()) out.write(`**agent** ${block.text.trim()}\n`);
         if (block.type === 'tool_use') {
-          // A tool call after a refusal is the one thing this loop exists to prevent.
-          if (refused) {
-            out.write('_loop stopped: a refusal is final, so the run was interrupted before a second call._\n');
-            await run.interrupt();
-            return 1;
-          }
           out.write(`**tool** \`${block.name}\``);
           out.block('json', JSON.stringify(block.input, null, 2));
         }
@@ -320,15 +342,29 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
     if (message.type === 'user' && Array.isArray(message.message.content)) {
       for (const block of message.message.content) {
         if (asRecord(block).type !== 'tool_result') continue;
-        const body = resultBody(asRecord(block) as { content?: unknown });
-        if (!body) continue;
+        const text = resultText(asRecord(block) as { content?: unknown });
+        if (!text.trim()) continue;
+
+        const body = asJson(text);
+        if (!body) {
+          // Not JSON: an MCP error, or a tool that answered in prose. It goes in as it came.
+          out.write('**result** (not JSON)');
+          out.block('text', text.trim());
+          continue;
+        }
 
         // Worker text leaves this loop only inside the wrapper, never as bare prose.
         if (body.answer !== undefined) body.answer = wrapWorkerText(body.answer);
 
         out.write('**result**');
         out.block('json', JSON.stringify(body, null, 2));
-        if (shouldStop(body)) refused = body;
+
+        // The one decision that ends a scene, made in one place. From here the PreToolUse
+        // gate above denies every Legwork tool, so the model can only report and stop.
+        if (shouldStop(body)) {
+          refused = body;
+          out.write('_refused — the loop stops here and reports; it does not rephrase and retry._\n');
+        }
       }
     }
 
@@ -338,7 +374,7 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
         out.block('text', insertLines.join('\n'));
       }
       out.write(`_run ended: ${message.subtype}, ${message.num_turns} turns._`);
-      return message.is_error ? 1 : 0;
+      return message.is_error && !refused ? 1 : 0;
     }
   }
   return 0;

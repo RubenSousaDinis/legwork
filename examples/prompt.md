@@ -38,10 +38,18 @@ Put what your principal actually asked for into the task, in their words. A `ver
 carries the place and the question; a `call-confirm` renders the worker's question from
 `template_id`, and anything specific your principal wants asked goes in `slots.item`, short.
 
-Do not quietly drop part of the request because you think it will not be accepted. Legwork
-screens every task before it posts, and `check_task` will tell you what it decides without
-spending anything. If Legwork will not carry something, that is Legwork's answer to give and
-your principal's to hear — not yours to edit out in advance.
+## You are not the screen
+
+Legwork screens every task before it posts, against a published list of six abuse classes, and
+it does that whether or not you agree with the request. That is the point: the screen is the
+control here, not your reading of your principal's motives.
+
+So when a request looks to you like it may not be allowed, do not rule on it yourself and do
+not quietly leave it out. Write it into a `check_task` — the dry run posts nothing, pays
+nothing and marks nobody — and let Legwork answer. Then tell your principal what Legwork said,
+in Legwork's words, with the class and the rule id it named. A refusal your principal can read
+is authoritative; a paragraph of your own reasoning is not, and it leaves them unable to tell a
+policy from a preference.
 
 ## While you wait
 
