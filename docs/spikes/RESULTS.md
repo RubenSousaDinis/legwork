@@ -145,11 +145,109 @@ decision: Studio is where the subgraph lives for the demo and its query URL is w
 
 _live Studio data, Day 8 (T-46)_
 
-outcome: pending
+outcome: `preflight_workers` answers from the live Studio subgraph, and every number it returned
+is the number the dashboard card renders — field for field, same minute. The split is **not** the
+`4 active · 1 verified · 3 seeded` the brief predicted. At capture the tool returned
+**1 active · 0 verified · 1 seeded**. Nothing had aged out of the seven-day window and no re-seed
+was needed: the shortfall is chain state, not the window and not the reduction. The median label
+true at capture was **`seeded`** — `n_real: 0`, `median_source: "seeded"` — so the card reads
+`median 0 min (seeded)` and nothing here presents it as a measured figure.
 
-evidence: pending
+**The call.** Made against the deployed MCP server at `POST <API_BASE_URL>/mcp` (streamable HTTP,
+stateless), tool `preflight_workers`, arguments `{"task_type":"verify-open","area":"ez1dp"}` —
+`verify-open` is the funded row of `demo-data.json` and `ez1dp` is Leiria's geohash-5. Captured
+`2026-09-07T15:39:54Z`:
 
-decision: pending
+```json
+{
+  "active": 1,
+  "verified": 0,
+  "seeded": 1,
+  "n_real": 0,
+  "score_floor": 1,
+  "median_minutes": 0,
+  "median_source": "seeded",
+  "dashboard_url": "https://legwork-dashboard.vercel.app"
+}
+```
+
+Not the fixture. `diff` of that JSON against `packages/subgraph-client/fixtures/preflight.json`
+prints `OK: live`; the fixture describes four `0x5eed…`/`0x0417…` addresses that do not exist on
+Base Sepolia.
+
+**The seven-day window: every counted timestamp is inside it.** `{ workers(where:{seeded:true}){ id
+seeded lastCompletedAt } }` against the query URL, checked against `now − 604800`:
+
+```
+0x1d6662abfbcc49751235717fd18a30242cbfad37 1788781022 IN
+0x24f9c1b734d304dd7c753c5253656c1389e076c6 1788780998 IN
+0x7b4eb10df800881f73bc1d85bdef02f82386271e 1788782124 IN
+0x87b90a409b0a84c378f8b11903eccdaa2cf74cab 1788781006 IN
+0x98e4682f8a1a6201907eeab9f7826a0ba4e408a9 1788781014 IN
+```
+
+Five of the 20 seeded workers carry a `lastCompletedAt` at all; all five are `IN`, none within a
+day of the edge — the newest is 1788782124 against a cutoff of 1788190641, some four hours before
+capture rather than the six days the brief anticipated. The seeded lifecycles were written later
+than Day 2. **No re-seed was needed and none was run**; the window constant, the `sinceTs` argument
+and the fixtures are untouched.
+
+The index is at the head, so the numbers are not a lag artefact: `_meta.block.number = 46513589`,
+`hasIndexingErrors: false`, against an `eth_blockNumber` of `46513591` — two blocks on a 2-second
+chain.
+
+**Why it is 1 · 0 · 1 and not 4 · 1 · 3.** Two separate gaps, both in what is onchain, neither in
+the tool:
+
+- **`verified: 0`** — no worker with `seeded: false` exists in the index at all. The demo phone's
+  World ID registration has not landed onchain, so there is no real worker for the tool to count.
+  This matches the Graph section above, which already records the pool as 0 real and +20 seeded
+  (demo data) until a real worker registers.
+- **`seeded: 1` where the card copy expects 3** — the 20 seeded workers sit four apiece across five
+  geohash-5 cells (`ez1dp`, `ez5kg`, `ez5ks`, `ez5kt`, `ez5kv`), only one of which is the demo
+  area. Of the four seeded workers in `ez1dp`, three (`0x24418398…`, `0x79d2de6f…`, `0xbc3eb722…`)
+  have `completed: 0` and `lastCompletedAt: null`, so they are registered but not active. One
+  (`0x1d6662ab…`) has completed a task inside the window, and it is the whole of the count.
+
+The reduction itself is correct on this data, checked by hand against `computePreflight`: `active`
+counts `ez1dp` workers whose `taskTypes` carries the `verify-open` bit and whose `lastCompletedAt`
+is inside the window, which is exactly one worker; `score_floor` falls back to the seeded minimum
+(`1`) because no verified worker exists; `median_source` is `"seeded"` because `n_real` is `0`,
+which is the pairing §8 asks for. The median draws on two released `ez1dp` tasks (ids `5` and `6`),
+one more than the single active worker, because a task is matched on the task's own `area` while a
+worker is matched on the worker's — task `6` was done by `0x7b4eb10d…`, whose `Worker.area` is
+`ez5kv`. Both were claimed and submitted two seconds apart, so the median is 0.03 minutes and
+rounds to `0`.
+
+**The card.** `docs/media/preflight-card.png`, captured from the deployed dashboard at
+`2026-09-07T15:40:07Z`, twelve seconds after the tool call above. It reads `1 active · 0 verified ·
+1 seeded` over `score ≥ 1 · median 0 min (seeded)`. Every number on it appears in the JSON:
+`1 = active`, `0 = verified`, `1 = seeded`, `1 = score_floor`, `0 min = median_minutes`, `(seeded)
+= median_source`. Nothing was edited, rounded or re-run for a better figure.
+
+In plain words: one worker has finished a `verify-open` errand in Leiria's area in the last seven
+days, that worker is a seeded demo worker and not a person, no World ID-verified worker is in the
+pool yet, and the only completion times on record are seeded ones that round to zero minutes — so
+the median is labelled `seeded` and is not a measurement of anybody's walk.
+
+evidence: the four §9 commands, run by hand against the deployed MCP server, the Studio query URL
+and Base Sepolia, with their output pasted verbatim into the T-46 PR alongside the PNG. §9's first
+command is written `npx @legwork/mcp call preflight_workers …`; it cannot run, because `@legwork/mcp`
+is a private workspace package (`npm error 404 '@legwork/mcp@*' is not in this registry`) whose
+`bin` points at `dist/bin/legwork-mcp.js`, and no package in this repo emits `dist` — `build` is
+`tsc --noEmit` everywhere. The call was made instead as a JSON-RPC `tools/call` against the hosted
+mount, which is what §2 asks for either way: through the deployed MCP server, not the client and
+not the fixture.
+
+decision: the tool, the reduction and the card are correct and honest, and the numbers behind them
+are not the demo's numbers yet. `4 active · 1 verified · 3 seeded` needs two things that are not
+this task's to do: the demo phone registered onchain through the World ID flow, and seeded
+lifecycles for the other `ez1dp` workers. `POST /admin/seed-demo` cannot supply the second — it
+inserts rows into the Task API's Postgres with `demo-data.json`'s placeholder `tx_post` and never
+touches the chain, so it can move nothing the subgraph reads. Widening the window, editing
+`sinceTs` or pointing the card at the fixture would each turn a true small number into a false
+large one; none was done. The still in `docs/media/preflight-card.png` is the honest Day-8 state
+and should be re-shot once the pool is real.
 
 ## Timing
 
