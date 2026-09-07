@@ -238,6 +238,67 @@ keys keep T-01a's nesting under `addresses`, with `usdc`, `treasury`, `relayer`,
 `startBlock`, `deployedAt` and `txs` added around that shape — `parseDeployment` ignores keys it
 does not know, so the provenance fields cost nothing downstream.
 
+## Identity
+
+_T-32 — the Task API's ERC-8004 identity, and one released task carrying a real agent id_
+
+outcome: **blocked at step A.** `AbuseMark.registerIdentity` cannot succeed against the deployed
+AbuseMark `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6`. The ERC-8004 IdentityRegistry mints with
+`_safeMint` — S5 above established that and left T-13 the choice of holding the identity in a
+contract or in an EOA — and the deployed AbuseMark implements no `onERC721Received`, so the mint
+to `address(this)` is rejected by the registry's receiver check. `eth_call` of
+`registerIdentity(agentURI)` from the owner reverts
+`ERC721InvalidReceiver(0x1848Db2d813A66b735f61a73c75456ca32b42Fb6)` (selector `0x64a0ae92`, the
+argument is the AbuseMark address itself). Nothing was sent: `scripts/register-identity.ts`
+simulates before it signs, so both the live invocation and `--only-register` stopped on the
+simulation with `selfAgentId` still `0`, `taskCount()` still 5 and the relayer float untouched at
+18100000. Steps B–E are written and dry-run clean; they are held rather than run, because the fix
+is a new AbuseMark and `TaskEscrow.abuseMark` has no setter — so a task released against today's
+AbuseMark would be evidence about an address that is on its way out.
+
+| field | value |
+|---|---|
+| `selfAgentId` | `0` — not registered |
+| `agentURI` | `data:application/json;base64,eyJ0eXBlIjoiaHR0cHM6Ly9laXBzLmV0aGVyZXVtLm9yZy9FSVBTL2VpcC04MDA0I3JlZ2lzdHJhdGlvbi12MSIsIm5` … (first 120 of 325 chars) |
+| `agentURI` source | `data-uri` — `DASHBOARD_URL` is unset, so the dashboard's `/agent.json` was never reachable to answer (lane D) |
+| `ownerOf(selfAgentId)` | not applicable — id `0` is a live third-party agent on the registry (`0x21fdEd74C901129977B8e28C2588595163E1e235`), not ours; `0` is the "unregistered" sentinel and must never be looked up |
+| register tx | none — the call reverts in simulation |
+| `BUYER_AGENT_ID` | not minted. `IdentityRegistry.register(agentURI)` from the buyer `0xc1286562DCD771eD76ED59e3D2A51DCe92d349d7` simulates clean, so step B is one command away once step A lands |
+| lifecycle txs | none — task 6 was not posted; `getTask(6)` is still all zeros |
+| `Outcome` event | none |
+| `getSummary` | not runnable — it needs the subject agent id from step B |
+
+**What the pipe needs.** `AbuseMark` must be able to receive an ERC-721, or the identity must be
+held somewhere that already can. That is a T-13 contract change plus a T-14 redeploy, and the
+redeploy reaches `TaskEscrow` too: `TaskEscrow.abuseMark` is set at construction and there is no
+`setAbuseMark`, so a new AbuseMark address cannot be wired into the deployed escrow. T-32 re-runs
+whole on the new addresses; the script is idempotent and skips any step already done.
+
+**What is already proven.** The rest of the chain of reasoning holds without step A.
+`TaskEscrow._release` calls `abuseMark.outcome(buyerAgentId, taskId, 1)` whenever `buyerAgentId`
+is non-zero and never reads `selfAgentId`; the ReputationRegistry gates on the subject agent id
+and not on the caller (S5), so AbuseMark can write `paid-on-proof` against a buyer-owned id
+whether or not it holds an identity of its own. The identity is what the pitch line and the
+dashboard chip need, not what the feedback write needs.
+
+**Two notes for the re-run.** `getSummary` will not take an empty `clientAddresses` array — the
+deployed registry reverts (S5) — so §2's unfiltered read is made inside a `try` and its revert is
+printed rather than hidden; `getClients(agentId)` is printed beside it and answers the same
+question. And the summary is visible a block later than its own receipt, so every read-back polls.
+
+the Task API's ERC-8004 identity is operator-attested in v0
+
+the agent id is verified against the IdentityRegistry, never trusted from a request body
+
+evidence: `pnpm tsx scripts/register-identity.ts --dry-run` — chain id 84532, all six planned
+calls printed, `registerIdentity` the only simulation that reverts. `pnpm tsx
+scripts/register-identity.ts` and `… --only-register` both exit 1 on that same simulation without
+sending. Full output pasted in PR #124.
+
+decision: pending the lead — T-13 makes AbuseMark an ERC-721 receiver (or the identity moves to an
+EOA and `registerIdentity` changes shape), T-14 redeploys AbuseMark and TaskEscrow, then T-32
+re-runs and fills this section in.
+
 ## Locked architecture
 
 - credential level: selfie | orb → narration variant: A | B — _pending_
