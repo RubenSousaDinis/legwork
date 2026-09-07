@@ -460,3 +460,46 @@ describe('noIdentityLogsOnly', () => {
     expect(await screeningRows()).toHaveLength(0);
   });
 });
+
+// ------------------------------------------ the hire.ts object shape (lead handover)
+
+describe('markIfIdentified (hire.ts object shape)', () => {
+  it('marks a verified id on the signer key and records the claim', async () => {
+    fake.setAgentIdentity(AGENT_ID, PAYER, WALLET_B);
+
+    const result = await markIfIdentified(
+      { agentId: AGENT_ID, verified: true, classId: 5, specHash: SPEC_HASH, payer: PAYER, claimed: CLAIMED },
+      deps(),
+    );
+
+    expect(result.marked).toBe(true);
+    expect(markCalls()).toEqual([{ fn: 'mark', role: 'signer', args: [AGENT_ID, 5, SPEC_HASH] }]);
+    const rows = await marksLogRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ outcome: 'marked', agent_id: '1207', agent_id_claimed: '1207' });
+  });
+
+  it('logs no_identity for an unverified caller, with the claim, without a read or a write', async () => {
+    const result = await markIfIdentified(
+      { agentId: 0n, verified: false, classId: 5, specHash: SPEC_HASH, payer: PAYER, claimed: '9' },
+      deps(),
+    );
+
+    expect(result).toEqual({ marked: false });
+    expect(fake.calls).toHaveLength(0);
+    const rows = await marksLogRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ outcome: 'no_identity', agent_id: null, agent_id_claimed: '9' });
+  });
+
+  it('is not_markable outside the six, with no row', async () => {
+    const result = await markIfIdentified(
+      { agentId: AGENT_ID, verified: true, classId: 7, specHash: SPEC_HASH, payer: PAYER },
+      deps(),
+    );
+
+    expect(result).toEqual({ marked: false });
+    expect(fake.calls).toHaveLength(0);
+    expect(await marksLogRows()).toHaveLength(0);
+  });
+});

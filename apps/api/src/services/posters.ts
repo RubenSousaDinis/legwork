@@ -14,9 +14,20 @@
 import { sql } from 'drizzle-orm';
 import type { Address } from 'viem';
 import { posters } from '../db/schema';
-import { defaultDeps, type ServiceDeps } from './identity';
+import { defaultDeps, type ChainReader, type ServiceDeps } from './identity';
 
 export { defaultDeps, type ServiceDeps } from './identity';
+
+/**
+ * What the poster ledger reads: the escrow's allowlist, the database and a clock. Narrower
+ * than `ServiceDeps` so `hire()` can hand over the deps it already holds — it never carries a
+ * signer key or a registry reader, and this ledger has no use for either.
+ */
+export interface PosterDeps {
+  chain: Pick<ChainReader, 'allowlistedBuyer'>;
+  db: ServiceDeps['db'];
+  now: ServiceDeps['now'];
+}
 
 export interface PosterRow {
   payer: string;
@@ -43,7 +54,7 @@ export function resetPosterCacheForTests(): void {
   allowlistCache.clear();
 }
 
-async function allowlistedBuyer(payer: Address, deps: ServiceDeps): Promise<boolean> {
+async function allowlistedBuyer(payer: Address, deps: PosterDeps): Promise<boolean> {
   const key = payer.toLowerCase();
   const now = deps.now().getTime();
   const hit = allowlistCache.get(key);
@@ -61,7 +72,7 @@ async function allowlistedBuyer(payer: Address, deps: ServiceDeps): Promise<bool
  */
 export async function upsertPoster(
   { payer, agentId }: { payer: Address; agentId: bigint | null },
-  deps?: ServiceDeps,
+  deps?: PosterDeps,
 ): Promise<void> {
   const d = deps ?? defaultDeps();
   const allowlisted = await allowlistedBuyer(payer, d);
@@ -82,7 +93,7 @@ export async function upsertPoster(
 }
 
 /** T-19's `/public/posters`, in one read. Oldest first, so the list reads as a history. */
-export async function listPosters(deps?: ServiceDeps): Promise<PosterList> {
+export async function listPosters(deps?: Pick<PosterDeps, 'db'>): Promise<PosterList> {
   const d = deps ?? defaultDeps();
   const rows = await d.db.select().from(posters).orderBy(posters.firstSeen);
   const list: PosterRow[] = rows.map((r) => ({

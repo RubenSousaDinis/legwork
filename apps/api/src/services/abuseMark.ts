@@ -164,11 +164,13 @@ export interface LegacyMarkParams {
   classId: number;
   specHash: Hex;
   payer: Hex;
+  /** The id the request body claimed, verified or not — `marks_log.agent_id_claimed`. */
+  claimed?: string;
 }
 
 export type LegacyMarkResult = { marked: false } | { marked: true; tx: Hex };
 
-export function markIfIdentified(p: LegacyMarkParams): Promise<LegacyMarkResult>;
+export function markIfIdentified(p: LegacyMarkParams, deps?: ServiceDeps): Promise<LegacyMarkResult>;
 export function markIfIdentified(
   cls: AbuseClass,
   specHash: Hex,
@@ -184,15 +186,18 @@ export function markIfIdentified(
  */
 export function markIfIdentified(
   clsOrLegacy: AbuseClass | LegacyMarkParams,
-  specHash?: Hex,
+  specHashOrDeps?: Hex | ServiceDeps,
   payer?: Address,
   agentId?: string,
   deps?: ServiceDeps,
 ): Promise<MarkResult | LegacyMarkResult> {
   // `typeof null === 'object'`, and `class: null` is exactly what a refusal outside the six
   // arrives as — so the null check is the one that keeps it on the `not_markable` road.
-  if (clsOrLegacy !== null && typeof clsOrLegacy === 'object') return legacyMark(clsOrLegacy, deps);
-  return markByClass(clsOrLegacy, specHash as Hex, payer as Address, agentId, deps);
+  if (clsOrLegacy !== null && typeof clsOrLegacy === 'object') {
+    // In the object form the second positional argument is the deps, when there is one.
+    return legacyMark(clsOrLegacy, typeof specHashOrDeps === 'object' ? specHashOrDeps : deps);
+  }
+  return markByClass(clsOrLegacy, specHashOrDeps as Hex, payer as Address, agentId, deps);
 }
 
 async function markByClass(
@@ -231,14 +236,15 @@ async function legacyMark(p: LegacyMarkParams, deps?: ServiceDeps): Promise<Lega
 
   const d = deps ?? defaultDeps();
   const payer = p.payer as Address;
+  const claimed = p.claimed ?? null;
   if (!p.verified) {
     await writeMarkLog(
-      { payer, claimed: null, agentId: null, cls, specHash: p.specHash, outcome: 'no_identity', tx: null },
+      { payer, claimed, agentId: null, cls, specHash: p.specHash, outcome: 'no_identity', tx: null },
       d,
     );
     return { marked: false };
   }
 
-  const result = await markVerified(cls, p.specHash, payer, p.agentId, p.agentId.toString(), d);
+  const result = await markVerified(cls, p.specHash, payer, p.agentId, claimed, d);
   return result.marked ? { marked: true, tx: result.mark_tx } : { marked: false };
 }

@@ -11,10 +11,20 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { AbuseClass } from '@legwork/shared';
+import { getDb } from '../db/client';
 import { screeningLog } from '../db/schema';
-import { defaultDeps, type ServiceDeps } from './identity';
+import type { ServiceDeps } from './identity';
 
-export { defaultDeps, type ServiceDeps } from './identity';
+export type { ServiceDeps } from './identity';
+
+/**
+ * A log writer needs a database and a clock, nothing else. Typed as exactly those two so
+ * `POST /check` — whose guarantee is that no chain is reachable from its imports — can write
+ * its rows without `identity.ts` and the chain singleton arriving behind them.
+ */
+export type ScreeningLogDeps = Pick<ServiceDeps, 'db' | 'now'>;
+
+const localDeps = (): ScreeningLogDeps => ({ db: getDb(), now: () => new Date() });
 
 /**
  * Exactly the columns of `screening_log`, and nothing else — no spec, no request body, no
@@ -55,9 +65,9 @@ function assertReason(reason: string): void {
   }
 }
 
-export async function logScreening(entry: ScreeningEntry, deps?: ServiceDeps): Promise<void> {
+export async function logScreening(entry: ScreeningEntry, deps?: ScreeningLogDeps): Promise<void> {
   assertReason(entry.reason);
-  const d = deps ?? defaultDeps();
+  const d = deps ?? localDeps();
   await d.db.insert(screeningLog).values({
     id: randomUUID(),
     at: entry.at ?? d.now(),
