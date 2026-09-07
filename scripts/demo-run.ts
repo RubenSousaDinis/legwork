@@ -395,7 +395,15 @@ async function readTask(apiBaseUrl: string, taskId: string, buyerToken: string, 
   return body as TaskView;
 }
 
-/** Long-polls until the task reaches one of `wanted`, or gives up. */
+/**
+ * Long-polls until the task reaches one of `wanted`, or gives up.
+ *
+ * Each pass nudges the sweeper first. The row is mirrored from `getTask`, and a Base Sepolia
+ * read can trail the receipt that caused it, so a task whose submit has landed can sit at
+ * `claimed` with `tx.submit` already beside it until something re-reads the chain. `/admin/sweep`
+ * reconciles every non-final row, which is exactly that re-read. It adds urgency and never
+ * authority: it cannot settle anything the contract would not settle for anyone.
+ */
 async function waitForStatus(
   apiBaseUrl: string,
   taskId: string,
@@ -406,6 +414,7 @@ async function waitForStatus(
 ): Promise<TaskView> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
+    await nudgeSweeper(apiBaseUrl);
     const view = await readTask(apiBaseUrl, taskId, buyerToken, LONGPOLL_MAX_S);
     if (wanted.includes(view.status)) return view;
     // The three ways a task ends up somewhere it will never leave. `resolved` is a settled
@@ -608,9 +617,8 @@ async function main(): Promise<void> {
   stages.push({ stage: 'SUBMITTED', tx: run.submitTx ?? submitted.tx.submit ?? '' });
 
   if (args.autoRelease || direct) {
-    // The window is short on purpose and disclosed on screen; the sweeper is only urgency.
+    // The window is short on purpose and disclosed on screen. `waitForStatus` sweeps as it polls.
     await sleep((Number(process.env['DEMO_DISPUTE_WINDOW_S'] ?? DEMO_DISPUTE_WINDOW_S) + 5) * 1000);
-    await nudgeSweeper(apiBaseUrl);
   } else {
     await approve(apiBaseUrl, posted.taskId, posted.buyerToken);
   }
