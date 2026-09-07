@@ -221,16 +221,18 @@ export PAYMENT_MODE=x402
 # deterministic KeywordFallbackClassifier — the screening backend that never calls a model.
 export LIVE_LLM=0
 unset ANTHROPIC_API_KEY
-# The facilitator: apps/api builds an HTTPFacilitatorClient from X402_FACILITATOR_URL and has
-# no toggle for the FakeFacilitator (apps/api/README.md's environment table has neither it nor
-# a pglite DATABASE_URL). The URL is left unset rather than pointed at x402.org, because a
-# class-C harness never calls a live facilitator; the name below is what the PR's ENV REQUEST
-# asks T-15 for, and apps/api ignores an env name it does not know.
+# The facilitator: the in-process FakeFacilitator, which needs no URL. A class-C harness never
+# calls a live facilitator, so the URL is unset rather than left pointing at x402.org.
 unset X402_FACILITATOR_URL
 export X402_FACILITATOR_MODE=fake
-# The database: pglite, in a directory under .out/ so a second run starts empty. `DATABASE_URL`
-# is honoured when the caller exports one, which is how a local Postgres can stand in.
-export DATABASE_URL="${DATABASE_URL:-pglite://$OUT/pglite}"
+# The database: pglite, in memory, so the second consecutive run starts on an empty one.
+# `DATABASE_URL` is honoured when the caller exports one — `pglite://<directory>` to keep a
+# run's rows for a post-mortem, or a Postgres URL to stand in for Supabase.
+export DATABASE_URL="${DATABASE_URL:-pglite://memory}"
+# The demo agent's ERC-8004 id lives on Base Sepolia; the anvil registry is a mock that has
+# never minted it. An inherited BUYER_AGENT_ID would make demo:run post an id this chain
+# cannot verify, so the harness posts without one.
+unset BUYER_AGENT_ID
 export DATA_MODE=live
 export DEMO_DISPUTE_WINDOW_S=120
 export ADMIN_API_KEY=e2e-admin
@@ -261,9 +263,11 @@ wait_for "the API" 60 api_ready || die "the API never answered GET /healthz — 
 
 export LEGWORK_API_URL="$API_URL"
 
+# No `--place`: `pnpm cli-worker` runs from `scripts/`, where a root-relative fixture path does
+# not resolve, and the default in `cli-worker.ts` is already this repository's demo place,
+# resolved against that file rather than against a working directory.
 say "starting the seeded CLI worker on area $AREA"
-pnpm cli-worker -- --area "$AREA" --place scripts/fixtures/demo-place.json --dry-run \
-  > "$OUT/worker.log" 2>&1 &
+pnpm cli-worker -- --area "$AREA" --dry-run > "$OUT/worker.log" 2>&1 &
 WORKER_PID=$!
 
 # ------------------------------------------------------------------------ 10. the demo run

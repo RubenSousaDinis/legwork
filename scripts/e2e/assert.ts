@@ -132,9 +132,8 @@ async function readBody(url: string): Promise<{ status: number; body: unknown }>
 /**
  * Every key name in a body, however deep.
  *
- * The public checks ask whether a key is *there*, never what it holds: a coordinate that
- * leaked as `lat: 0` is still a coordinate that leaked, and a rounded one lives under a name
- * of its own (`coordinate_rounded`).
+ * The public checks ask whether a key is *there*, never what it holds: a spec that leaked as
+ * an empty string is still a spec that leaked.
  */
 function keyNames(value: unknown, into: Set<string> = new Set()): Set<string> {
   if (Array.isArray(value)) {
@@ -148,8 +147,35 @@ function keyNames(value: unknown, into: Set<string> = new Set()): Set<string> {
   return into;
 }
 
-const hasPrivateKeyName = (keys: Set<string>): string | undefined =>
-  [...keys].find((k) => k === 'lat' || k === 'lon' || k.startsWith('exact_'));
+/**
+ * The path of the first coordinate key a stranger must not see, or `undefined`.
+ *
+ * `lat` and `lon` are allowed in exactly one place: directly inside `coordinate_rounded`, which
+ * is the three-decimal form the privacy rule prescribes and `round100m` in
+ * `apps/api/app/public/_shared.ts` produces. Anywhere else the pair is an exact coordinate that
+ * escaped the private task record, and `exact_*` is never allowed anywhere. Checking the shape
+ * rather than a flat set of names is what keeps "rounded, in its own container" a pass and
+ * "rounded, but spilled next to the proof hash" a failure.
+ */
+function firstPrivateCoordinateKey(value: unknown, path = '', insideRounded = false): string | undefined {
+  if (Array.isArray(value)) {
+    for (const [i, item] of value.entries()) {
+      const found = firstPrivateCoordinateKey(item, `${path}[${i}]`, false);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (!value || typeof value !== 'object') return undefined;
+
+  for (const [key, inner] of Object.entries(value)) {
+    const here = path ? `${path}.${key}` : key;
+    if (key.startsWith('exact_')) return here;
+    if ((key === 'lat' || key === 'lon') && !insideRounded) return here;
+    const found = firstPrivateCoordinateKey(inner, here, key === 'coordinate_rounded');
+    if (found) return found;
+  }
+  return undefined;
+}
 
 // ------------------------------------------------------------------------ main
 
@@ -270,15 +296,22 @@ async function main(): Promise<void> {
   check(Boolean(row), `GET /public/feed lists task ${taskId}`);
   eq(row?.seeded, true, `the feed row for ${taskId} renders as seeded — the CLI worker is seeded demo staff`);
 
-  const feedKeys = keyNames(feed.body);
-  const leaked = hasPrivateKeyName(feedKeys);
-  check(leaked === undefined, `GET /public/feed carries no lat, lon or exact_* key — found ${leaked ?? 'none'}`);
+  const leaked = firstPrivateCoordinateKey(feed.body);
+  check(
+    leaked === undefined,
+    'GET /public/feed carries no coordinate outside a rounded one',
+    `found ${leaked ?? 'none'}`,
+  );
 
   const publicTask = await readBody(`${apiBaseUrl}/public/task/${taskId}`);
   eq(publicTask.status, 200, `GET /public/task/${taskId} answers 200`);
   const publicKeys = keyNames(publicTask.body);
-  const publicLeak = hasPrivateKeyName(publicKeys);
-  check(publicLeak === undefined, `GET /public/task/${taskId} carries no lat, lon or exact_* key — found ${publicLeak ?? 'none'}`);
+  const publicLeak = firstPrivateCoordinateKey(publicTask.body);
+  check(
+    publicLeak === undefined,
+    `GET /public/task/${taskId} carries no coordinate outside a rounded one`,
+    `found ${publicLeak ?? 'none'}`,
+  );
   check(!publicKeys.has('buyer_token'), `GET /public/task/${taskId} carries no buyer_token`);
   for (const secret of ['spec', 'spec_text', 'question', 'note', 'payer'] as const) {
     check(!publicKeys.has(secret), `GET /public/task/${taskId} carries no ${secret} — raw spec text is never public`);
