@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node cli-worker.ts demo-run.ts demo-reset.ts demo-loop.test.ts",
+    "typecheck": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node *.ts",
     "lint": "eslint . --no-error-on-unmatched-pattern",
     "test": "vitest run --passWithNoTests",
-    "build": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node cli-worker.ts demo-run.ts demo-reset.ts demo-loop.test.ts",
+    "build": "tsc --noEmit --strict --noUncheckedIndexedAccess --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution Bundler --allowImportingTsExtensions --resolveJsonModule --esModuleInterop --skipLibCheck --types node *.ts",
     "cli-worker": "tsx cli-worker.ts",
     "demo:run": "tsx demo-run.ts",
     "demo:reset": "tsx demo-reset.ts",
@@ -16,10 +16,13 @@
   "dependencies": {
     "@x402/evm": "catalog:",
     "@x402/fetch": "catalog:",
+    "fast-json-stable-stringify": "catalog:",
+    "ngeohash": "catalog:",
     "sharp": "catalog:",
     "viem": "catalog:"
   },
   "devDependencies": {
+    "@types/ngeohash": "catalog:",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
