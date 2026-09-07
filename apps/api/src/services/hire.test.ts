@@ -41,6 +41,7 @@ import { resetRateLimitForTests } from '../http/rateLimit';
 import { route } from '../http/route';
 import { tasks } from '../db/schema';
 import { caps } from './caps';
+import { resetPosterCacheForTests } from './posters';
 import {
   hire,
   screenEnvelope,
@@ -287,6 +288,7 @@ async function seedOpenTask(payer: string, index: number): Promise<void> {
 beforeEach(async () => {
   resetConfigForTests({ DASHBOARD_URL });
   resetRateLimitForTests();
+  resetPosterCacheForTests();
   bench = await buildBench();
 });
 

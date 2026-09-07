@@ -16,7 +16,8 @@ import { ApiError } from '@/src/errors';
 import { clientKey, rateLimit } from '@/src/http/rateLimit';
 import { getDb } from '@/src/db/client';
 import { logger } from '@/src/log';
-import { refusalPayload, screener, writeScreeningLog } from '@/src/services/hire';
+import { refusalPayload, screener } from '@/src/services/hire';
+import { ACCEPTED_REASON, ACCEPTED_RULE_ID, logScreening } from '@/src/services/screeningLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,23 +46,25 @@ export const POST = route(async (req) => {
 
   const verdict = await screener()(body);
   const taskType = taskTypeOf(body);
-  const db = getDb();
+  const log = { db: getDb(), now: () => new Date() };
   const logDecision = (entry: object) =>
     logger.info({ route: '/check', task_type: taskType, spec_hash: verdict.spec_hash, ...entry });
 
   if (verdict.kind === 'invalid') {
     // A schema failure is a plain 4xx with the field named, here as on the paid route.
-    await writeScreeningLog(
-      { db },
+    await logScreening(
       {
-        taskType,
+        task_type: taskType,
         class: null,
         reason: verdict.reason,
-        ruleId: `schema.${verdict.field}`,
-        specHash: verdict.spec_hash,
+        rule_id: `schema.${verdict.field}`,
+        spec_hash: verdict.spec_hash,
         marked: false,
+        mark_tx: null,
+        agent_id: null,
         payer: null,
       },
+      log,
     );
     logDecision({ decision: 'invalid_request', rule_id: `schema.${verdict.field}` });
     throw ApiError.of('invalid_request', {
@@ -74,17 +77,19 @@ export const POST = route(async (req) => {
 
   if (verdict.kind === 'refused') {
     // `marked: false`, always: this route has no payer, and a dry run brands nobody.
-    await writeScreeningLog(
-      { db },
+    await logScreening(
       {
-        taskType,
+        task_type: taskType,
         class: verdict.class,
         reason: verdict.reason,
-        ruleId: verdict.rule_id,
-        specHash: verdict.spec_hash,
+        rule_id: verdict.rule_id,
+        spec_hash: verdict.spec_hash,
         marked: false,
+        mark_tx: null,
+        agent_id: null,
         payer: null,
       },
+      log,
     );
     logDecision({ decision: 'refused', class: verdict.class, rule_id: verdict.rule_id });
     return Response.json(refusalPayload(verdict, { marked: false }), { status: 422 });
@@ -93,17 +98,19 @@ export const POST = route(async (req) => {
   // The same integer arithmetic `quoteFor` in @legwork/payments runs, without that package in
   // this route's import graph: the dry run has no gateway to reach for, by construction.
   const priceUnits = priceWithFee(toUsdcUnits(verdict.envelope.amount_usdc));
-  await writeScreeningLog(
-    { db },
+  await logScreening(
     {
-      taskType,
+      task_type: taskType,
       class: null,
-      reason: 'accepted',
-      ruleId: 'accepted',
-      specHash: verdict.spec_hash,
+      reason: ACCEPTED_REASON,
+      rule_id: ACCEPTED_RULE_ID,
+      spec_hash: verdict.spec_hash,
       marked: false,
+      mark_tx: null,
+      agent_id: null,
       payer: null,
     },
+    log,
   );
   logDecision({ decision: 'accepted', price_units: priceUnits.toString() });
 

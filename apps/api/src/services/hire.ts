@@ -56,7 +56,7 @@
  * marks.
  */
 import { randomUUID } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { isAddress, type Hex } from 'viem';
 import { z } from 'zod';
 import {
@@ -91,7 +91,7 @@ import ngeohash from 'ngeohash';
 import { getChain } from '../chain';
 import { getConfig } from '../config';
 import { getDb, rawQuery, type Db } from '../db/client';
-import { posters, screeningLog, tasks } from '../db/schema';
+import { tasks } from '../db/schema';
 import { ApiError, apiErrorFromZod } from '../errors';
 import { logger } from '../log';
 import { newBuyerToken } from './buyerToken';
@@ -99,6 +99,8 @@ import { caps as buildCaps, type Caps } from './caps';
 import { dashboardUrl } from './statusBus';
 import { markIfIdentified } from './abuseMark';
 import { resolveAgentId } from './identity';
+import { upsertPoster } from './posters';
+import { ACCEPTED_REASON, ACCEPTED_RULE_ID, logScreening } from './screeningLog';
 
 // ------------------------------------------------------------------ constants
 
@@ -346,15 +348,20 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
 
   if (verdict.kind === 'invalid') {
     await deps.idem.release(nonce);
-    await writeScreeningLog(deps, {
-      taskType,
-      class: null,
-      reason: verdict.reason,
-      ruleId: `schema.${verdict.field}`,
-      specHash: verdict.spec_hash,
-      marked: false,
-      payer,
-    });
+    await logScreening(
+      {
+        task_type: taskType,
+        class: null,
+        reason: verdict.reason,
+        rule_id: `schema.${verdict.field}`,
+        spec_hash: verdict.spec_hash,
+        marked: false,
+        mark_tx: null,
+        agent_id: null,
+        payer,
+      },
+      serviceDeps(deps),
+    );
     logDecision({ ...common, decision: 'invalid_request', rule_id: `schema.${verdict.field}` });
     throw ApiError.of('invalid_request', { field: verdict.field, reason: verdict.reason });
   }
@@ -371,19 +378,23 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
             classId: ABUSE_CLASS_ID[verdict.class],
             specHash: verdict.spec_hash,
             payer,
+            claimed: claimedId(body),
           });
     await deps.idem.release(nonce);
-    await writeScreeningLog(deps, {
-      taskType,
-      class: verdict.class,
-      reason: verdict.reason,
-      ruleId: verdict.rule_id,
-      specHash: verdict.spec_hash,
-      marked: mark.marked,
-      ...(mark.marked ? { markTx: mark.tx } : {}),
-      ...(identity.verified ? { agentId: identity.agentId.toString() } : {}),
-      payer,
-    });
+    await logScreening(
+      {
+        task_type: taskType,
+        class: verdict.class,
+        reason: verdict.reason,
+        rule_id: verdict.rule_id,
+        spec_hash: verdict.spec_hash,
+        marked: mark.marked,
+        mark_tx: mark.marked ? mark.tx : null,
+        agent_id: identity.verified ? identity.agentId.toString() : null,
+        payer,
+      },
+      serviceDeps(deps),
+    );
     logDecision({
       ...common,
       decision: 'refused',
@@ -474,7 +485,7 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
     updatedAt: now,
   });
 
-  await upsertPoster(deps, { payer, agentId: agentIdText, allowlisted, now });
+  await upsertPoster({ payer, agentId: identity.verified ? identity.agentId : null }, serviceDeps(deps));
   await deps.caps.record(payer, quote.price_units);
   await deps.idem.complete(nonce, { task_id: Number(taskId), settle_tx: null });
 
@@ -493,16 +504,20 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
     });
   }
 
-  await writeScreeningLog(deps, {
-    taskType,
-    class: null,
-    reason: 'accepted',
-    ruleId: 'accepted',
-    specHash: verdict.spec_hash,
-    marked: false,
-    ...(agentIdText ? { agentId: agentIdText } : {}),
-    payer,
-  });
+  await logScreening(
+    {
+      task_type: taskType,
+      class: null,
+      reason: ACCEPTED_REASON,
+      rule_id: ACCEPTED_RULE_ID,
+      spec_hash: verdict.spec_hash,
+      marked: false,
+      mark_tx: null,
+      agent_id: agentIdText,
+      payer,
+    },
+    serviceDeps(deps),
+  );
   logDecision({
     ...common,
     decision: 'accepted',
@@ -580,56 +595,14 @@ async function replay(deps: HireDeps, taskId: number): Promise<Response> {
   );
 }
 
-export interface ScreeningLogRow {
-  taskType: string;
-  class: AbuseClass | null;
-  reason: string;
-  ruleId: string;
-  specHash: string;
-  marked: boolean;
-  markTx?: string;
-  agentId?: string;
-  payer?: string | null;
-}
-
-/** One row per decision. The class, the rule and the hash — never the words of the spec. */
-export async function writeScreeningLog(
-  deps: Pick<HireDeps, 'db'>,
-  row: ScreeningLogRow,
-): Promise<void> {
-  await deps.db.insert(screeningLog).values({
-    id: randomUUID(),
-    taskType: row.taskType,
-    class: row.class,
-    reason: row.reason,
-    ruleId: row.ruleId,
-    specHash: row.specHash,
-    marked: row.marked,
-    markTx: row.markTx ?? null,
-    agentId: row.agentId ?? null,
-    payer: row.payer ?? null,
-  });
-}
-
 /**
- * The payer's row on `/public/posters`. `first_seen` is the first time they paid for
- * anything and is never rewritten; the verified id and the allowlist flag are refreshed,
- * because both can become true after the first task.
+ * The slice of `HireDeps` T-30's services read — the escrow allowlist, the database and the
+ * clock. The marker and the identity resolver arrive already bound (`identity`, `abuseMark`);
+ * the log writer and the poster ledger take these three and nothing more, so `hire()` never
+ * holds a signer key or a registry reader it has no use for.
  */
-async function upsertPoster(
-  deps: Pick<HireDeps, 'db'>,
-  p: { payer: string; agentId: string | null; allowlisted: boolean; now: Date },
-): Promise<void> {
-  await deps.db
-    .insert(posters)
-    .values({ payer: p.payer, agentId: p.agentId, firstSeen: p.now, allowlisted: p.allowlisted })
-    .onConflictDoNothing({ target: posters.payer });
-  if (p.agentId || p.allowlisted) {
-    await deps.db
-      .update(posters)
-      .set({ ...(p.agentId ? { agentId: p.agentId } : {}), allowlisted: p.allowlisted })
-      .where(sql`lower(${posters.payer}) = ${p.payer.toLowerCase()}`);
-  }
+function serviceDeps(deps: Pick<HireDeps, 'chain' | 'db' | 'clock'>) {
+  return { chain: deps.chain, db: deps.db, now: deps.clock };
 }
 
 // --------------------------------------------------------------- the wiring
