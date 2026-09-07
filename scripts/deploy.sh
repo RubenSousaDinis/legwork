@@ -79,6 +79,15 @@ BUYER=$(cast wallet address --private-key "${BUYER_PRIVATE_KEY:?}")
 CLI_WORKER=$(cast wallet address --private-key "${CLI_WORKER_PRIVATE_KEY:?}")
 TREASURY="${TREASURY_ADDRESS:?TREASURY_ADDRESS is unset in .env}"
 
+# A fresh anvil funds only its own ten dev accounts; the operator's roles need gas on it too.
+# Base Sepolia is never touched here: `anvil_setBalance` exists on anvil alone.
+if [ "$ANVIL" = 1 ]; then
+  for role in "$DEPLOYER" "$RELAYER"; do
+    cast rpc anvil_setBalance "$role" 0x8AC7230489E80000 --rpc-url "$RPC" >/dev/null
+  done
+  echo "anvil: funded deployer and relayer with 10 ETH each"
+fi
+
 # Worker 1 is the CLI worker; 2..20 are derived in the open, the same way Seed.s.sol derives them.
 seed_worker() {
   if [ "$1" = 1 ]; then printf '%s\n' "$CLI_WORKER"; return; fi
