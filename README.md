@@ -50,10 +50,10 @@ Bot-proof, not fraud-proof.
 
 | Live, not ours | Ours, deployed on Base Sepolia | Seeded and disclosed |
 | --- | --- | --- |
-| World ID — Developer Portal, IDKit 4.x, staging credentials | WorkerRegistry `0x9011A65B89376e6cA393c3158fcB75f5a19F60a1` | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
-| ERC-8004 IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | TaskEscrow `0xDAFefc07986B3336b066B19E6DE6B76680628B52` | `<N>` seeded task lifecycles |
-| ERC-8004 ReputationRegistry `0x8004B663056A597Dffe9eCcC1965A193B7388713` | Reputation `0x68b16582c8fdFdAaDBfB158d578e2ab839e3d763` | one real registration (the demo phone) |
-| x402 reference facilitator | AbuseMark `0x1848Db2d813A66b735f61a73c75456ca32b42Fb6` | marks operator-attested |
+| World ID — Developer Portal, IDKit 4.x, staging credentials | WorkerRegistry `0xc33d229046507f4C2E664cbf974542c92eEAbAf4` | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
+| ERC-8004 IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | TaskEscrow `0x641B56dfA3A033D84a75588c18579347A0DE3c6B` | `<N>` seeded task lifecycles |
+| ERC-8004 ReputationRegistry `0x8004B663056A597Dffe9eCcC1965A193B7388713` | Reputation `0x2f731B56D02080190fa2ef7813887B2743551E43` | one real registration (the demo phone) |
+| x402 reference facilitator | AbuseMark `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` | marks operator-attested |
 | USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | Subgraph (Studio) `<studio url>` | relayed claims, gas paid by Legwork |
 | — | Task API + MCP server, mini-app, dashboard `<host>` | operator powers: seed, reset, resolve |
 

@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC8004Identity, IERC8004Reputation} from "../../src/interfaces/IERC8004.sol";
 
-/// @notice Stand-in IdentityRegistry: incrementing ids, settable owner and wallet.
-contract MockIdentityRegistry is IERC8004Identity {
+/// @notice Stand-in IdentityRegistry: incrementing ids, settable owner and wallet. Mints the way the
+///         live registry does (`_safeMint`, RESULTS `## S5`): a contract caller must answer
+///         `onERC721Received` with the selector or the registration reverts `ERC721InvalidReceiver`.
+contract MockIdentityRegistry is IERC8004Identity, IERC721Errors {
     uint256 public nextId = 1;
     mapping(uint256 => address) private _ownerOf;
     mapping(uint256 => address) private _walletOf;
@@ -15,6 +19,21 @@ contract MockIdentityRegistry is IERC8004Identity {
         uriOf[agentId] = agentURI;
         _ownerOf[agentId] = msg.sender;
         _walletOf[agentId] = msg.sender;
+        _checkOnERC721Received(msg.sender, agentId);
+    }
+
+    /// @dev What OpenZeppelin's `_safeMint` does after minting to a contract.
+    function _checkOnERC721Received(address to, uint256 tokenId) private {
+        if (to.code.length == 0) return;
+        try IERC721Receiver(to).onERC721Received(msg.sender, address(0), tokenId, "") returns (
+            bytes4 retval
+        ) {
+            if (retval != IERC721Receiver.onERC721Received.selector) {
+                revert ERC721InvalidReceiver(to);
+            }
+        } catch {
+            revert ERC721InvalidReceiver(to);
+        }
     }
 
     function setOwner(uint256 agentId, address owner_) external {
