@@ -14,7 +14,7 @@
  *
  * This file also owns `defaultDeps()`, the one composition root the four T-30 services
  * share: the API's chain singleton (`../chain`) and the Drizzle client (`../db/client`),
- * the same two `hire.ts` uses. None of the four ever reads `process.env` — the signer key
+ * the same two `hire.ts` uses. None of the four ever reads the environment — the signer key
  * lives inside the chain package's `TxQueue` and is never seen from here.
  */
 import { isAddressEqual, type Address, type Hex } from 'viem';

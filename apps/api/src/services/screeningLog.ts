@@ -5,7 +5,7 @@
  *
  * `screening_log` is what the dashboard (T-26) and `/public/refusals` (T-19) read, so it is
  * a public surface in everything but name. It carries the class, the rule id and the
- * `spec_hash`; the spec text, the envelope and any coordinate stay in the private task
+ * `spec_hash`; the spec text, the request body and any coordinate stay in the private task
  * record. `reason` is the gate's own sentence, which is why the guard below rejects
  * anything shaped like pasted spec text rather than trusting the caller to have passed one.
  */
@@ -17,7 +17,7 @@ import { defaultDeps, type ServiceDeps } from './identity';
 export { defaultDeps, type ServiceDeps } from './identity';
 
 /**
- * Exactly the columns of `screening_log`, and nothing else — no `spec`, no `envelope`, no
+ * Exactly the columns of `screening_log`, and nothing else — no spec, no request body, no
  * coordinate. `agent_id` is the **verified** id or `null`; `payer` is `null` for the rows
  * `POST /check` writes, because a free dry run has no payer.
  */
@@ -45,7 +45,7 @@ const MAX_REASON_LENGTH = 200;
 const REASON_GUARD = 'screening_log.reason must be the gate sentence, not spec text';
 
 /**
- * A newline or a `{` means somebody handed this the envelope; over 200 characters means
+ * A newline or a `{` means somebody handed this the request body; over 200 characters means
  * somebody handed it the spec. Both throw before the insert, so nothing is written — a
  * half-written privacy leak is worse than a failed request.
  */
