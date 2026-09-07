@@ -294,8 +294,9 @@ done
 echo
 echo "startBlock: $START_BLOCK"
 echo "relayer float: $RELAYER_BEFORE -> $RELAYER_AFTER (6-decimal USDC)"
-echo "treasury: $TREASURY_BEFORE -> $TREASURY_AFTER (delta +$TREASURY_DELTA)"
-echo "pool: 1 real - +20 seeded (demo data)"
+if [ "$TREASURY_DELTA" -ge 0 ]; then DELTA_SIGNED="+$TREASURY_DELTA"; else DELTA_SIGNED="$TREASURY_DELTA"; fi
+echo "treasury: $TREASURY_BEFORE -> $TREASURY_AFTER (delta $DELTA_SIGNED)"
+printf "pool: 1 real \xc2\xb7 +20 seeded (demo data)\n"
 echo
 
 if [ "$FAILED" != 0 ]; then
