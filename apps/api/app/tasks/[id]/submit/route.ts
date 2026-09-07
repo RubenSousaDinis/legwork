@@ -218,7 +218,9 @@ export const POST = route(async (req, ctx) => {
   const decision = autoDisputeFor(reuse, geofence);
 
   const settled = await chain.getTask(taskId);
-  const mirrored = await mirrorFromChain(row, settled, { submit: tx.hash });
+  const mirrored = await mirrorFromChain(row, settled, { submit: tx.hash }, {
+    workerSeeded: await chain.isSeeded(caller),
+  });
   await getDb()
     .update(tasks)
     .set({

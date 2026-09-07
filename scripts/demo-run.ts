@@ -73,6 +73,8 @@ export const PRICE_UNITS = priceWithFee(WORKER_UNITS);
 
 /** The library's own default is $1, which refuses the 3.45 this task costs. */
 const MAX_PAYMENT_USD = `$${fromUsdcUnits(priceWithFee(toUsdcUnits(MAX_TASK_AMOUNT_USDC))).toFixed(2)}`;
+/** The same cap in atomic units, for the explicit asset entry spend controls want. */
+const MAX_PAYMENT_UNITS = priceWithFee(toUsdcUnits(MAX_TASK_AMOUNT_USDC)).toString();
 /** `CHAIN_ID=31337` points everything at anvil (the e2e harness); anything else is Base Sepolia. */
 const CHAIN = Number(process.env['CHAIN_ID'] ?? CHAIN_ID) === 31337 ? foundry : baseSepolia;
 const PAYMENT_NETWORK = `eip155:${CHAIN.id}` as 'eip155:84532' | 'eip155:31337';
@@ -290,11 +292,17 @@ async function postTask(
   apiBaseUrl: string,
   privateKey: Hex,
   envelope: Record<string, unknown>,
+  usdc: Address,
 ): Promise<PostedTask> {
   const account = privateKeyToAccount(privateKey);
+  // Spend controls admit the library's default assets only; anvil's mock USDC is not one, so
+  // the record's asset is allowed by name, capped at the largest task in atomic units.
   const client = new x402Client()
     .register(PAYMENT_NETWORK, new ExactEvmScheme(account))
-    .setSpendControls({ maxAmountPerPayment: MAX_PAYMENT_USD });
+    .setSpendControls({
+      maxAmountPerPayment: MAX_PAYMENT_USD,
+      allowedAssets: [{ network: PAYMENT_NETWORK, asset: usdc, maxAmountPerPayment: MAX_PAYMENT_UNITS }],
+    });
   const payFetch = wrapFetchWithPayment(fetch, client) as typeof fetch;
 
   let res: Response;
@@ -586,7 +594,7 @@ async function main(): Promise<void> {
     posted = { taskId: onchain.taskId, buyerToken: '', specHash: '0x' };
     stages.push({ stage: 'POSTED', tx: onchain.postTx, taskId: onchain.taskId, detail: CUSTODY_LINE });
   } else {
-    posted = await postTask(apiBaseUrl, buyerKey, buildEnvelope(place, args.agentId));
+    posted = await postTask(apiBaseUrl, buyerKey, buildEnvelope(place, args.agentId), usdc);
     const postView = await readTask(apiBaseUrl, posted.taskId, posted.buyerToken, 0);
     stages.push({
       stage: 'POSTED',
