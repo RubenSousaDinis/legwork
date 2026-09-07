@@ -9,7 +9,7 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "catalog:",
+    "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@legwork/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "catalog:",
     "viem": "catalog:"
