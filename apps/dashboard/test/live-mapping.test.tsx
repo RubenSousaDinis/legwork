@@ -240,6 +240,34 @@ describe('live adapter', () => {
     expect(floor.textContent).not.toContain('·');
   });
 
+  it('liveRefusalOmitsTheSpecLabelWhenTheWireSendsNoHash', async () => {
+    // `/public/refusals.recent` withholds `spec_hash` for the same reason it withholds
+    // `reason`, so a live refused line has no hash to print. The label went out on its
+    // own — a bare `spec` — until it was made conditional.
+    server.use(
+      ...liveHandlers({
+        recent: [
+          {
+            at: '2026-09-05T10:30:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            rule_id: 'deny.auth',
+            marked: false,
+          },
+        ],
+      }),
+    );
+    const result = await getLiveDashboardData();
+    const refused = result.screening.find((l) => l.outcome === 'refused')!;
+    expect(refused.specHash).toBe('');
+
+    const { container } = render(<ScreeningLog lines={[refused]} />);
+    expect(container.querySelector('.screening-spec')).toBeNull();
+    expect(container.textContent).not.toContain('spec ');
+    // The half that does exist still renders.
+    expect(container.textContent).toContain('authentication circumvention · deny.auth');
+  });
+
   it('liveRefusalUsesTheRuleIdAsTheSecondPart', async () => {
     server.use(
       ...liveHandlers({

@@ -17,6 +17,12 @@ function refusedParts(line: ScreeningLine): string {
 /**
  * Renders only the fields of `ScreeningLine`. There is no spec text to render and
  * no requester identity anywhere in the shape, so neither can leak onto the page.
+ *
+ * Every part is joined only when it exists. A live refused line has no `specHash` —
+ * `/public/refusals.recent` withholds it for the same reason it withholds `reason` — and
+ * the label went out on its own, a bare `spec`, until this was made conditional. The
+ * `task-refused → #<id>` line is the same shape: the public refusal feed carries no
+ * requester identity, so that line is demo-mode only, by the same privacy ruling.
  */
 export function ScreeningLog({ lines, present = false, max }: ScreeningLogProps) {
   const shown = typeof max === 'number' ? lines.slice(0, max) : lines;
@@ -50,7 +56,9 @@ export function ScreeningLog({ lines, present = false, max }: ScreeningLogProps)
                   {line.reason}
                 </span>
               ) : null}
-              <span className="mono screening-spec">spec {shortHash(line.specHash)}</span>
+              {line.specHash ? (
+                <span className="mono screening-spec">spec {shortHash(line.specHash)}</span>
+              ) : null}
               {line.marked && line.agentId ? (
                 <span className="mono screening-mark">
                   task-refused → #{line.agentId}
