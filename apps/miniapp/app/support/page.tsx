@@ -1,5 +1,7 @@
+import { credentialLabel } from '@legwork/shared';
 import type { Metadata } from 'next';
 import { Chip } from '../../components/ui/Chip';
+import { CREDENTIAL_LEVEL } from '../../lib/env';
 
 export const metadata: Metadata = {
   title: 'Legwork — support',
@@ -54,7 +56,7 @@ export default function SupportPage() {
           photograph what is there, and the escrow releases on the proof.
         </p>
         <div className="lw-chips">
-          <Chip tone="verified">sandbox World ID</Chip>
+          <Chip tone="verified">{credentialLabel(CREDENTIAL_LEVEL)}</Chip>
           <Chip tone="seeded">testnet USDC — not spendable</Chip>
         </div>
       </section>

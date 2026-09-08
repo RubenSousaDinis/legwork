@@ -53,7 +53,7 @@ Read on the server only, never from a `NEXT_PUBLIC_*` var and never in a client 
 | `DATA_MODE=live\|demo` | server only | picks the adapter |
 | `NEXT_PUBLIC_API_BASE_URL` | server, and `next.config.ts` | the API origin; defaults to `http://localhost:3001` |
 | `NEXT_PUBLIC_SUBGRAPH_QUERY_URL` | server and browser | the publishable subgraph query URL |
-| `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `sandbox World ID`, anything else `sandbox Selfie Check` |
+| `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `World ID · Orb`, anything else `World ID · Selfie Check` |
 | `NEXT_PUBLIC_ADMIN_UI` | build time | `1` mounts `/admin`; anything else, unset included, 404s |
 
 `apiBase()` is isomorphic: the API's own origin on the server, and the same-origin `/api`
@@ -79,8 +79,8 @@ never attributed to an agent by guesswork.
 `WORLD_CREDENTIAL_LEVEL` is a server var and this mapper also runs in the browser, so
 `useLiveDashboard` passes `initial.pool.highlighted?.level` into
 `getLiveDashboardData({ level })`; the env is read only when no level is given. Without
-that an `orb` deployment would render `sandbox World ID` on load and `sandbox Selfie Check`
-from the first tick.
+that an `orb` deployment would render `World ID · Orb` on load and `World ID · Selfie
+Check` from the first tick.
 
 `lib/live/` polls it every 3 s. The poller never overlaps requests, does nothing at all
 when the response says `changed: false`, calls `onChange` only when the mapped result

@@ -1,14 +1,10 @@
+import { credentialLabel } from '@legwork/shared';
 import { poolString } from '../lib/format';
 import { Chip } from './Chip';
 import type { PoolData } from '../lib/data/types';
 
 export interface WorkerPoolProps {
   pool: PoolData;
-}
-
-/** `orb` is an onchain World ID proof; `selfie` is the cloud Selfie Check. */
-export function credentialLabel(level: 'selfie' | 'orb'): string {
-  return level === 'orb' ? 'sandbox World ID' : 'sandbox Selfie Check';
 }
 
 /**

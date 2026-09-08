@@ -71,7 +71,7 @@ export interface PoolData {
   highlighted?: {
     id: string;
     minutesReal?: number;
-    /** `orb` renders `sandbox World ID`, `selfie` renders `sandbox Selfie Check`. */
+    /** `orb` renders `World ID · Orb`, `selfie` renders `World ID · Selfie Check`. */
     level: 'selfie' | 'orb';
   };
   rows: PoolRow[];

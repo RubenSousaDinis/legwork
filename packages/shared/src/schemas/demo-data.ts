@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CREDENTIAL_LABEL } from '../constants';
 import { ABUSE_CLASSES, TASK_TYPES } from '../enums';
 
 /**
@@ -10,7 +11,7 @@ export const DemoData = z.object({
     place_id: z.string().regex(/^(node|way|relation)\/\d+$/),
     name: z.string(), street_address: z.string(), locality: z.literal('Leiria'), country: z.literal('PT'),
   }),
-  worker: z.object({ handle: z.literal('#w-0417'), verified: z.literal(true), credential: z.enum(['sandbox World ID', 'sandbox Selfie Check']) }),
+  worker: z.object({ handle: z.literal('#w-0417'), verified: z.literal(true), credential: z.enum([CREDENTIAL_LABEL.orb, CREDENTIAL_LABEL.selfie]) }),
   agent: z.object({ handle: z.literal('#8004-1207'), erc8004_id: z.literal(1207) }),
   money: z.object({
     agent_pays: z.literal(3.45), escrow_locked: z.literal(3.45), worker_receives: z.literal(3.0), fee: z.literal(0.45),
