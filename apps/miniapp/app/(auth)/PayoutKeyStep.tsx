@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
+import type { AreaSource } from '../../lib/area';
 import { exportPrivateKey, importPrivateKey } from '../../lib/workerKey';
 
 const BASESCAN = 'https://sepolia.basescan.org/address/';
@@ -12,8 +13,15 @@ export type PayoutKeyStepProps = {
   /** Opened straight away when a 409 said this World ID already has a worker account. */
   importOpen?: boolean;
   onImported: (address: string) => void;
-  onContinue: () => void;
+  /** Fresh registration. Absent in the conflict state — that button cannot succeed there. */
+  onContinue?: () => void;
+  /** Returning worker. Only rendered in the conflict state. */
+  onSignIn?: () => void;
   busy: boolean;
+  conflict?: boolean;
+  area?: string | null;
+  areaSource?: AreaSource;
+  onRetryLocation?: () => void;
 };
 
 /**
@@ -26,7 +34,12 @@ export function PayoutKeyStep({
   importOpen = false,
   onImported,
   onContinue,
+  onSignIn,
   busy,
+  conflict = false,
+  area = null,
+  areaSource = 'default',
+  onRetryLocation,
 }: PayoutKeyStepProps) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -65,6 +78,11 @@ export function PayoutKeyStep({
   return (
     <section className="lw-card" data-step="payout-key">
       <p className="lw-list-label">Your payout address</p>
+      {conflict ? (
+        <p className="lw-list-label lw-list-label--flush" data-label="held-key">
+          this phone holds
+        </p>
+      ) : null}
       <p className="lw-address lw-mono-address">{address}</p>
       <p className="lw-chips lw-chips--stacked">
         <a className="lw-quiet-link" data-hit="44" href={`${BASESCAN}${address}`} rel="noreferrer" target="_blank">
@@ -130,9 +148,34 @@ export function PayoutKeyStep({
           </div>
         ) : null}
 
-        <Button variant="primary" size="lg" full disabled={busy} onClick={onContinue}>
-          Register as a worker
-        </Button>
+        {conflict ? (
+          <Button variant="primary" size="lg" full disabled={busy} onClick={onSignIn}>
+            Sign in with this key
+          </Button>
+        ) : (
+          <>
+            {area !== null ? (
+              <div data-area="binding">
+                <p className="lw-body" data-floor="20">
+                  {`You will be registered in ${area}`}
+                </p>
+                <p className="lw-meta" data-area-source={areaSource}>
+                  {areaSource === 'gps'
+                    ? "from this phone's location"
+                    : 'default — this phone gave no location fix'}
+                </p>
+                {areaSource === 'default' ? (
+                  <Button variant="ghost" full onClick={onRetryLocation}>
+                    Use my location
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            <Button variant="primary" size="lg" full disabled={busy} onClick={onContinue}>
+              Register as a worker
+            </Button>
+          </>
+        )}
       </div>
     </section>
   );

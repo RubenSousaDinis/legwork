@@ -184,7 +184,7 @@ describe('auth flow', () => {
 
     expect(
       await screen.findByText(
-        'This World ID already has a worker account. Restore it with your payout key below.',
+        'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.',
       ),
     ).toBeTruthy();
 
@@ -192,5 +192,101 @@ describe('auth flow', () => {
     const field = await screen.findByLabelText('Import an existing payout key');
     expect(field.tagName).toBe('TEXTAREA');
     expect(screen.getByText('Restore')).toBeTruthy();
+  });
+
+  it('conflictScreenNeverOffersRegister', async () => {
+    setScenario({ idkitVerify: 'nullifier_already_registered' });
+    await verifyAndSignIn();
+    await screen.findByText(/already has a worker account/);
+    expect(screen.queryByText('Register as a worker')).toBeNull();
+    expect(screen.getByText('Sign in with this key')).toBeTruthy();
+  });
+
+  it('nullifierConflictSignsInWithTheHeldKey', async () => {
+    const { bindRegisteredWorker, NULLIFIER } = await import('../mocks/handlers');
+    const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
+
+    // --- outside World App: idkit session with the held payout address.
+    const held = loadOrCreatePayoutKey();
+    bindRegisteredWorker({ worker: held.address, nullifier: NULLIFIER });
+    setScenario({ idkitVerify: 'nullifier_already_registered' });
+
+    await verifyAndSignIn();
+    fireEvent.click(await screen.findByText('Sign in with this key'));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/tasks'));
+    expect(registerRequests()).toHaveLength(0);
+    expect(sessionRequests()).toEqual([{ mode: 'idkit', worker_address: held.address }]);
+
+    // --- inside World App: walletAuth, still never /register.
+    cleanup();
+    localStorage.clear();
+    resetSessionForTests();
+    replace.mockClear();
+    calls = [];
+    vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
+    vi.mocked(MiniKit.walletAuth).mockResolvedValue({
+      executedWith: 'minikit',
+      data: WALLET_AUTH_DATA,
+    } as never);
+
+    const heldInside = loadOrCreatePayoutKey();
+    bindRegisteredWorker({ worker: heldInside.address, nullifier: NULLIFIER });
+    setScenario({ idkitVerify: 'nullifier_already_registered' });
+
+    await verifyAndSignIn();
+    fireEvent.click(await screen.findByText('Sign in with this key'));
+
+    await waitFor(() => expect(sessionRequests().at(-1)).toMatchObject({ mode: 'walletAuth' }));
+    expect(registerRequests()).toHaveLength(0);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/tasks'));
+  });
+
+  it('nullifierConflictExplainsAMismatchedKey', async () => {
+    const { bindRegisteredWorker, NULLIFIER, WORKER_ADDRESS } = await import('../mocks/handlers');
+    bindRegisteredWorker({ worker: WORKER_ADDRESS, nullifier: NULLIFIER });
+    setScenario({ idkitVerify: 'nullifier_already_registered' });
+
+    await verifyAndSignIn();
+    fireEvent.click(await screen.findByText('Sign in with this key'));
+
+    expect(
+      await screen.findByText(
+        'That account is bound to a different payout address. Paste the key you exported when you registered — Legwork cannot recover it for you.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Import an existing payout key').tagName).toBe('TEXTAREA');
+    expect(replace).not.toHaveBeenCalledWith('/tasks');
+    expect(registerRequests()).toHaveLength(0);
+  });
+
+  it('registerStepShowsTheAreaAndItsSource', async () => {
+    expect(navigator.geolocation).toBeUndefined();
+
+    await verifyAndSignIn();
+    expect(await screen.findByText('You will be registered in ez1dp')).toBeTruthy();
+    expect(screen.getByText('default — this phone gave no location fix')).toBeTruthy();
+    expect(screen.getByText('Use my location')).toBeTruthy();
+
+    const { stubGeolocation, geolocationAt } = await import('./proof/harness');
+    stubGeolocation(geolocationAt(39.744, -8.807, 10));
+    fireEvent.click(screen.getByText('Use my location'));
+
+    expect(await screen.findByText("from this phone's location")).toBeTruthy();
+    expect(screen.queryByText('Use my location')).toBeNull();
+  });
+
+  it('payoutKeyNeverLeavesTheDevice', async () => {
+    await verifyAndSignIn();
+    fireEvent.click(await screen.findByText('Register as a worker'));
+    await waitFor(() => expect(registerRequests()).toHaveLength(1));
+
+    const secret = localStorage.getItem('legwork.payoutKey.v1');
+    expect(secret).toMatch(/^0x[0-9a-f]{64}$/);
+    for (const { url, init } of calls) {
+      expect(url).not.toContain(secret);
+      expect(JSON.stringify(init?.headers ?? {})).not.toContain(secret);
+      expect(String(init?.body ?? '')).not.toContain(secret);
+    }
   });
 });

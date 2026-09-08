@@ -35,6 +35,49 @@ const PROOF_HASH = hash('6e9024681357bdf0ace13579bdf02468');
 /** Leiria, rounded to 3 decimals (≈100 m) — the only precision a public surface ever sees. */
 const COORDINATE_ROUNDED = { lat: 39.749, lon: -8.808 };
 const AREA = 'ez1dp';
+
+/** Mean Earth radius (IUGG), metres — the same figure `apps/api/src/services/geo.ts` uses. */
+const EARTH_RADIUS_M = 6_371_008.8;
+
+/** The exact place of each fixture row, so `/tasks/list` can answer `distance_m` from the query. */
+export const TASK_PLACE_COORDS: Record<string, { lat: number; lon: number }> = {
+  '1024': { lat: 39.74362, lon: -8.80713 },
+  '1025': { lat: 39.7485, lon: -8.812 },
+};
+
+/** A fix `metres` due north of a place — used by tests that need a known distance. */
+export function metresNorthOf(
+  place: { lat: number; lon: number },
+  metres: number,
+): { lat: number; lon: number } {
+  return { lat: place.lat + metres * (180 / (Math.PI * EARTH_RADIUS_M)), lon: place.lon };
+}
+
+function distanceM(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): number {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const dLat = toRadians(b.lat - a.lat);
+  const dLon = toRadians(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function withDistance<T extends { task_id: string; distance_m?: number }>(
+  rows: readonly T[],
+  from: { lat: number; lon: number } | null,
+): Array<Omit<T, 'distance_m'> & { distance_m?: number }> {
+  return rows.map((row) => {
+    const { distance_m: _ignored, ...rest } = row;
+    const place = TASK_PLACE_COORDS[row.task_id];
+    if (from === null || place === undefined) return rest;
+    return { ...rest, distance_m: Math.round(distanceM(from, place)) };
+  });
+}
+
 const DASHBOARD_URL = 'https://legwork.example/dashboard/1024';
 const PROOF_URL = `https://legwork.example/api/proofs/${PROOF_HASH}?exp=1757034000&sig=${'ab'.repeat(32)}`;
 
@@ -221,10 +264,31 @@ export function sessionRequests(): unknown[] {
   return sessionBodies;
 }
 
+/**
+ * The mock registry. `/session` answers from this, not from a canned 200 — a 409 fixture
+ * has to bind the worker the phone is about to present, the way the live table does.
+ */
+type RegistryRow = { worker: string; nullifier: string };
+
+let registry: RegistryRow[] = [];
+
+export function bindRegisteredWorker(row: RegistryRow): void {
+  const worker = row.worker.toLowerCase();
+  registry = registry.filter(
+    (entry) => entry.nullifier !== row.nullifier && entry.worker.toLowerCase() !== worker,
+  );
+  registry.push({ worker: row.worker, nullifier: row.nullifier });
+}
+
+function workerInRegistry(address: string): RegistryRow | undefined {
+  return registry.find((entry) => entry.worker.toLowerCase() === address.toLowerCase());
+}
+
 export function resetLastVerifyBody(): void {
   lastVerifyText = null;
   registerBodies = [];
   sessionBodies = [];
+  registry = [];
 }
 
 // ----------------------------------------------------------------- handlers
@@ -254,14 +318,44 @@ export const handlers = [
   http.get('*/api/session/nonce', () => json(SESSION_NONCE_RESPONSE)),
 
   http.post('*/api/session', async ({ request }) => {
-    const body = (await request.json()) as { mode?: unknown; worker_address?: unknown } | null;
+    const body = (await request.json()) as {
+      mode?: unknown;
+      worker_address?: unknown;
+      payload?: { address?: unknown };
+    } | null;
     sessionBodies.push(body);
-    const mode = body?.mode === 'idkit' ? ('idkit' as const) : ('walletAuth' as const);
-    const worker =
-      mode === 'idkit' && typeof body?.worker_address === 'string'
-        ? body.worker_address
-        : WORKER_ADDRESS;
-    return json({ ...SESSION_RESPONSE, mode, worker });
+
+    if (body?.mode === 'idkit') {
+      const address = typeof body.worker_address === 'string' ? body.worker_address : '';
+      const bound = workerInRegistry(address);
+      if (bound === undefined) {
+        return json({ error: 'forbidden', reason: 'not_registered' }, { status: 403 });
+      }
+      return json({
+        ...SESSION_RESPONSE,
+        mode: 'idkit' as const,
+        worker: bound.worker,
+        nullifier: bound.nullifier,
+      });
+    }
+
+    // walletAuth: the MiniKit signature is the proof. The registry must already hold a
+    // worker for this World ID — from `/register` on the happy path, or from a 409 fixture.
+    if (registry.length === 0) {
+      return json({ error: 'forbidden', reason: 'not_registered' }, { status: 403 });
+    }
+    const payloadAddress =
+      typeof body?.payload?.address === 'string' ? body.payload.address : '';
+    const bound = workerInRegistry(payloadAddress) ?? registry[0];
+    if (bound === undefined) {
+      return json({ error: 'forbidden', reason: 'not_registered' }, { status: 403 });
+    }
+    return json({
+      ...SESSION_RESPONSE,
+      mode: 'walletAuth' as const,
+      worker: bound.worker,
+      nullifier: bound.nullifier,
+    });
   }),
 
   http.post('*/api/register', async ({ request }) => {
@@ -269,15 +363,34 @@ export const handlers = [
     registerBodies.push(body);
     const worker =
       typeof body?.worker_address === 'string' ? body.worker_address : WORKER_ADDRESS;
+    bindRegisteredWorker({ worker, nullifier: NULLIFIER });
     return json({ ...REGISTER_RESPONSE, worker });
   }),
 
   // `/tasks/list` is the contract's path and `/tasks` is the one T-24 §2 and T-25 §2 call;
   // both are answered so neither task's tests hang on the spelling. See the PR body.
-  http.get('*/api/tasks/list', () =>
-    json(scenario().tasks === 'empty' ? TASKS_EMPTY : TASKS_TWO_ROWS),
-  ),
-  http.get('*/api/tasks', () => json(scenario().tasks === 'empty' ? TASKS_EMPTY : TASKS_TWO_ROWS)),
+  http.get('*/api/tasks/list', ({ request }) => {
+    const url = new URL(request.url);
+    const lat = url.searchParams.get('lat');
+    const lon = url.searchParams.get('lon');
+    const from =
+      lat !== null && lon !== null && lat !== '' && lon !== ''
+        ? { lat: Number(lat), lon: Number(lon) }
+        : null;
+    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_TWO_ROWS.tasks;
+    return json({ tasks: withDistance(rows, from) });
+  }),
+  http.get('*/api/tasks', ({ request }) => {
+    const url = new URL(request.url);
+    const lat = url.searchParams.get('lat');
+    const lon = url.searchParams.get('lon');
+    const from =
+      lat !== null && lon !== null && lat !== '' && lon !== ''
+        ? { lat: Number(lat), lon: Number(lon) }
+        : null;
+    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_TWO_ROWS.tasks;
+    return json({ tasks: withDistance(rows, from) });
+  }),
 
   http.post('*/api/tasks/:id/claim', () => {
     switch (scenario().claim) {

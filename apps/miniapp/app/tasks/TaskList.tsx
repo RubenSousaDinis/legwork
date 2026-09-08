@@ -4,9 +4,16 @@ import { CLAIM_COOLDOWN_S } from '@legwork/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { EarningsBar } from '../../components/EarningsBar';
-import { TaskCard, type TaskRow } from '../../components/TaskCard';
+import { TaskCard, formatDistance, type TaskRow } from '../../components/TaskCard';
+import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
-import { lastKnownPosition, resolveArea } from '../../lib/area';
+import {
+  DEFAULT_AREA,
+  areaFromPosition,
+  lastKnownPosition,
+  readRegisteredArea,
+  resolveArea,
+} from '../../lib/area';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 
 /**
@@ -18,9 +25,19 @@ import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim }
 const POLL_MS = 3000;
 const EARNINGS_POLL_MS = 60_000;
 
-export const EMPTY_STATE = 'No open tasks near you right now — the list refreshes every 3 s.';
+/** The same honesty chip the proof screen uses when the webview will not give a fix. */
+export const GPS_UNAVAILABLE_CHIP = 'GPS unavailable in webview — disclosed';
+
 export const NOT_SPENDABLE = 'not spendable';
 export const NEARBY_TASKS = 'NEARBY TASKS';
+
+export function emptyBoardCopy(area: string): string {
+  return `No open tasks in ${area} right now. This board shows the cell you registered in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.`;
+}
+
+export function emptyBoardMismatch(fixArea: string, registeredArea: string): string {
+  return `Your phone is in ${fixArea}, and your account is registered in ${registeredArea}.`;
+}
 
 /** The three 409/403 answers `POST /tasks/:id/claim` is allowed to give, in the worker's words. */
 export const CLAIM_ERRORS: Record<string, string> = {
@@ -42,6 +59,16 @@ function errorCode(thrown: unknown): string | null {
   if (!(thrown instanceof ApiError)) return null;
   const body = thrown.body as { error?: unknown } | null;
   return typeof body?.error === 'string' ? body.error : null;
+}
+
+function claimErrorMessage(thrown: unknown): string {
+  const code = errorCode(thrown);
+  if (code === 'too_far_to_claim' && thrown instanceof ApiError) {
+    const body = thrown.body as { distance_m?: unknown } | null;
+    const distance = typeof body?.distance_m === 'number' ? body.distance_m : undefined;
+    return `Too far to claim — you are ${formatDistance(distance)} away, and a claim must start within 2 km`;
+  }
+  return (code && CLAIM_ERRORS[code]) || GENERIC_ERROR;
 }
 
 /**
@@ -73,6 +100,10 @@ export function TaskList() {
   const [claim, setClaim] = useState<ActiveClaim | null>(null);
   const [error, setError] = useState<{ task_id: string; message: string } | null>(null);
   const [earnings, setEarnings] = useState<number | null>(null);
+  const [located, setLocated] = useState(false);
+  const [hasFix, setHasFix] = useState(false);
+  const [boardArea, setBoardArea] = useState(DEFAULT_AREA);
+  const [fixArea, setFixArea] = useState<string | null>(null);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
@@ -89,14 +120,15 @@ export function TaskList() {
     if (stored !== null) setClaim(stored);
   }, []);
 
-  useEffect(() => {
-    let live = true;
-    void resolveArea().then((resolved) => {
-      if (live) area.current = resolved;
-    });
-    return () => {
-      live = false;
-    };
+  const locate = useCallback(async () => {
+    const resolved = await resolveArea();
+    const registered = readRegisteredArea();
+    const nextArea = registered ?? resolved;
+    area.current = nextArea;
+    setBoardArea(nextArea);
+    const position = lastKnownPosition();
+    setHasFix(position !== null);
+    setFixArea(position !== null ? areaFromPosition(position.lat, position.lon) : null);
   }, []);
 
   const poll = useCallback(async () => {
@@ -111,7 +143,23 @@ export function TaskList() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    await locate();
+    await poll();
+  }, [locate, poll]);
+
   useEffect(() => {
+    let live = true;
+    void locate().then(() => {
+      if (live) setLocated(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [locate]);
+
+  useEffect(() => {
+    if (!located) return;
     void poll();
     const id = setInterval(() => {
       if (document.hidden) return;
@@ -129,7 +177,7 @@ export function TaskList() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
     };
-  }, [poll]);
+  }, [located, poll]);
 
   useEffect(() => {
     let live = true;
@@ -153,8 +201,12 @@ export function TaskList() {
     async (row: TaskRow) => {
       setError(null);
       try {
+        const position = lastKnownPosition();
         const response = await apiFetch<ClaimResponse>(`/tasks/${row.task_id}/claim`, {
           method: 'POST',
+          body: JSON.stringify(
+            position === null ? {} : { lat: position.lat, lon: position.lon },
+          ),
         });
         const next: ActiveClaim = {
           task_id: row.task_id,
@@ -168,7 +220,7 @@ export function TaskList() {
         setExpandedId(null);
       } catch (thrown) {
         const code = errorCode(thrown);
-        setError({ task_id: row.task_id, message: (code && CLAIM_ERRORS[code]) || GENERIC_ERROR });
+        setError({ task_id: row.task_id, message: claimErrorMessage(thrown) });
         // Someone was faster: the list is already wrong, so ask again rather than wait 3 s.
         if (code === 'AlreadyClaimed') void poll();
       }
@@ -199,10 +251,32 @@ export function TaskList() {
       ? null
       : (rows.find((row) => row.task_id === claim.task_id) ?? claimedRow.current);
   const rest = claim === null ? rows : rows.filter((row) => row.task_id !== claim.task_id);
+  const mismatch =
+    fixArea !== null && fixArea !== boardArea
+      ? emptyBoardMismatch(fixArea, boardArea)
+      : null;
 
   return (
     <div data-screen="tasks">
       <p className="lw-list-label">{NEARBY_TASKS}</p>
+      {located && !hasFix ? (
+        <p className="lw-chips">
+          <Chip tone="neutral" floor={20}>
+            {GPS_UNAVAILABLE_CHIP}
+          </Chip>
+        </p>
+      ) : null}
+      <p className="lw-chips lw-chips--stacked">
+        <button
+          className="lw-plain-button lw-quiet-link"
+          data-hit="44"
+          data-refresh="list"
+          onClick={() => void refresh()}
+          type="button"
+        >
+          Refresh list
+        </button>
+      </p>
 
       {claim === null || pinned === null || pinned === undefined ? null : (
         <ul className="lw-list">
@@ -219,9 +293,16 @@ export function TaskList() {
       )}
 
       {rest.length === 0 && claim === null ? (
-        <p className="lw-body" data-empty="tasks" data-floor="20">
-          {EMPTY_STATE}
-        </p>
+        <div data-empty="tasks">
+          <p className="lw-body" data-floor="20">
+            {emptyBoardCopy(boardArea)}
+          </p>
+          {mismatch === null ? null : (
+            <p className="lw-body" data-empty="mismatch" data-floor="20">
+              {mismatch}
+            </p>
+          )}
+        </div>
       ) : null}
 
       <ul className="lw-list">

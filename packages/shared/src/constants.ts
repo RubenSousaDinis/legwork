@@ -51,6 +51,12 @@ export const NEED_BY_MIN_LEAD_S = 1200;
 
 /** A submitted proof must be within this many metres of the task's place. */
 export const GEOFENCE_M = 150;
+/**
+ * A claim may start this far from the place. Wider than `GEOFENCE_M` on purpose: the worker
+ * has `DEFAULT_CLAIM_TTL_S` (30 minutes) to walk there after claiming, and the proof photo
+ * still has to be taken inside the 150 m fence. The two numbers are different on purpose.
+ */
+export const CLAIM_RADIUS_M = 2000;
 /** Public surfaces round coordinates to 3 decimals (about 100 m). Exact ones stay private. */
 export const PUBLIC_COORD_DECIMALS = 3;
 
