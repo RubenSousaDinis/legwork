@@ -39,11 +39,17 @@ env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
   pnpm --filter @legwork/examples agent -- --scene refusal
 ```
 
-The hire scene needs someone to actually do the errand. Run the seeded CLI worker beside it:
+The hire scene needs someone to actually do the errand. Run the seeded CLI worker beside it,
+pointed at the task the agent just posted and at the same place — the proof has to land inside
+the 150 m geofence around that place, and the worker's own fixture is a different pharmacy:
 
 ```bash
-pnpm cli-worker -- --area ez1dp
+pnpm cli-worker -- --task-id <the id the agent posted> --place <a place json with lat and lon>
 ```
+
+That worker holds one claim at a time. If it answers `CLAIM REFUSED: AlreadyClaimed`, read
+`TaskEscrow.activeClaimOf(<worker address>)`: a task left in `Disputed` keeps the claim, and
+only the contract owner's `resolve` clears it.
 
 `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT` matters: the SDK spawns the `claude` binary, and
 inside a Claude Code session that child refuses to start.
@@ -74,8 +80,14 @@ The transcript is a real run on Base Sepolia testnet; tokens are redacted.
 
 It carries two marked blocks, `insert:hire` and `insert:refusal`, each a three-line fenced
 block. `scripts/inserts.ts` reads those markers to cut the terminal cards, so the markers are
-an interface: keep both pairs, keep three lines in each, and never hand-edit the lines
-themselves — they are what the binary and the API actually printed.
+an interface: keep both pairs and keep three lines in each. Nothing inside them is written from
+imagination — the hire block is the local binary's own stderr, and every figure, id, class and
+rule in the refusal block is one the run produced.
+
+The hire block is captured by driving the local server over stdio from a plain MCP client
+rather than from inside a scene. The binary does print those lines during a scene, with
+`LEGWORK_INSERT=1` — but the Claude Agent SDK does not forward an MCP server's stderr to the
+SDK consumer, so the loop cannot read its own.
 
 ## Tests
 
