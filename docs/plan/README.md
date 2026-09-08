@@ -67,7 +67,7 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 | T-48 | [Submission content + prize table](T-48-submission-content.md) | E | 9 | S / C | T-45 | planned |
 | T-49 | [Final README + POSTERS](T-49-final-readme.md) | lead | 10 | S / L | all | planned |
 | T-50 | [Mini-app design polish](T-50-miniapp-design-polish.md) | D | 5 | M / C | T-42 | planned |
-| T-51 | [Dashboard front door — landing, the two paths, the deck](T-51-dashboard-front-door.md) | D | 5 | L / C | T-26, T-43 | dispatched |
+| T-51 | [Dashboard front door — landing, the two paths, the deck](T-51-dashboard-front-door.md) | D | 5 | L / C | T-26, T-43 | merged |
 | T-52 | [Worker sign-in + location legibility on the board](T-52-worker-location-legibility.md) | D | 5 | M / C | — | merged |
 | T-53 ★ | [Inside World App the worker's address is the wallet](T-53-worker-address-is-the-wallet.md) | D | 5 | S / C | T-52 | planned |
 | T-54 | [Selfie Check as the demo credential](T-54-selfie-check-as-the-demo-credential.md) | D | 5 | M / C | — | planned |
