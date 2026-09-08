@@ -40,7 +40,7 @@ import {
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { MCP_TOOLS, PRICE_FLOOR_USDC } from '@legwork/shared';
-import { shouldStop, wrapWorkerText } from './loop-rules';
+import { identityLine, shouldStop, wrapWorkerText } from './loop-rules';
 
 /** The demo agent. The operator's Opus window is a different budget and a different job. */
 const MODEL = 'claude-sonnet-5';
@@ -294,9 +294,15 @@ function asJson(text: string): Record<string, unknown> | null {
 async function runScene(scene: Scene, out: Transcript): Promise<number> {
   /** Set once, by `shouldStop`, and read by the PreToolUse gate below. */
   let refused: Record<string, unknown> | null = null;
+  // The committed prompt, plus the one line that names the agent onchain. `BUYER_AGENT_ID` is
+  // the identity T-32 registered for the buyer wallet; without it a refusal marks nobody.
+  const agentId = process.env.BUYER_AGENT_ID?.trim();
+  if (!agentId) throw new Error('BUYER_AGENT_ID is not set (read from the environment only)');
+  const systemPrompt = `${readFileSync(join(HERE, 'prompt.md'), 'utf8').trimEnd()}\n\n${identityLine(agentId)}\n`;
+
   const options: Options = {
     model: MODEL,
-    systemPrompt: readFileSync(join(HERE, 'prompt.md'), 'utf8'),
+    systemPrompt,
     maxTurns: MAX_TURNS,
     permissionMode: 'default',
     cwd: REPO_ROOT,

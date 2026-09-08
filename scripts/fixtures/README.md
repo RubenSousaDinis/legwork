@@ -6,7 +6,7 @@
 |---|---|
 | `pnpm demo:reset` | `POST /admin/reset-demo`, then `WorkerRegistry.resetWorker` for an explicitly named binding, then the mark count off `GET /public/refusals`. Prints `RESET OK`. |
 | `pnpm demo:run` | The whole money loop: post (x402, 3.45 USDC) → claim → submit → release, against Base Sepolia. Last line is `RELEASED`; exit 0. |
-| `pnpm cli-worker -- --area ez1dp --place scripts/fixtures/demo-place.json` | The worker half on its own, against a task somebody else posted. |
+| `pnpm cli-worker -- --area ez1dn --place scripts/fixtures/demo-place.json` | The worker half on its own, against a task somebody else posted. |
 
 All three read every key from `process.env` and print none of them. The operator supplies the
 environment; `node --env-file=.env` is the usual way.
@@ -33,10 +33,13 @@ does not resolve is a `422` from `POST /tasks`, not a failed loop.
 The committed values are the operator's Day-3 choice:
 
 ```
-node/2143259076   Farmácia Antunes, Rua Vale de Lobos, Leiria, PT   39.7341702, -8.7995142
+node/13464213795   Pão Doce, Rua do Cruzeiro, Leiria, PT   39.7294263, -8.8359575
 ```
 
-geohash-5 `ez1dp`, which is the same area `demo-data.json`'s seeded rows use. To film somewhere
+geohash-5 `ez1dn` — the pastry shop in Parceiros the operator films at (Sept 8). The seeded
+pool from `demo-data.json` lives one cell east, in `ez1dp`; three more seeded workers are seeded
+into `ez1dn` by `scripts/seed-area.sh` so the preflight for the filmed task reads
+"4 active · 1 verified · 3 seeded" once the phone has completed one task there. To film somewhere
 else, replace all seven fields and re-check the coordinate: **if the API's geocode of
 `place_id` is more than 150 m from the `lat`/`lon` here, every submit auto-disputes.** Fix the
 fixture, never the fence.
