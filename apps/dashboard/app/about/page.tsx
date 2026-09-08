@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { Chip } from '../../components/Chip';
 import { SiteHeader } from '../../components/SiteHeader';
-import { CLAIM } from '../copy';
-import { TrustModel } from '../TrustModel';
+import { TRUST_MODEL_CLOSER, claimSentence, resolvedCredentialLevel, trustModelSentence } from '../copy';
 
 export const metadata: Metadata = {
   title: 'Legwork · about',
@@ -11,6 +10,8 @@ export const metadata: Metadata = {
 const STANDARDS = ['World ID', 'ERC-8004', 'x402', 'USDC', 'Base Sepolia'] as const;
 
 export default function AboutPage() {
+  const level = resolvedCredentialLevel();
+  const [before, after] = trustModelSentence(level).split('bounded, attributable work');
   return (
     <main className="landing">
       <SiteHeader current="about" />
@@ -18,10 +19,17 @@ export default function AboutPage() {
         About
       </h1>
       <p className="landing-prose landing-claim" data-floor="24">
-        {CLAIM}
+        {claimSentence(level)}
       </p>
       <section className="landing-trust">
-        <TrustModel />
+        <p className="landing-prose" data-floor="24">
+          {before}
+          <strong>bounded, attributable work</strong>
+          {after}
+        </p>
+        <p className="landing-closer" data-floor="24">
+          {TRUST_MODEL_CLOSER}
+        </p>
       </section>
       <section className="agents-block">
         <h2 className="landing-section-title">What is live and what is seeded</h2>

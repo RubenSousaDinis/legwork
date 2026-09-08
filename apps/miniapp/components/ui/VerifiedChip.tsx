@@ -1,4 +1,4 @@
-import { credentialLabel, type CredentialLevel } from '@legwork/shared';
+import { credentialLabel, verifiedBannerSub, type CredentialLevel } from '@legwork/shared';
 import type { SessionState } from '../../lib/session';
 import { Chip } from './Chip';
 
@@ -42,7 +42,7 @@ export function VerifiedChip({ state, compact = false, level }: VerifiedChipProp
     <div className="lw-verified-banner" data-verified="true">
       <span className="lw-verified-line" data-floor="20">
         <span className="lw-verified-line__head">Verified human ✓</span>
-        <span className="lw-verified-line__sub"> · World ID · one account per person</span>
+        <span className="lw-verified-line__sub">{` ${verifiedBannerSub(level)}`}</span>
       </span>
       <span>
         <Chip tone="verified" floor={20}>

@@ -1,16 +1,22 @@
 'use client';
 
+import { uniquenessClause, type CredentialLevel } from '@legwork/shared';
 import { Button } from '../../components/ui/Button';
+import { CREDENTIAL_LEVEL } from '../../lib/env';
 
 export type LandingProps = {
   busy: boolean;
   onVerify: () => void;
+  level?: CredentialLevel;
 };
 
 export const LANDING_LABEL = 'WORLD ID';
 export const LANDING_TITLE = 'Verify once. Claim tasks nearby.';
 export const VERIFY_BUTTON = 'Verify with World ID';
-export const VERIFY_CAPTION = 'about 30 seconds · one account per person';
+export function verifyCaption(level: CredentialLevel): string {
+  return `about 30 seconds · ${uniquenessClause(level)}`;
+}
+export const VERIFY_CAPTION = verifyCaption(CREDENTIAL_LEVEL);
 
 /** The three facts, in the order the prototype stacks them under the button. */
 export const LANDING_FACTS = [
@@ -27,7 +33,7 @@ export const LANDING_FACTS = [
  * 390 px instead of overflowing its own box. The verification state is the header's job and
  * is not repeated here: `Verify to claim` appears once on this screen, in `<header>`.
  */
-export function Landing({ busy, onVerify }: LandingProps) {
+export function Landing({ busy, onVerify, level = CREDENTIAL_LEVEL }: LandingProps) {
   return (
     <section className="lw-card" data-step="landing">
       <p className="lw-list-label">{LANDING_LABEL}</p>
@@ -39,7 +45,7 @@ export function Landing({ busy, onVerify }: LandingProps) {
         </Button>
       </div>
       <p className="lw-cta-caption" data-cta-caption>
-        {VERIFY_CAPTION}
+        {verifyCaption(level)}
       </p>
 
       <ul className="lw-facts" data-floor="20">

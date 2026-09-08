@@ -52,6 +52,7 @@ describe('the landing card', () => {
     const caption = container.querySelector('[data-cta-caption]') as HTMLElement;
     expect(caption).not.toBeNull();
     expect(caption.textContent).toBe(VERIFY_CAPTION);
+    // orb — the bundle default. The uniqueness clause is orb-only; see landingCaptionFollowsTheCredential.
     expect(caption.textContent).toBe('about 30 seconds · one account per person');
     expect(cta.closest('[data-step="landing"]')).toBe(caption.closest('[data-step="landing"]'));
 

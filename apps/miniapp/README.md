@@ -29,7 +29,7 @@ Client (`NEXT_PUBLIC_*`, shipped in the bundle — nothing secret goes here):
 | Variable | Default | Used for |
 |---|---|---|
 | `NEXT_PUBLIC_WORLD_APP_ID` | — (warns) | `app_id` on the IDKit widget. Without it the widget does not mount. |
-| `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` | `orb` (warns) | `selfie` picks `selfieCheckLegacy`, anything else picks `orbLegacy`. |
+| `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` | `orb` (warns) | Selects the IDKit preset and every uniqueness claim. `selfie` picks `selfieCheckLegacy` and the camera-checked wording; anything else picks `orbLegacy` and `one account per person`. |
 | `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3001` | Rewrite target for `/api/:path*`. |
 
 Server only, read in the temporary route handlers and never in a client bundle:
@@ -42,6 +42,24 @@ Server only, read in the temporary route handlers and never in a client bundle:
 
 A missing value warns to the console and falls back. Nothing throws — the probe has to render
 on a phone that was handed a half-filled Vercel environment.
+
+## Which credential the claims follow
+
+The deployment ships on **Orb** until the operator flips it. Every uniqueness sentence is a
+function of `CredentialLevel` in `@legwork/shared` — the banner sub-line, the landing caption,
+the first about-fact, and the trust-model paragraph on `/about` and `/support`. At `orb` those
+strings are the wording on `main` today. At `selfie` they say a live person, camera-checked,
+and never uniqueness: World's own page says Selfie Check does not guarantee one-person-one-account.
+
+Reverting is two environment values and a redeploy, nothing else:
+
+```
+WORLD_CREDENTIAL_LEVEL=orb
+NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL=orb
+```
+
+`pickPreset`, IDKit, and the verify routes already send `selfieCheckLegacy` at `selfie`. This
+package does not hard-code the level in a rendered string.
 
 ## Running it
 
@@ -185,5 +203,5 @@ Supporting classes carry the same rules where a screen needs them: `lw-card--tig
   button wears the `lw-button` classes rather than wrapping one.
 
 The worker's verification state sits in the sticky header on every route — the compact pill
-beside the wordmark and the full `Verified human ✓ · World ID · one account per person`
-banner under it — so it is always above the fold.
+beside the wordmark and the full `Verified human ✓` banner under it, whose sub-line follows
+the credential (`· World ID · one account per person` at orb) — so it is always above the fold.

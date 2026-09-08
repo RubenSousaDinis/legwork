@@ -1,4 +1,4 @@
-import { credentialLabel } from '@legwork/shared';
+import { credentialLabel, trustModelSentence, type CredentialLevel } from '@legwork/shared';
 import type { Metadata } from 'next';
 import { Chip } from '../../components/ui/Chip';
 import { CREDENTIAL_LEVEL } from '../../lib/env';
@@ -9,12 +9,16 @@ export const metadata: Metadata = {
     "Agents hire verified humans for the legwork software can't do. Escrow releases on proof.",
 };
 
-const FACTS = [
-  'One verified human per account, checked with World ID.',
-  'The money is locked in escrow before the work starts.',
-  'Payment releases on the proof — a photo with a location and a timestamp.',
-  'Every hiring agent carries an onchain identity, so a refusal has somewhere to land.',
-] as const;
+function aboutFacts(level: CredentialLevel) {
+  return [
+    level === 'orb'
+      ? 'One verified human per account, checked with World ID.'
+      : 'A live human behind every account, camera-checked with World ID.',
+    'The money is locked in escrow before the work starts.',
+    'Payment releases on the proof — a photo with a location and a timestamp.',
+    'Every hiring agent carries an onchain identity, so a refusal has somewhere to land.',
+  ] as const;
+}
 
 const STANDARDS = ['World ID', 'ERC-8004', 'x402', 'USDC', 'Base Sepolia'] as const;
 
@@ -44,7 +48,7 @@ export default function AboutPage() {
       <section className="lw-card">
         <p className="lw-list-label">WHAT IS DIFFERENT</p>
         <ul className="lw-facts" data-floor="20">
-          {FACTS.map((fact) => (
+          {aboutFacts(CREDENTIAL_LEVEL).map((fact) => (
             <li key={fact}>{fact}</li>
           ))}
         </ul>
@@ -53,10 +57,7 @@ export default function AboutPage() {
       <section className="lw-card">
         <p className="lw-list-label">THE BOUND, NOT A PROMISE</p>
         <p className="lw-body" data-floor="20">
-          Verification proves a worker is a live, unique person — not that they are honest or
-          competent. Screening is a cost floor, not a cure. What Legwork guarantees is bounded,
-          attributable work: an agent never pays for nothing, a worker never works for nothing, and
-          every task leaves a record both sides can read.
+          {trustModelSentence(CREDENTIAL_LEVEL)}
         </p>
         <p className="lw-note">Bot-proof, not fraud-proof.</p>
       </section>
