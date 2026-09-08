@@ -53,6 +53,14 @@ const WALLET_AUTH_DATA = {
   signature: `0x${'ab'.repeat(64)}1b`,
 };
 
+/** The mock signs as the held payout key so `/session` looks up the same address `/register` bound. */
+function mockWalletAuth() {
+  vi.mocked(MiniKit.walletAuth).mockImplementation(async () => ({
+    executedWith: 'minikit',
+    data: { ...WALLET_AUTH_DATA, address: getPayoutAddress() ?? WALLET_AUTH_DATA.address },
+  } as never));
+}
+
 type FetchCall = { url: string; init: RequestInit | undefined };
 let calls: FetchCall[] = [];
 let originalFetch: typeof globalThis.fetch;
@@ -98,10 +106,7 @@ describe('auth flow', () => {
 
     // --- inside World App: register, then nonce, then walletAuth, then the session.
     vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
-    vi.mocked(MiniKit.walletAuth).mockResolvedValue({
-      executedWith: 'minikit',
-      data: WALLET_AUTH_DATA,
-    } as never);
+    mockWalletAuth();
 
     await verifyAndSignIn();
     await screen.findByText('Your payout address');
@@ -126,7 +131,11 @@ describe('auth flow', () => {
     });
     // `payload` is the walletAuth result's `data` object, and the nonce goes back beside it.
     expect(sessionRequests()).toEqual([
-      { mode: 'walletAuth', payload: WALLET_AUTH_DATA, nonce: NONCE },
+      {
+        mode: 'walletAuth',
+        payload: { ...WALLET_AUTH_DATA, address: getPayoutAddress() },
+        nonce: NONCE,
+      },
     ]);
     expect(screen.queryByText('web sign-in — outside World App')).toBeNull();
 
@@ -184,7 +193,7 @@ describe('auth flow', () => {
 
     expect(
       await screen.findByText(
-        'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.',
+        'Open this in World App to sign in with the key this phone holds, or paste the key you exported.',
       ),
     ).toBeTruthy();
 
@@ -197,26 +206,32 @@ describe('auth flow', () => {
   it('conflictScreenNeverOffersRegister', async () => {
     setScenario({ idkitVerify: 'nullifier_already_registered' });
     await verifyAndSignIn();
-    await screen.findByText(/already has a worker account/);
+    await screen.findByText(
+      'Open this in World App to sign in with the key this phone holds, or paste the key you exported.',
+    );
     expect(screen.queryByText('Register as a worker')).toBeNull();
-    expect(screen.getByText('Sign in with this key')).toBeTruthy();
+    expect(screen.queryByText('Sign in with this key')).toBeNull();
   });
 
   it('nullifierConflictSignsInWithTheHeldKey', async () => {
     const { bindRegisteredWorker, NULLIFIER } = await import('../mocks/handlers');
     const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
 
-    // --- outside World App: idkit session with the held payout address.
+    // --- outside World App: a 409 never issued the idkit cookie, so there is no sign-in.
     const held = loadOrCreatePayoutKey();
     bindRegisteredWorker({ worker: held.address, nullifier: NULLIFIER });
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
-    fireEvent.click(await screen.findByText('Sign in with this key'));
-
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/tasks'));
+    expect(
+      await screen.findByText(
+        'Open this in World App to sign in with the key this phone holds, or paste the key you exported.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Sign in with this key')).toBeNull();
+    expect(sessionRequests()).toHaveLength(0);
     expect(registerRequests()).toHaveLength(0);
-    expect(sessionRequests()).toEqual([{ mode: 'idkit', worker_address: held.address }]);
+    expect(replace).not.toHaveBeenCalledWith('/tasks');
 
     // --- inside World App: walletAuth, still never /register.
     cleanup();
@@ -225,16 +240,18 @@ describe('auth flow', () => {
     replace.mockClear();
     calls = [];
     vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
-    vi.mocked(MiniKit.walletAuth).mockResolvedValue({
-      executedWith: 'minikit',
-      data: WALLET_AUTH_DATA,
-    } as never);
+    mockWalletAuth();
 
     const heldInside = loadOrCreatePayoutKey();
     bindRegisteredWorker({ worker: heldInside.address, nullifier: NULLIFIER });
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
+    expect(
+      await screen.findByText(
+        'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.',
+      ),
+    ).toBeTruthy();
     fireEvent.click(await screen.findByText('Sign in with this key'));
 
     await waitFor(() => expect(sessionRequests().at(-1)).toMatchObject({ mode: 'walletAuth' }));
@@ -244,6 +261,8 @@ describe('auth flow', () => {
 
   it('nullifierConflictExplainsAMismatchedKey', async () => {
     const { bindRegisteredWorker, NULLIFIER, WORKER_ADDRESS } = await import('../mocks/handlers');
+    vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
+    mockWalletAuth();
     bindRegisteredWorker({ worker: WORKER_ADDRESS, nullifier: NULLIFIER });
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 

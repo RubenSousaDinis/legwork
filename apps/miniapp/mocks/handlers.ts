@@ -272,6 +272,13 @@ type RegistryRow = { worker: string; nullifier: string };
 
 let registry: RegistryRow[] = [];
 
+/**
+ * The idkit-session cookie. The real `/idkit/verify` only sets it on 200; a 409 returns
+ * before that, and `POST /session` in idkit mode 401s without it. jsdom does not persist
+ * `Set-Cookie`, so this flag is the cookie.
+ */
+let idkitCookieIssued = false;
+
 export function bindRegisteredWorker(row: RegistryRow): void {
   const worker = row.worker.toLowerCase();
   registry = registry.filter(
@@ -289,6 +296,7 @@ export function resetLastVerifyBody(): void {
   registerBodies = [];
   sessionBodies = [];
   registry = [];
+  idkitCookieIssued = false;
 }
 
 // ----------------------------------------------------------------- handlers
@@ -310,8 +318,10 @@ export const handlers = [
   http.post('*/api/idkit/verify', async ({ request }) => {
     lastVerifyText = await request.text();
     if (scenario().idkitVerify === 'nullifier_already_registered') {
+      idkitCookieIssued = false;
       return json(NULLIFIER_ALREADY_REGISTERED, { status: 409 });
     }
+    idkitCookieIssued = true;
     return json(VERIFY_RESPONSE);
   }),
 
@@ -326,6 +336,10 @@ export const handlers = [
     sessionBodies.push(body);
 
     if (body?.mode === 'idkit') {
+      // Same order as the live route: the cookie first, then the registry.
+      if (!idkitCookieIssued) {
+        return json(UNAUTHORIZED, { status: 401 });
+      }
       const address = typeof body.worker_address === 'string' ? body.worker_address : '';
       const bound = workerInRegistry(address);
       if (bound === undefined) {
@@ -339,14 +353,11 @@ export const handlers = [
       });
     }
 
-    // walletAuth: the MiniKit signature is the proof. The registry must already hold a
-    // worker for this World ID — from `/register` on the happy path, or from a 409 fixture.
-    if (registry.length === 0) {
-      return json({ error: 'forbidden', reason: 'not_registered' }, { status: 403 });
-    }
+    // walletAuth: the MiniKit signature is the proof. The signing address has to already
+    // be in the registry — from `/register` on the happy path, or from a 409 fixture.
     const payloadAddress =
       typeof body?.payload?.address === 'string' ? body.payload.address : '';
-    const bound = workerInRegistry(payloadAddress) ?? registry[0];
+    const bound = workerInRegistry(payloadAddress);
     if (bound === undefined) {
       return json({ error: 'forbidden', reason: 'not_registered' }, { status: 403 });
     }
@@ -438,6 +449,7 @@ export const handlers = [
  */
 export const nullifierAlreadyRegistered = http.post('*/api/idkit/verify', async ({ request }) => {
   lastVerifyText = await request.text();
+  idkitCookieIssued = false;
   return json(NULLIFIER_ALREADY_REGISTERED, { status: 409 });
 });
 

@@ -44,6 +44,9 @@ type Step = 'landing' | 'verifying' | 'signing-in' | 'payout-key' | 'register';
 const CONFLICT_MESSAGE =
   'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.';
 
+const BROWSER_CONFLICT_MESSAGE =
+  'Open this in World App to sign in with the key this phone holds, or paste the key you exported.';
+
 const MISMATCH_MESSAGE =
   'That account is bound to a different payout address. Paste the key you exported when you registered — Legwork cannot recover it for you.';
 
@@ -239,21 +242,17 @@ export default function AuthPage() {
   }, [payoutAddress, mode, router]);
 
   const signInExisting = useCallback(async () => {
-    if (payoutAddress === null) return;
+    if (payoutAddress === null || !miniKitInstalled()) return;
     setBusy(true);
     setError(null);
     try {
-      const sessionMode = miniKitInstalled() ? ('walletAuth' as const) : ('idkit' as const);
-      setMode(sessionMode);
-      const created =
-        sessionMode === 'walletAuth'
-          ? await createWalletAuthSession()
-          : await createIdkitSession(payoutAddress);
+      setMode('walletAuth');
+      const created = await createWalletAuthSession();
       setSessionState({
         status: 'verified',
         nullifier: created.nullifier,
         level: CREDENTIAL_LEVEL,
-        mode: sessionMode === 'walletAuth' ? 'walletAuth' : 'idkit',
+        mode: 'walletAuth',
         worker: created.worker,
         registered: true,
       });
@@ -273,7 +272,7 @@ export default function AuthPage() {
     <div data-auth-step={step}>
       {conflict ? (
         <p className="lw-error-line" data-conflict="nullifier_already_registered" data-floor="20">
-          {CONFLICT_MESSAGE}
+          {miniKitInstalled() ? CONFLICT_MESSAGE : BROWSER_CONFLICT_MESSAGE}
         </p>
       ) : null}
       {error === null ? null : <FailedCheck error={error} />}
@@ -310,7 +309,7 @@ export default function AuthPage() {
           onContinue={register}
           onImported={setPayoutAddress}
           onRetryLocation={() => void refreshArea()}
-          onSignIn={() => void signInExisting()}
+          onSignIn={miniKitInstalled() ? () => void signInExisting() : undefined}
         />
       ) : null}
 

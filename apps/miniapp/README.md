@@ -56,9 +56,10 @@ pnpm --filter @legwork/miniapp build
 ## Sign-in, area, and the two radii
 
 A World ID that already has a worker account answers `409 nullifier_already_registered` and
-does not issue an idkit-session cookie. The conflict screen then offers **Sign in with this
-key** — `POST /session` in `walletAuth` mode inside World App (the MiniKit signature is the
-proof) or `idkit` mode outside it (the held payout address). It never calls `POST /register`.
+does not issue an idkit-session cookie. Inside World App the conflict screen offers **Sign in
+with this key** — `POST /session` in `walletAuth` mode; the MiniKit signature is the proof, and
+it never calls `POST /register`. Outside World App that button is not offered: there is no
+idkit cookie after a 409, so the screen says to open World App or paste the exported key.
 If the held address is not the one bound to that World ID, the screen says so and the import
 field stays open; Legwork cannot recover a key that left the phone.
 

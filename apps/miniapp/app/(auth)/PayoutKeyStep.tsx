@@ -15,7 +15,7 @@ export type PayoutKeyStepProps = {
   onImported: (address: string) => void;
   /** Fresh registration. Absent in the conflict state — that button cannot succeed there. */
   onContinue?: () => void;
-  /** Returning worker. Only rendered in the conflict state. */
+  /** Returning worker, inside World App only. A 409 never issues the idkit cookie. */
   onSignIn?: () => void;
   busy: boolean;
   conflict?: boolean;
@@ -149,9 +149,11 @@ export function PayoutKeyStep({
         ) : null}
 
         {conflict ? (
-          <Button variant="primary" size="lg" full disabled={busy} onClick={onSignIn}>
-            Sign in with this key
-          </Button>
+          onSignIn ? (
+            <Button variant="primary" size="lg" full disabled={busy} onClick={onSignIn}>
+              Sign in with this key
+            </Button>
+          ) : null
         ) : (
           <>
             {area !== null ? (
