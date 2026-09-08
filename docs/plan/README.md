@@ -70,6 +70,7 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 | T-51 | [Dashboard front door — landing, the two paths, the deck](T-51-dashboard-front-door.md) | D | 5 | L / C | T-26, T-43 | dispatched |
 | T-52 | [Worker sign-in + location legibility on the board](T-52-worker-location-legibility.md) | D | 5 | M / C | — | merged |
 | T-53 ★ | [Inside World App the worker's address is the wallet](T-53-worker-address-is-the-wallet.md) | D | 5 | S / C | T-52 | planned |
+| T-54 | [Selfie Check as the demo credential](T-54-selfie-check-as-the-demo-credential.md) | D | 5 | M / C | — | planned |
 | T-13b ⇢ | [Self-deploy ERC-8004 registries (S5 FAIL)](T-13b-self-deploy-erc8004.md) | A | 2 | S / L | T-04 | dropped — S5 PASS |
 | T-16b ⇢ | [Direct funding gateway (S3 FAIL)](T-16b-direct-funding.md) | B | 6 | M / C | T-15 | dropped — S3 PASS |
 
