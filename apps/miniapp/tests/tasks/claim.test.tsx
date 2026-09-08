@@ -34,6 +34,8 @@ beforeEach(() => {
 afterEach(() => {
   requests.stop();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, 'geolocation', { configurable: true, value: undefined });
   cleanup();
 });
 
@@ -105,6 +107,40 @@ describe('claiming', () => {
 
     // Exactly once — a second release would be a second relayed transaction.
     expect(requests.count('POST', `/api/tasks/${TASK_ID}/release-claim`)).toBe(1);
+  });
+
+  it('claimStatesDistanceWindowAndFence', async () => {
+    const { metresNorthOf, TASK_PLACE_COORDS } = await import('../../mocks/handlers');
+    const { geolocationAt, stubGeolocation } = await import('../proof/harness');
+    const fix = metresNorthOf(TASK_PLACE_COORDS['1024']!, 350);
+    stubGeolocation(geolocationAt(fix.lat, fix.lon, 12));
+
+    render(<TaskList />);
+    const summary = await screen.findByText(TITLE);
+    fireEvent.click(summary.closest('button') as HTMLButtonElement);
+
+    expect(
+      await screen.findByText(
+        'Padaria Central is ~350 m away. You have 30 minutes to get there, and your proof photo must be taken within 150 m of it.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('claimBlockedBeyondTheRadiusSaysWhy', async () => {
+    const { metresNorthOf, TASK_PLACE_COORDS } = await import('../../mocks/handlers');
+    const { geolocationAt, stubGeolocation } = await import('../proof/harness');
+    const fix = metresNorthOf(TASK_PLACE_COORDS['1024']!, 3000);
+    stubGeolocation(geolocationAt(fix.lat, fix.lon, 12));
+
+    render(<TaskList />);
+    const summary = await screen.findByText(TITLE);
+    fireEvent.click(summary.closest('button') as HTMLButtonElement);
+
+    const button = await screen.findByText('CLAIM');
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      screen.getByText('Too far to claim — you are ~3.0 km away, and a claim must start within 2 km'),
+    ).toBeTruthy();
   });
 
   it('cooldownMessageOn409', async () => {

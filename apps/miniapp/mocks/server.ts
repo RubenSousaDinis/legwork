@@ -1,5 +1,6 @@
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { resetAreaForTests } from '../lib/area';
 import { handlers, resetLastVerifyBody } from './handlers';
 import { resetScenarios } from './scenarios';
 
@@ -14,5 +15,6 @@ afterEach(() => {
   server.resetHandlers();
   resetLastVerifyBody();
   resetScenarios();
+  resetAreaForTests();
 });
 afterAll(() => server.close());

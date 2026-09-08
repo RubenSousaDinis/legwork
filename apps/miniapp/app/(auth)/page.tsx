@@ -6,7 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chip } from '../../components/ui/Chip';
 import { ApiError } from '../../lib/api';
-import { resolveArea } from '../../lib/area';
+import {
+  lastAreaSource,
+  rememberRegisteredArea,
+  resolveArea,
+  type AreaSource,
+} from '../../lib/area';
 import { CREDENTIAL_LEVEL } from '../../lib/env';
 import {
   createIdkitSession,
@@ -37,7 +42,13 @@ import { VerifyStep } from './VerifyStep';
 type Step = 'landing' | 'verifying' | 'signing-in' | 'payout-key' | 'register';
 
 const CONFLICT_MESSAGE =
-  'This World ID already has a worker account. Restore it with your payout key below.';
+  'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.';
+
+const BROWSER_CONFLICT_MESSAGE =
+  'Open this in World App to sign in with the key this phone holds, or paste the key you exported.';
+
+const MISMATCH_MESSAGE =
+  'That account is bound to a different payout address. Paste the key you exported when you registered — Legwork cannot recover it for you.';
 
 /** Long enough to read the transaction chip, short enough that nobody taps twice. */
 const REDIRECT_DELAY_MS = 2500;
@@ -77,6 +88,12 @@ function screenError(thrown: unknown): ScreenError {
   return describeIdkitError(describe(thrown));
 }
 
+function isMismatchedAddress(thrown: unknown): thrown is ApiError {
+  if (!(thrown instanceof ApiError)) return false;
+  const body = thrown.body as { error?: string; reason?: string } | null;
+  return thrown.status === 403 && body?.reason === 'not_registered';
+}
+
 /** Read at sign-in time, not at mount: the webview installs MiniKit asynchronously. */
 function miniKitInstalled(): boolean {
   try {
@@ -99,6 +116,8 @@ export default function AuthPage() {
   const [mode, setMode] = useState<'walletAuth' | 'idkit' | null>(null);
   const [payoutAddress, setPayoutAddress] = useState<string | null>(null);
   const [tx, setTx] = useState<string | null>(null);
+  const [area, setArea] = useState<string | null>(null);
+  const [areaSource, setAreaSource] = useState<AreaSource>('default');
 
   const verified = useRef<VerifyResponse | null>(null);
 
@@ -106,6 +125,17 @@ export default function AuthPage() {
   useEffect(() => {
     if (session.status === 'verified' && session.registered) router.replace('/tasks');
   }, [session, router]);
+
+  const refreshArea = useCallback(async () => {
+    const resolved = await resolveArea();
+    setArea(resolved);
+    setAreaSource(lastAreaSource());
+  }, []);
+
+  useEffect(() => {
+    if (step !== 'payout-key' || conflict) return;
+    void refreshArea();
+  }, [step, conflict, refreshArea]);
 
   const startVerify = useCallback(async () => {
     setBusy(true);
@@ -180,6 +210,7 @@ export default function AuthPage() {
     setStep('register');
     try {
       const area = await resolveArea();
+      rememberRegisteredArea(area);
       const result = await registerWorker(payoutAddress, area);
       setTx(result.tx);
 
@@ -210,11 +241,38 @@ export default function AuthPage() {
     }
   }, [payoutAddress, mode, router]);
 
+  const signInExisting = useCallback(async () => {
+    if (payoutAddress === null || !miniKitInstalled()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setMode('walletAuth');
+      const created = await createWalletAuthSession();
+      setSessionState({
+        status: 'verified',
+        nullifier: created.nullifier,
+        level: CREDENTIAL_LEVEL,
+        mode: 'walletAuth',
+        worker: created.worker,
+        registered: true,
+      });
+      router.replace('/tasks');
+    } catch (thrown) {
+      if (isMismatchedAddress(thrown)) {
+        setError({ sentence: MISMATCH_MESSAGE, code: String(thrown.status) });
+      } else {
+        setError(screenError(thrown));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [payoutAddress, router]);
+
   return (
     <div data-auth-step={step}>
       {conflict ? (
         <p className="lw-error-line" data-conflict="nullifier_already_registered" data-floor="20">
-          {CONFLICT_MESSAGE}
+          {miniKitInstalled() ? CONFLICT_MESSAGE : BROWSER_CONFLICT_MESSAGE}
         </p>
       ) : null}
       {error === null ? null : <FailedCheck error={error} />}
@@ -243,10 +301,15 @@ export default function AuthPage() {
       {step === 'payout-key' && payoutAddress !== null ? (
         <PayoutKeyStep
           address={payoutAddress}
+          area={area}
+          areaSource={areaSource}
           busy={busy}
+          conflict={conflict}
           importOpen={conflict}
           onContinue={register}
           onImported={setPayoutAddress}
+          onRetryLocation={() => void refreshArea()}
+          onSignIn={miniKitInstalled() ? () => void signInExisting() : undefined}
         />
       ) : null}
 

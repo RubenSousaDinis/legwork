@@ -6,7 +6,7 @@
  * | Route | Auth | Body / query | 200 | Other |
  * |---|---|---|---|---|
  * | `GET /tasks/list?area=&lat=&lon=` | worker-session | — | `{tasks: WorkerTaskRow[]}` | — |
- * | `POST /tasks/:id/claim` | worker-session | — | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}` |
+ * | `POST /tasks/:id/claim` | worker-session | optional `{lat, lon}` | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}`; 422 `{error: 'too_far_to_claim', distance_m, radius_m}` |
  * | `POST /tasks/:id/release-claim` | worker-session | — | `{tx}` | 409 `conflict` |
  * | `POST /tasks/:id/submit` | worker-session | `{proofHash?, …per-type proof}` | `{tx, status: 'submitted'}` | 400 `invalid_request`; 409 `conflict` |
  * | `POST /tasks/:id/report` | worker-session | `{class}` | `{recorded: true}` | 404 |
@@ -33,6 +33,7 @@
  * that pass for one task, which is what `GET /tasks/:id` (T-19) calls on a status read.
  */
 import {
+  CLAIM_RADIUS_M,
   TASK_STATE,
   TASK_TYPES,
   TASK_TYPE_BIT,
@@ -211,6 +212,34 @@ export function assertClaimableBy(
   if (pre.isSeeded && !pre.buyerAllowlisted) return { error: 'SeededCannotClaimExternal' };
   if (!isClaimable(chainTask, now)) return { error: 'AlreadyClaimed' };
   return undefined;
+}
+
+export interface TooFarToClaim {
+  error: 'too_far_to_claim';
+  distance_m: number;
+  radius_m: number;
+}
+
+/**
+ * Optional GPS on a claim: when both coordinates are present and the place is further than
+ * `CLAIM_RADIUS_M`, the worker is too far to start. Absent coordinates are not a refusal —
+ * a worker with no fix is not punished for it, and the 150 m proof fence still applies at
+ * submit. Uses the same `distanceM` helper as the proof geofence; not a second haversine.
+ */
+export function tooFarToClaim(
+  from: { lat: number; lon: number } | undefined,
+  row: Pick<TaskRow, 'exactLat' | 'exactLon'>,
+): TooFarToClaim | undefined {
+  if (from === undefined) return undefined;
+  const place = taskCoordinate(row);
+  if (place === undefined) return undefined;
+  const distance = distanceM(from, place);
+  if (distance <= CLAIM_RADIUS_M) return undefined;
+  return {
+    error: 'too_far_to_claim',
+    distance_m: Math.round(distance),
+    radius_m: CLAIM_RADIUS_M,
+  };
 }
 
 /** `Open`, or a `Claimed` whose claim TTL has run out — the contract's own lazy expiry. */

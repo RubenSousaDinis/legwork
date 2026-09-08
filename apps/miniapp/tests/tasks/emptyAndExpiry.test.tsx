@@ -20,6 +20,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, 'geolocation', { configurable: true, value: undefined });
   cleanup();
 });
 
@@ -29,7 +31,33 @@ describe('the edges of the list', () => {
     render(<TaskList />);
 
     expect(
-      await screen.findByText('No open tasks near you right now — the list refreshes every 3 s.'),
+      await screen.findByText(
+        'No open tasks in ez1dp right now. This board shows the cell you registered in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('emptyStateNamesTheAreaAndTheMismatch', async () => {
+    const { rememberRegisteredArea, areaFromPosition } = await import('../../lib/area');
+    const { geolocationAt, stubGeolocation } = await import('../proof/harness');
+    rememberRegisteredArea('ez1dp');
+    const elsewhere = { lat: 38.7223, lon: -9.1393 };
+    stubGeolocation(geolocationAt(elsewhere.lat, elsewhere.lon, 12));
+    setScenario({ tasks: 'empty' });
+
+    render(<TaskList />);
+
+    expect(
+      await screen.findByText(
+        'No open tasks in ez1dp right now. This board shows the cell you registered in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.',
+      ),
+    ).toBeTruthy();
+    const fixArea = areaFromPosition(elsewhere.lat, elsewhere.lon);
+    expect(fixArea).not.toBe('ez1dp');
+    expect(
+      await screen.findByText(
+        `Your phone is in ${fixArea}, and your account is registered in ez1dp.`,
+      ),
     ).toBeTruthy();
   });
 

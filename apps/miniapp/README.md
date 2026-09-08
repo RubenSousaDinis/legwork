@@ -53,6 +53,33 @@ pnpm --filter @legwork/miniapp test       # vitest, jsdom, msw — never a live 
 pnpm --filter @legwork/miniapp build
 ```
 
+## Sign-in, area, and the two radii
+
+A World ID that already has a worker account answers `409 nullifier_already_registered` and
+does not issue an idkit-session cookie. Inside World App the conflict screen offers **Sign in
+with this key** — `POST /session` in `walletAuth` mode; the MiniKit signature is the proof, and
+it never calls `POST /register`. Outside World App that button is not offered: there is no
+idkit cookie after a 409, so the screen says to open World App or paste the exported key.
+If the held address is not the one bound to that World ID, the screen says so and the import
+field stays open; Legwork cannot recover a key that left the phone.
+
+Registration binds a geohash-5 cell. The payout-key step shows `You will be registered in
+<area>` plus either `from this phone's location` or `default — this phone gave no location
+fix`, and in the second case **Use my location** retries the fix. The default cell is
+`ez1dp` (Leiria). The board lists that registered cell, names it in the empty state, and
+says so when the current fix is in a different cell.
+
+Two distances, both on screen at the moment they matter:
+
+| Constant | Metres | When it applies |
+|---|---|---|
+| `CLAIM_RADIUS_M` | 2000 | A claim may start within 2 km of the place (30 minutes to walk). |
+| `GEOFENCE_M` | 150 | The proof photo must be taken within 150 m. |
+
+Beyond 2 km the claim button stays visible and disabled, and says why. A worker with no GPS
+fix is not refused at claim time; the 150 m fence still applies at submit. Outside that
+fence the proof screen warns before the camera opens.
+
 ## Running the probe (operator, on the demo phone)
 
 Vercel previews cannot open inside World App, so the probe has to be on `main` and served

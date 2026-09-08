@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_CLAIM_TTL_S, type TaskType } from '@legwork/shared';
+import { CLAIM_RADIUS_M, DEFAULT_CLAIM_TTL_S, GEOFENCE_M, type TaskType } from '@legwork/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { clearActiveClaim } from '../app/tasks/activeClaim';
@@ -97,9 +97,23 @@ const PROOF_LINES: Record<TaskType, readonly string[]> = {
 
 /** `~180 m` at street scale, `~1.2 km` beyond it — never a raw metre count, never a coordinate. */
 export function formatDistance(distance_m?: number): string {
-  if (distance_m === undefined || !Number.isFinite(distance_m)) return '—';
+  if (distance_m === undefined || !Number.isFinite(distance_m)) return 'distance unavailable';
   if (distance_m >= 1000) return `~${(distance_m / 1000).toFixed(1)} km`;
   return `~${Math.round(distance_m / 10) * 10} m`;
+}
+
+export function claimConfirmation(row: TaskRow): string {
+  const place = row.brief?.place?.name ?? row.title;
+  const windowMin = Math.round(DEFAULT_CLAIM_TTL_S / 60);
+  const fence = `You have ${windowMin} minutes to get there, and your proof photo must be taken within ${GEOFENCE_M} m of it.`;
+  if (row.distance_m === undefined || !Number.isFinite(row.distance_m)) {
+    return `${place}. ${fence}`;
+  }
+  return `${place} is ${formatDistance(row.distance_m)} away. ${fence}`;
+}
+
+export function tooFarToClaimReason(distance_m: number): string {
+  return `Too far to claim — you are ${formatDistance(distance_m)} away, and a claim must start within 2 km`;
 }
 
 /** First 6 characters, then the last 4 — the hash is a link, not something to read out. */
@@ -221,11 +235,7 @@ export function TaskCard({
               <ClaimedActions claim={claim} onRelease={onRelease} router={router} taskId={row.task_id} />
             </div>
           ) : (
-            <div data-floor="20" data-row="claim">
-              <Button variant="primary" size="lg" full onClick={onClaim}>
-                CLAIM
-              </Button>
-            </div>
+            <ClaimButton onClaim={onClaim} row={row} />
           )}
 
           <p className="lw-chips lw-chips--centred" data-row="relayed">
@@ -242,6 +252,30 @@ export function TaskCard({
         </div>
       ) : null}
     </li>
+  );
+}
+
+function ClaimButton({ row, onClaim }: { row: TaskRow; onClaim: () => void }) {
+  const tooFar =
+    row.distance_m !== undefined &&
+    Number.isFinite(row.distance_m) &&
+    row.distance_m > CLAIM_RADIUS_M;
+
+  return (
+    <div data-floor="20" data-row="claim">
+      {tooFar ? (
+        <p className="lw-body" data-claim="too-far" data-floor="20">
+          {tooFarToClaimReason(row.distance_m as number)}
+        </p>
+      ) : (
+        <p className="lw-body" data-claim="confirm" data-floor="20">
+          {claimConfirmation(row)}
+        </p>
+      )}
+      <Button disabled={tooFar} full onClick={onClaim} size="lg" variant="primary">
+        CLAIM
+      </Button>
+    </div>
   );
 }
 

@@ -23,10 +23,15 @@ T-16 and T-17 never share a file, so the worker's board is a route of its own; `
 and §5 carried the pre-wave-2 spelling — the route on `main` wins, and the lead is amending
 both sections. T-24's mocks answer either path, so nothing but this line changed.
 
-- `area` is `resolveArea()`, the geohash-5 cell and nothing finer. It is resolved once on
-  mount and read through a ref, so the interval is built once instead of once per fix.
-- `lat`/`lon` ride along only when `lastKnownPosition()` already has a fix, and only so the
-  API can sort nearest-first. The exact coordinate never leaves the phone by any other route.
+- `area` is the registered geohash-5 cell when the phone stored one, otherwise
+  `resolveArea()`. It is resolved **before the first poll**, and `Refresh list` retries the
+  fix. `lat`/`lon` ride along only when `lastKnownPosition()` has a fix.
+- Empty list: `No open tasks in <area> right now. This board shows the cell you registered
+  in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.` When the
+  current fix is in another cell: `Your phone is in <fixArea>, and your account is
+  registered in <area>.`
+- No fix: cards read `distance unavailable` (never `—`) and the header carries
+  `GPS unavailable in webview — disclosed`.
 - The interval returns early while `document.hidden`, and a `visibilitychange` or `focus`
   polls immediately rather than waiting out the remaining seconds. A phone in a pocket asks
   for nothing.
@@ -35,7 +40,8 @@ both sections. T-24's mocks answer either path, so nothing but this line changed
   render, and every rebuild is an extra request.
 - **401** → `router.replace('/')`. The cookie is the session; there is nothing to retry.
 
-Empty list: `No open tasks near you right now — the list refreshes every 3 s.`
+Empty list: `No open tasks in <area> right now. This board shows the cell you registered in;
+tasks posted elsewhere will not appear here. The list refreshes every 3 s.`
 
 ## The claim
 
@@ -84,9 +90,11 @@ locks 3.45 and the fee is 0.45 on top; no deducted figure appears anywhere on th
 Every seeded row carries the chip `seeded`.
 
 Distance is rounded to the nearest **10 m** and written `~180 m` at street scale, `~1.2 km`
-(one decimal) beyond a kilometre, and `—` when the API sends none. Ten metres is as fine as
-this screen ever gets: it is a "how far do I walk" figure, not a position. The TTL line is
-`claim within 30 min`, from `DEFAULT_CLAIM_TTL_S`.
+(one decimal) beyond a kilometre, and `distance unavailable` when the API sends none. Ten
+metres is as fine as this screen ever gets: it is a "how far do I walk" figure, not a
+position. The TTL line is `claim within 30 min`, from `DEFAULT_CLAIM_TTL_S`. The expanded
+card names the distance, the 30-minute window and the 150 m proof fence before `CLAIM`.
+Beyond `CLAIM_RADIUS_M` (2 km) that button stays on screen, disabled, and says why.
 
 The address is the row's `title` — the API renders it as `<place> · <street>, <locality>` — and
 the question line is derived from `task_type`, because that line is the same for every task of

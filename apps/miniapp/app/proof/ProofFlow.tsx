@@ -1,6 +1,6 @@
 'use client';
 
-import { NOTE_MAX_CHARS, type TaskType } from '@legwork/shared';
+import { NOTE_MAX_CHARS, GEOFENCE_M, type TaskType } from '@legwork/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Countdown } from '../../components/Countdown';
 import { Button } from '../../components/ui/Button';
@@ -8,6 +8,7 @@ import { Chip } from '../../components/ui/Chip';
 import { MonoTag } from '../../components/ui/MonoTag';
 import { apiFetch } from '../../lib/api';
 import { getPosition, type GpsResult } from '../../lib/gps';
+import { formatDistance } from '../../components/TaskCard';
 import { clearActiveClaim, type ActiveClaim } from '../tasks/activeClaim';
 import {
   AnswerToggle,
@@ -82,7 +83,12 @@ type SubmitResponse = {
   status: 'submitted' | 'disputed';
   auto_dispute_reason?: string;
 };
-type WorkerTaskRow = { task_id: string; title: string };
+type WorkerTaskRow = {
+  task_id: string;
+  title: string;
+  distance_m?: number;
+  brief?: { place?: { name: string } };
+};
 
 type Photo = { blob: Blob; url: string };
 type Phase = 'capture' | 'submitting' | 'waiting' | 'settled';
@@ -119,6 +125,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   /** The server's timestamp for the photo — the phone's own clock never reaches the receipt. */
   const [capturedAt, setCapturedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fenceWarning, setFenceWarning] = useState<string | null>(null);
 
   // The object URL outlives every render until the photo is replaced, and is revoked when it
   // is: a retake on a long shift would otherwise keep every discarded photo in memory.
@@ -147,17 +154,36 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   }, [taskId]);
 
   // The title is the worker's own claimed row in `GET /tasks/list`; `GET /tasks/:id` is a
-  // public shape and carries no title.
+  // public shape and carries no title. The same read carries `distance_m` when a fix is
+  // sent, which is what the fence warning before the camera needs.
   useEffect(() => {
     let live = true;
-    void apiFetch<{ tasks: WorkerTaskRow[] }>('/tasks/list')
-      .then((data) => {
+    void (async () => {
+      const fix = await getPosition();
+      const path =
+        fix.ok
+          ? `/tasks/list?lat=${encodeURIComponent(String(fix.lat))}&lon=${encodeURIComponent(String(fix.lon))}`
+          : '/tasks/list';
+      try {
+        const data = await apiFetch<{ tasks: WorkerTaskRow[] }>(path);
         const row = data.tasks.find((candidate) => candidate.task_id === taskId);
-        if (live && row !== undefined) setTitle(row.title);
-      })
-      .catch(() => {
+        if (!live || row === undefined) return;
+        setTitle(row.title);
+        if (
+          fix.ok &&
+          row.distance_m !== undefined &&
+          Number.isFinite(row.distance_m) &&
+          row.distance_m >= GEOFENCE_M
+        ) {
+          const place = row.brief?.place?.name ?? row.title;
+          setFenceWarning(
+            `You are ${formatDistance(row.distance_m)} from ${place}. A proof taken here will be refused — the photo must be within 150 m.`,
+          );
+        }
+      } catch {
         // Same: the header shows the id on its own rather than blocking the capture.
-      });
+      }
+    })();
     return () => {
       live = false;
     };
@@ -342,6 +368,11 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
 
       {phase === 'capture' || phase === 'submitting' ? (
         <div className="lw-card">
+          {fenceWarning === null ? null : (
+            <p className="lw-error-line" data-fence="outside" data-floor="20">
+              {fenceWarning}
+            </p>
+          )}
           <Capture onCapture={onCapture} onRetake={onRetake} photo={photo} />
 
           {/* What will travel with the photo, as the two-column mono list of the design. */}
