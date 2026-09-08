@@ -1,4 +1,4 @@
-/** The World App icon — dashed ring around the two-mark footprint. */
+/** Legwork's own icon — dashed ring around the two-mark footprint. */
 export function LogoMark({ size }: { size: number }) {
   return (
     <img

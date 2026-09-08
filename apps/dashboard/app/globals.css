@@ -687,7 +687,17 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 34px;
   flex: 0 0 auto;
+  overflow: visible;
+}
+
+.landing-route-mark .meter-footprint {
+  display: block;
+  width: 24px;
+  height: 34px;
+  overflow: visible;
 }
 
 .landing-route-path {

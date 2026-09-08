@@ -1,4 +1,5 @@
 import { Chip } from '../components/Chip';
+import { Footprint } from '../components/Footprint';
 import { LogoMark } from '../components/LogoMark';
 import { SiteHeader } from '../components/SiteHeader';
 import { Wordmark } from '../components/Wordmark';
@@ -29,7 +30,7 @@ export function Landing() {
         <span className="meter-dot" />
         <span className="landing-route-path" />
         <span className="landing-route-mark">
-          <LogoMark size={40} />
+          <Footprint dimmed={false} />
         </span>
       </div>
 

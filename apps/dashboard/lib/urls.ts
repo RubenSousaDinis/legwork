@@ -28,10 +28,11 @@ export function apiUrl(): string {
   return publicOrigin(process.env.NEXT_PUBLIC_API_BASE_URL, DEPLOYED_API);
 }
 
-/** Printed origin of this dashboard. Loopback or a missing Vercel URL → the hosted app. */
+/** Printed origin of this dashboard. The per-deployment `VERCEL_URL` is not a public host. */
 export function dashboardUrl(): string {
-  const fromVercel = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
-  return publicOrigin(fromVercel, DEPLOYED_DASHBOARD);
+  const raw = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const production = raw ? `https://${raw.replace(/^https?:\/\//, '')}` : undefined;
+  return publicOrigin(production, DEPLOYED_DASHBOARD);
 }
 
 export const GITHUB_REPO = 'https://github.com/RubenSousaDinis/legwork';
