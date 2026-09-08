@@ -58,11 +58,13 @@ Read on the server only, never from a `NEXT_PUBLIC_*` var and never in a client 
 | Env | Where it is read | What it does |
 |---|---|---|
 | `DATA_MODE=live\|demo` | server only | picks the adapter |
-| `NEXT_PUBLIC_API_BASE_URL` | server, `next.config.ts`, `/agents`, `/deck` | the API origin; defaults to `http://localhost:3001`. Printed on `/agents` as the real host, never a placeholder. |
+| `NEXT_PUBLIC_API_BASE_URL` | server, `next.config.ts` | live fetches and the `/api` rewrite. Loopback here is a rewrite target, not a public host. |
 | `NEXT_PUBLIC_SUBGRAPH_QUERY_URL` | server and browser | the publishable subgraph query URL |
 | `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `World ID · Orb`, anything else `World ID · Selfie Check` |
 | `NEXT_PUBLIC_ADMIN_UI` | build time | `1` mounts `/admin`; anything else, unset included, 404s |
-| `NEXT_PUBLIC_MINIAPP_URL` | landing + support | worker-app origin; defaults to `https://legwork-miniapp.vercel.app` |
+| `NEXT_PUBLIC_MINIAPP_URL` | landing + support + header | worker-app origin printed on `/`. Loopback or unset → `https://legwork-miniapp.vercel.app`. |
+
+Printed install lines on `/agents` and `/deck` use `apiUrl()` / `dashboardUrl()` in `lib/urls.ts`. Those skip loopback and print `https://legwork-api.vercel.app` and `https://legwork-dashboard.vercel.app`. `live.ts` still talks to `localhost:3001` locally.
 
 `apiBase()` is isomorphic: the API's own origin on the server, and the same-origin `/api`
 prefix in the browser, which `next.config.ts` rewrites. So the browser never needs a CORS

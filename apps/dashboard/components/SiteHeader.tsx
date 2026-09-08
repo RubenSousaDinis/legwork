@@ -1,4 +1,6 @@
+import { LogoMark } from './LogoMark';
 import { Wordmark } from './Wordmark';
+import { miniappUrl } from '../lib/urls';
 
 export type SiteHeaderCurrent = 'live' | 'agents' | 'deck' | 'about' | 'support';
 
@@ -14,9 +16,15 @@ export function SiteHeader({ current }: { current?: SiteHeaderCurrent }) {
   return (
     <header className="site-header">
       <a href="/" className="site-header-brand landing-link">
+        <span className="site-header-mark" aria-hidden="true">
+          <LogoMark size={28} />
+        </span>
         <Wordmark />
       </a>
       <nav className="site-header-nav" aria-label="Site">
+        <a href={miniappUrl()} className="site-header-link landing-link">
+          worker app ↗
+        </a>
         {LINKS.map((link) => (
           <a
             key={link.id}

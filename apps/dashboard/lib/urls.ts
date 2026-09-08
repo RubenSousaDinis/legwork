@@ -1,16 +1,38 @@
 /** Public origins the dashboard may print. Fallbacks are the registered hosts, not placeholders. */
 
+export const DEPLOYED_API = 'https://legwork-api.vercel.app';
+export const DEPLOYED_MINIAPP = 'https://legwork-miniapp.vercel.app';
+export const DEPLOYED_DASHBOARD = 'https://legwork-dashboard.vercel.app';
+
+function isLoopback(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return true;
+  }
+}
+
+/** Origin a public page may print. Loopback is a local rewrite target, not an install host. */
+function publicOrigin(raw: string | undefined, deployed: string): string {
+  if (!raw) return deployed;
+  const trimmed = raw.replace(/\/$/, '');
+  return isLoopback(trimmed) ? deployed : trimmed;
+}
+
 export function miniappUrl(): string {
-  return process.env.NEXT_PUBLIC_MINIAPP_URL ?? 'https://legwork-miniapp.vercel.app';
+  return publicOrigin(process.env.NEXT_PUBLIC_MINIAPP_URL, DEPLOYED_MINIAPP);
 }
 
 export function apiUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
+  return publicOrigin(process.env.NEXT_PUBLIC_API_BASE_URL, DEPLOYED_API);
 }
 
-/** This dashboard's own origin — the same rule `layout.tsx` uses for metadataBase. */
+/** Printed origin of this dashboard. The per-deployment `VERCEL_URL` is not a public host. */
 export function dashboardUrl(): string {
-  return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+  const raw = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const production = raw ? `https://${raw.replace(/^https?:\/\//, '')}` : undefined;
+  return publicOrigin(production, DEPLOYED_DASHBOARD);
 }
 
 export const GITHUB_REPO = 'https://github.com/RubenSousaDinis/legwork';
