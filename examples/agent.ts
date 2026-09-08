@@ -10,8 +10,9 @@
  * **Authentication is the operator's Claude Code login.** This file constructs no API client
  * and reads no Anthropic API key from anywhere — the name is deliberately not spelled in this
  * package, so the check that it is absent cannot match the sentence saying so. The Agent SDK
- * spawns the `claude` binary, which uses the login already on this machine. Inside a Claude Code session the child refuses to start, so
- * run the script under `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT`. If that still cannot
+ * spawns the `claude` binary, which uses the login already on this machine. Inside a Claude
+ * Code session that child refuses to start, so run the script under
+ * `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT`. If that still cannot
  * authenticate, the operator mints `CLAUDE_CODE_OAUTH_TOKEN` with `claude setup-token` and
  * puts it in `.env` — named in the README, never printed here, never committed.
  *
@@ -320,8 +321,10 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
                     hookSpecificOutput: {
                       hookEventName: 'PreToolUse' as const,
                       permissionDecision: 'deny' as const,
+                      // Worded as what it is — the run is over — so the model does not read
+                      // the denial as a second refusal from Legwork and invent a reason for it.
                       permissionDecisionReason:
-                        'that request was refused; do not rephrase and retry — report the refusal to your principal',
+                        'this run ended when Legwork refused; no further Legwork call will be made. Report that refusal to your principal and stop.',
                     },
                   }
                 : {},
