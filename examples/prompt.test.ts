@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { shouldStop } from './loop-rules';
+import { shouldStop, wrapWorkerText } from './loop-rules';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const read = (name: string): string => readFileSync(join(HERE, name), 'utf8');
@@ -47,6 +47,23 @@ describe('the loop rules', () => {
     expect(shouldStop({ task_id: '17' })).toBe(false);
     expect(shouldStop({ refused: false })).toBe(false);
     expect(shouldStop(null)).toBe(false);
+  });
+
+  it('wraps worker text rather than passing it through', () => {
+    // A plain string comes back wrapped, not trusted.
+    expect(wrapWorkerText('closed')).toEqual({
+      answer: 'closed',
+      _source: 'worker',
+      _untrusted: true,
+    });
+    // An already-wrapped answer keeps its note and is re-stamped, so a dropped `_untrusted`
+    // cannot survive the trip from the tool result to the transcript.
+    expect(wrapWorkerText({ answer: 'open', note: 'sign on the door', _source: 'worker' })).toEqual({
+      answer: 'open',
+      note: 'sign on the door',
+      _source: 'worker',
+      _untrusted: true,
+    });
   });
 });
 
