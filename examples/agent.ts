@@ -93,6 +93,9 @@ export function parseArgs(argv: string[]): Args {
   const args: Args = { scene: 'hire', dryRun: false, transcript: null };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
+    // `pnpm --filter @legwork/examples agent -- --scene hire` forwards the separator itself,
+    // so the command the README documents arrives here with a bare `--` in front of it.
+    if (flag === '--') continue;
     if (flag === '--dry-run') args.dryRun = true;
     else if (flag === '--scene') {
       const value = argv[(i += 1)];
