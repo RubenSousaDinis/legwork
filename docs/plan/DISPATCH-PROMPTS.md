@@ -429,6 +429,15 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 > Implement the brief in issue **T-52** (`docs/plan/T-52-worker-location-legibility.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-52` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter; **T-51 is in flight and owns `apps/dashboard/**` and `apps/miniapp/app/about/page.tsx`, so do not touch either.** This brief ships as two PRs on the one branch: the sign-in lockout first, then the board's location legibility. Both PRs need the **`interface-change`** label, because `packages/shared/src/constants.ts` gains `CLAIM_RADIUS_M`. Write the failing test before the fix in PR 1 and watch it go red — three bugs in this repo shipped because a mock answered with a canned success whatever it was asked, and §14 says how to avoid a fourth. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
 
+
+---
+
+### T-53 — Inside World App the worker's address is the wallet
+
+`T-53-worker-address-is-the-wallet.md` · lane D · size S · class C · depends on T-52 · added Sept 8 · **★ the demo cannot be filmed without it**
+
+> Implement the brief in issue **T-53** (`docs/plan/T-53-worker-address-is-the-wallet.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-53` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. **Do step 2 of §7 before anything else: change the mock so walletAuth signs as an address that is not the payout key, and watch `bothSessionModes` go red with `403 not_registered`.** That red is the bug, and a green suite that was never red is exactly how this survived the last task. Then fix it. The API and the registry are out of scope — they are already correct. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
 ---
 
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO
