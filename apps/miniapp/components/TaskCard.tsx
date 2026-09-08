@@ -235,11 +235,7 @@ export function TaskCard({
           </p>
 
           {error === undefined ? null : (
-            <p
-              className="lw-error-line"
-              data-error="claim"
-              style={{ color: 'var(--ink-text)' }}
-            >
+            <p className="lw-error-line" data-error="claim">
               {error}
             </p>
           )}

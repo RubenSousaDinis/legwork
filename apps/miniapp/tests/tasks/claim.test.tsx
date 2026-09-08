@@ -114,10 +114,11 @@ describe('claiming', () => {
     expect((await screen.findByText(/claim again within 15 min/)).textContent).toBe(
       'You released or let a claim expire recently. You can claim again within 15 min.',
     );
-    // Amber is the refusal colour; a claim someone else won is not a refusal.
-    expect(document.querySelector('[data-error="claim"]')?.getAttribute('style')).toContain(
-      'var(--ink-text)',
-    );
+    // Amber is the refusal colour; a claim someone else won is not a refusal. The line wears
+    // the ink class and never the refusal tone that `globals.css` turns amber.
+    const line = document.querySelector('[data-error="claim"]');
+    expect(line?.classList.contains('lw-error-line')).toBe(true);
+    expect(line?.getAttribute('data-tone')).not.toBe('refusal');
     cleanup();
 
     setScenario({ claim: 'AlreadyClaimed' });
