@@ -2,11 +2,13 @@
   "name": "@legwork/examples",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "echo 'no tests'",
-    "build": "tsc --noEmit"
+    "test": "vitest run",
+    "build": "tsc --noEmit",
+    "agent": "tsx agent.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "catalog:",
