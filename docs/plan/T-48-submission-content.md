@@ -130,3 +130,11 @@ Read the prize table row by row with the evidence file open; every `yes` must be
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), for the submission text.**
+
+- **Claim the Selfie Check track on the second limb, honestly.** The requirement reads "Uses Selfie Check **or a Selfie Check-compatible World ID credential flow** in a meaningful way", and that is what we ship: the same IDKit 4.x relying-party flow, `orbLegacy` instead of `selfieCheckLegacy`, because Selfie Check (Beta) is access-gated and the flag was not granted for our app before the freeze. Say so plainly in one sentence and point at `FEEDBACK-WORLD.md` entries E5, E6, E8 and E9 and at `docs/spikes/RESULTS.md` `## S2`. Do not write that the app uses Selfie Check.
+- **The track's feedback requirement is met by `FEEDBACK-WORLD.md`** — nine dated entries with verbatim error strings, including the undocumented `verification_disabled` and the credential named only inside `IDKitDebugReport`. Link it from the submission.
+- **The uniqueness claim is Orb's.** Selfie Check is medium-assurance and does not guarantee one-person-one-account; the product's "one account per person" line is true under Orb and would not have been under Selfie Check. Worth one line in the write-up: the credential was chosen for the claim, not the other way round.
+- **The demo place is Pão Doce, Leiria (`ez1dn`)**, and the demo agent is ERC-8004 id 9196.

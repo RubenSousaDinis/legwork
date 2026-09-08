@@ -133,3 +133,13 @@ Open a screenshot at full size and look for unredacted ids/tokens first. Then ch
 Cover in pass 1: Portal app + action creation; the sandbox error `verification_disabled` with its exact string and everything known about where it comes from; the two genuine findings that are already evidenced — "onchain World ID verification is Orb-only" and "MiniKit no longer owns `verify` — World ID verification moved into IDKit 4.x" (evidence: `apps/miniapp/lib/worldid.ts` imports `IDKitRequestWidget` from `@worldcoin/idkit` and the API forwards to `POST https://developer.world.org/api/v4/verify/{rp_id}`).
 
 **Screenshots do not exist yet.** The operator holds three PNGs from the first run and has not committed them. Write no `docs/feedback-world/*.png` path you cannot point at a real file: say `screenshot pending` in those entries instead, and list in the PR body which entries are waiting for an image. A later pass attaches them.
+
+
+**Dispatch 2+ (Sept 8, lead) — what changed under this brief.** Pass 1 landed as `FEEDBACK-WORLD.md` entries E1–E7; the lead added **E8** (the debug report naming `verification_level: "face"`, and the Portal having nowhere to grant it) and **E9** (Selfie Check is medium-assurance and does not carry one-person-one-account uniqueness, which is the claim our banner makes). Nine entries exist; a later pass renumbers nothing.
+
+The facts a later pass writes from:
+
+- **Selfie Check was never available to us.** It is access-gated; the flag was requested from `developers@toolsforhumanity.com` on Sept 8. Until it lands, the app cannot request the face credential at all, so §2's pass-3 material about the credential in the mini-app build is about **Orb**.
+- **Orb verifies end to end.** `POST /idkit/verify` returned 200 on Sept 8 at 11:03 UTC with a Unique Human proof. `docs/spikes/RESULTS.md` `## S2` is filled and is the evidence for the S2' sub-bullet under heading (1), which may now flip from `— _pending_`.
+- **Screenshots:** the operator has four to commit under `docs/feedback-world/raw/` — the desktop country modal (E4), the bare code (E5), the silent second attempt (E6), the app name and unverified triangle (E7) — plus today's screen showing the sentence, the code and the debug report (E8). Only entries whose file exists may name one.
+- **Sandbox App:** access was requested the same day. The track asks for feedback on Sandbox App states and we have none yet; if it arrives, that is pass 3's material and the honest note otherwise is that we could not exercise it.
