@@ -420,6 +420,15 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 > Implement the brief in issue **T-51** (`docs/plan/T-51-dashboard-front-door.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-51` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. This brief ships as three PRs on the one branch, in the order §7 gives them — the refusal card first, then the front door, then `/deck` — so run the verification commands in §9 and open a PR after each, rather than saving everything for the end. `/?present=1` is the filmed video canvas and the CI legibility gate navigates to it: if that branch of `app/page.tsx` changes behaviour, you have broken the demo. Nothing from the pre-kickoff `pitch/` or `design-system/` directories may enter the repository. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, paste the §9 output into each draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
 
+
+---
+
+### T-52 — The worker can get back in, and the board says where they are
+
+`T-52-worker-location-legibility.md` · lane D · size M · class C · no dependencies · added Sept 8, from the operator's first phone run on the deployed mini-app · **two PRs**
+
+> Implement the brief in issue **T-52** (`docs/plan/T-52-worker-location-legibility.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-52` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter; **T-51 is in flight and owns `apps/dashboard/**` and `apps/miniapp/app/about/page.tsx`, so do not touch either.** This brief ships as two PRs on the one branch: the sign-in lockout first, then the board's location legibility. Both PRs need the **`interface-change`** label, because `packages/shared/src/constants.ts` gains `CLAIM_RADIUS_M`. Write the failing test before the fix in PR 1 and watch it go red — three bugs in this repo shipped because a mock answered with a canned success whatever it was asked, and §14 says how to avoid a fourth. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
 ---
 
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO

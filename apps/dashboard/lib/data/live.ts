@@ -121,21 +121,16 @@ export interface WireFeed {
 }
 
 /**
- * One entry of `/public/refusals.recent`. Optional fields are read, never required.
- * `agent_id` is not in the frozen contract and is not expected to arrive; it is read
- * only so a `ScreeningLine` can carry one if it ever does. The agent card never reads
- * it — `marks` comes from the subgraph `Mark` entity.
+ * One entry of `/public/refusals.recent`. The frozen contract sends exactly these
+ * five keys — `at`, `task_type`, `class`, `rule_id`, `marked` — and no `reason`,
+ * so a refusal log cannot quote back the spec the gate refused to run.
  */
 export interface WireRefusalRecent {
   at: string;
   task_type?: TaskType;
   class?: AbuseClass;
-  reason?: string;
   rule_id?: string;
-  spec_hash?: string;
   marked?: boolean;
-  mark_tx?: string;
-  agent_id?: string | number;
 }
 
 export interface WireRefusals {
@@ -364,9 +359,12 @@ function refusalToFeedRow(entry: WireRefusalRecent, index: number): TaskRowData 
     priceUsdc: 0,
     agentPaysUsdc: 0,
     state: 'refused',
-    meta: `posted ${hhmm(entry.at)} · no money moved`,
+    meta: `posted ${hhmm(entry.at)}`,
     seeded: false,
-    refusal: { class: entry.class ?? null, reason: entry.reason ?? entry.class ?? 'refused' },
+    refusal: {
+      class: entry.class ?? null,
+      ...(entry.rule_id ? { ruleId: entry.rule_id } : {}),
+    },
   };
 }
 
@@ -500,13 +498,10 @@ export async function getLiveDashboardData(
         outcome: 'refused',
         taskType: entry.task_type ?? 'free-text',
         class: entry.class ?? null,
-        reason: entry.reason ?? entry.class ?? 'refused',
-        specHash: entry.spec_hash ?? '',
+        specHash: '',
         marked: entry.marked === true,
       };
       if (entry.rule_id) line.ruleId = entry.rule_id;
-      if (entry.mark_tx) line.markTx = entry.mark_tx;
-      if (entry.agent_id !== undefined) line.agentId = String(entry.agent_id);
       return line;
     }),
     ...wireRows.map(

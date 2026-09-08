@@ -44,7 +44,7 @@ export interface TaskRowData {
   state: TaskRowState;
   meta: string;
   seeded: boolean;
-  refusal?: { class: AbuseClass | null; reason: string };
+  refusal?: { class: AbuseClass | null; reason?: string; ruleId?: string };
   tx?: string;
 }
 
@@ -83,7 +83,7 @@ export interface ScreeningLine {
   outcome: 'refused' | 'passed';
   taskType: TaskType | 'free-text';
   class?: AbuseClass | null;
-  reason: string;
+  reason?: string;
   ruleId?: string;
   specHash: string;
   marked: boolean;

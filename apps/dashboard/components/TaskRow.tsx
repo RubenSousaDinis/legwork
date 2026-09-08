@@ -63,8 +63,9 @@ export function TaskRow({ row, present = false }: TaskRowProps) {
 
       {row.refusal ? (
         <p className="task-row-refusal" data-floor="32">
-          {row.refusal.class ? `${row.refusal.class} · ` : ''}
-          {row.refusal.reason}
+          {[row.refusal.class, row.refusal.ruleId, row.refusal.reason]
+            .filter((part): part is string => Boolean(part))
+            .join(' · ')}
         </p>
       ) : null}
 

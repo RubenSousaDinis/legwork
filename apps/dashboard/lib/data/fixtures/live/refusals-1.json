@@ -13,6 +13,13 @@
       "at": "2026-09-05T10:30:00.000Z",
       "task_type": "call-confirm",
       "class": "authentication circumvention",
+      "rule_id": "kw-otp-readback",
+      "marked": true
+    },
+    {
+      "at": "2026-09-05T10:00:00.000Z",
+      "task_type": "call-confirm",
+      "class": "authentication circumvention",
       "reason": "asks the worker to read a one-time code aloud from another person handset",
       "rule_id": "kw-otp-readback",
       "spec_hash": "0x9e15d3c8047ba62f1830d5c4e97a06b3128fd47ce0a539b6742c081de5ab39f4",
