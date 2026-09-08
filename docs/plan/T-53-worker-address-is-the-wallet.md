@@ -12,6 +12,7 @@ owned_paths:
   - apps/miniapp/app/tasks/**
   - apps/miniapp/app/verify/**
   - apps/miniapp/components/UnverifiedBanner.tsx
+  - apps/miniapp/components/TaskCard.tsx
   - apps/miniapp/lib/session.ts
   - apps/miniapp/lib/workerKey.ts
   - apps/miniapp/mocks/**
@@ -81,6 +82,26 @@ So the intended design was always list-first with verification as the action. On
 says otherwise: nothing sends a signed-out visitor from `/` to `/tasks`, so nobody ever sees it.
 This is a routing change, not a build.
 
+### And the row a visitor lands on says nothing
+
+From the same test, the card reads:
+
+```
+verify-open
+verify-open · ez1dn
+3.00 USDC
+Verify to claim
+```
+
+The type twice, then a geohash cell. `UnverifiedTasks` titles each row
+`` `${row.task_type} · ${row.area}` `` while `UnverifiedBanner` also renders `<MonoTag>` with the
+same `task_type` — the identical shape as the dashboard's refusal card, where a tag and a title
+held the same value.
+
+**The words it should be using already exist**, one file away: `components/TaskCard.tsx:80`
+holds `QUESTION` — `'verify-open': 'Is it open right now?'` — and `PROOF_LINES` for what must
+come back. The signed-in card reads well because it uses them. The preview does not.
+
 ## 2. Exact scope
 
 **The ruling.** Inside World App, the worker's address **is** the walletAuth address. That is
@@ -137,6 +158,16 @@ page has to warn them they can permanently lose — was never a service to them.
    the banner copy and `data-screen="tasks-unverified"` are T-42's and are already right. If the
    list looks wrong at `/`, the fault is the routing you just wrote, not the component.
 
+10. **The unverified row says what the errand is.** Export `QUESTION` from
+    `components/TaskCard.tsx` and title each preview row with `QUESTION[task_type]`, so
+    `verify-open` reads `Is it open right now?`. The `MonoTag` keeps the machine name — that is
+    what `DESIGN-SPEC.md` gives `MonoTag` to carry — so the row becomes a tag, a question, a
+    price and the disabled action, with the type appearing once.
+11. **The geohash leaves the title.** `ez1dn` is not an address and means nothing to a worker.
+    Drop it: `GET /public/feed` carries no place name by design, and a cell code is worse than
+    silence. Do not invent a location, and do not reach for a distance — the public feed carries
+    none, and the signed-in list is where distance belongs.
+
 ## 3. Out of scope
 
 - The API, the contracts and the registry. `POST /register` already takes whatever address it is
@@ -162,6 +193,7 @@ apps/miniapp/app/(auth)/**
 apps/miniapp/app/tasks/**
 apps/miniapp/app/verify/**
 apps/miniapp/components/UnverifiedBanner.tsx
+apps/miniapp/components/TaskCard.tsx
 apps/miniapp/lib/session.ts
 apps/miniapp/lib/workerKey.ts
 apps/miniapp/mocks/**
@@ -219,6 +251,7 @@ holds it or T-52 is not merged: stop. Finish with `gh pr ready`, never `gh pr cr
 | `rootShowsTheWorkersOwnListWhenVerified` (`tests/tasks/`) | with a verified session, `/` renders the worker's list — the same tree `/tasks` renders — and not the unverified preview |
 | `verifyLivesAtItsOwnRoute` (`tests/`) | `/verify` renders the auth flow's first step, and `UnverifiedTasks`'s `verifyHref` is `/verify` |
 | `tasksRouteStillResolves` (`tests/tasks/`) | `/tasks` renders the same thing as `/` — the URL that is already in histories and redirects does not 404 |
+| `previewRowNamesTheErrandOnce` (`tests/tasks/`) | an unverified row renders `Is it open right now?` as its title, the string `verify-open` appears exactly once on the row (the `MonoTag`), and no geohash cell renders |
 | every existing test file | green; the mini-app suite does not lose a test |
 
 ## 9. Verification commands
@@ -270,6 +303,7 @@ owned-paths:
   - apps/miniapp/app/tasks/**
   - apps/miniapp/app/verify/**
   - apps/miniapp/components/UnverifiedBanner.tsx
+  - apps/miniapp/components/TaskCard.tsx
   - apps/miniapp/lib/session.ts
   - apps/miniapp/lib/workerKey.ts
   - apps/miniapp/mocks/**
