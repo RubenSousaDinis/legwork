@@ -6,7 +6,7 @@
  * answered `400 invalid_request` for `amount_usdc`, and the tool passed that body on as an
  * accepted dry run the contract then rejected. Two things are pinned here: the amount goes on
  * the wire at the floor for the type, and a body that is neither a refusal nor an acceptance
- * comes back as a tool error the agent can read, not as a contract violation.
+ * comes back as a tool error the agent can read, never as a result the contract rejects.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { PRICE_FLOOR_USDC } from '@legwork/shared';
