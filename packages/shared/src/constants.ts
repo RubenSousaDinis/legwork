@@ -91,3 +91,40 @@ export const CREDENTIAL_LABEL = {
 export function credentialLabel(level: CredentialLevel): string {
   return CREDENTIAL_LABEL[level];
 }
+
+/**
+ * World's own credential page: Selfie Check (Beta) is "a medium-assurance biometric
+ * credential using the device camera for liveness and facial similarity" and explicitly
+ * does not guarantee "strict one-person-one-account uniqueness like Orb verification".
+ * Every sentence below follows the credential. Orb may claim uniqueness; selfie may not.
+ */
+export function uniquenessClause(level: CredentialLevel): string {
+  return level === 'orb' ? 'one account per person' : 'a live person, camera-checked';
+}
+
+export function verifiedBannerSub(level: CredentialLevel): string {
+  return `· World ID · ${uniquenessClause(level)}`;
+}
+
+export function claimSentence(level: CredentialLevel): string {
+  const fourth =
+    level === 'orb'
+      ? 'every worker is one verified human'
+      : 'every worker is a camera-checked live human';
+  return (
+    'Marketplaces already let agents hire humans. Legwork is the first where ' +
+    fourth +
+    ', every payment is escrowed onchain and released on proof, every hiring agent is accountable, and the documented abuse classes are refused at the API.'
+  );
+}
+
+export function trustModelSentence(level: CredentialLevel): string {
+  const opening =
+    level === 'orb'
+      ? 'Verification proves a worker is a live, unique person'
+      : 'Verification proves a worker is a live person';
+  return (
+    opening +
+    " — not that they are honest or competent. Escrow bounds the agent's loss to one task, and a per-agent daily cap bounds it to one day. Screening is a cost floor, not a cure. Legwork's guarantee is bounded, attributable work: an agent never pays for nothing, a worker never works for nothing, and every task leaves a record both sides can read."
+  );
+}
