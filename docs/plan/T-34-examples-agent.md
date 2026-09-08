@@ -92,7 +92,7 @@ Expected: tests green; `key-literal grep exit=1`; `4` markers; `banned-words exi
 - No secrets in code or client bundles; read keys only from `process.env` (the SDK reads its own); `.env.example` is the only env file in git. The transcript never carries a key, a session cookie or an unredacted `buyer_token`.
 - Tests never call a live model or a live chain (`LIVE_LLM`/`LIVE_CHAIN` gated files excepted); the real run is an operator command, not a test.
 - The injected sentence exists only in `examples/fixtures/inbox-injected.json`; the prompt never contains it; the model is never told the scene is scripted.
-- Model id `claude-opus-5`, as in `CLASSIFIER_MODEL`; no other model.
+- Model id `claude-sonnet-5` (the lead decision in §2 supersedes the `claude-opus-5` this line carried until Sept 8); no other model.
 - `agent.ts` never retries after `refused: true`; `loop-rules.ts` is the single place that decides to stop.
 - Honesty: the transcript header says "Base Sepolia testnet · the worker was the seeded CLI worker" if that is who completed it; never imply a person did.
 
@@ -125,4 +125,11 @@ Comment `BLOCKED: <exactly what you need — an interface, an env var, a depende
 Open `transcript.md` first: are the inserts real (tx-shaped ids, a real `rule_id`) and redacted? Then `prompt.md` for the five sentences. Then `agent.ts`: `new Anthropic()` without `apiKey`; the refusal handling stops the loop (no retry); worker text only ever appears inside the `_untrusted` wrapper.
 
 ## 15. Round 2+
-—
+
+Round 2 (Sept 8, after the review of PR #139). Address each item, reply to each in the PR, change nothing else.
+
+- **BLOCKING 1 — the refusal must come from `hire_human`, not `check_task`.** Beat 6 of the video is the agent card's mark counter going 0 → 1, and `POST /check` never marks: a refusal on the dry run leaves the counter at 0 on camera, and `insert:refusal` line 1 reads `check_task(…)` where the storyboard's card reads the `call-confirm` hire. Rewrite the "You are not the screen" section of `prompt.md` so a request the model is unsure of goes to `hire_human` as the principal asked — Legwork screens every post before any money moves; a refused post costs nothing, comes back with the class and the rule id, and is final — and keep `check_task` in the tool table as what it is, a free dry run for the agent's own use, never the route for a doubtful request. Then re-run the refusal scene for real (`--scene refusal`) and replace scene 2 and the `insert:refusal` block in `transcript.md` with that run: line 1 `hire_human(call-confirm · slots.item: "…")`, line 2 the reason exactly as returned, line 3 the payload. The five pinned sentences and every §8 test stay green. The run marks agent 9196 onchain; that is expected — `demo:reset` tells the operator to register a fresh id before filming.
+- **BLOCKING 2 — merge `main` in first.** `check_task`'s accepted path is fixed on `main` (the tool never sent `amount_usdc`; `POST /check` screens the full envelope) — `git merge origin/main` before the re-run so the dry-run error is not in the new scene 2.
+- Scene 1 stays as it ran. Add one sentence under its heading saying it is re-run after the operator resolves task 17; that re-run is not part of this round.
+- Rulings recorded: §2's `claude-sonnet-5` wins over the old §10 line (now corrected above); the Agent SDK not forwarding an MCP server's stderr is a real limit, and capturing the hire insert by driving the binary over stdio is accepted as long as the transcript says so, which it does.
+
