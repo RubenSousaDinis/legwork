@@ -67,6 +67,7 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 | T-48 | [Submission content + prize table](T-48-submission-content.md) | E | 9 | S / C | T-45 | planned |
 | T-49 | [Final README + POSTERS](T-49-final-readme.md) | lead | 10 | S / L | all | planned |
 | T-50 | [Mini-app design polish](T-50-miniapp-design-polish.md) | D | 5 | M / C | T-42 | planned |
+| T-51 | [Dashboard front door — landing, the two paths, the deck](T-51-dashboard-front-door.md) | D | 5 | L / C | T-26, T-43 | planned |
 | T-13b ⇢ | [Self-deploy ERC-8004 registries (S5 FAIL)](T-13b-self-deploy-erc8004.md) | A | 2 | S / L | T-04 | substitute |
 | T-16b ⇢ | [Direct funding gateway (S3 FAIL)](T-16b-direct-funding.md) | B | 6 | M / C | T-15 | substitute |
 
