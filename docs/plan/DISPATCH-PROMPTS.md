@@ -414,6 +414,14 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 ---
 
+### T-51 — Dashboard front door — landing, the two paths, the deck, and the refusal card
+
+`T-51-dashboard-front-door.md` · lane D · size L · class C · depends on T-26, T-43 · added Sept 8, from the operator's first pass over the deployed UIs · **three PRs**
+
+> Implement the brief in issue **T-51** (`docs/plan/T-51-dashboard-front-door.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-51` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. This brief ships as three PRs on the one branch, in the order §7 gives them — the refusal card first, then the front door, then `/deck` — so run the verification commands in §9 and open a PR after each, rather than saving everything for the end. `/?present=1` is the filmed video canvas and the CI legibility gate navigates to it: if that branch of `app/page.tsx` changes behaviour, you have broken the demo. Nothing from the pre-kickoff `pitch/` or `design-system/` directories may enter the repository. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, paste the §9 output into each draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+---
+
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO
 
 Only dispatch these once the gate is GREEN and the insurance footage is filmed.
