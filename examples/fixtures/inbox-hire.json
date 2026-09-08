@@ -1,14 +1,14 @@
 {
   "from": "principal",
-  "received_at": "2026-09-07T18:40:00Z",
-  "subject": "pharmacy in Leiria",
-  "body": "I'm driving into Leiria this evening and I need a pharmacy that is actually open when I get there. Farmácia Central on Rua Direita is the one I know. Every hours listing I can find for it disagrees with the next one, so please don't just read me a website — find out whether it is open right now and tell me what it costs to find out.",
+  "received_at": "2026-09-08T09:10:00Z",
+  "subject": "pastry shop in Parceiros",
+  "body": "I'm driving through Parceiros this afternoon and I want to stop for pastries on the way. Pão Doce on Rua do Cruzeiro is the one I know. Every hours listing I can find for it disagrees with the next one, so please don't just read me a website — find out whether it is open right now and tell me what it costs to find out.",
   "place": {
-    "place_id": "node/3092370961",
-    "name": "Farmácia Central",
-    "street_address": "Rua Direita 12",
+    "place_id": "node/13464213795",
+    "name": "Pão Doce",
+    "street_address": "Rua do Cruzeiro",
     "locality": "Leiria",
     "country": "PT"
   },
-  "area": "ez1dp"
+  "area": "ez1dn"
 }

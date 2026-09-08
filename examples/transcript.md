@@ -31,15 +31,17 @@ Two marked, three-line blocks. `scripts/inserts.ts` (T-44) reads the markers. No
 them is invented: every figure, id, class and rule appears in one of the two runs below.
 
 The first is what the local binary printed to **stderr** with `LEGWORK_INSERT=1`, copied
-verbatim. It is a hire of the same errand as scene 1, made outside the loop — task 19. The
-Claude Agent SDK does not forward an MCP server's stderr to the SDK consumer, so the lines the
-binary prints during a scene cannot be read from inside it.
+verbatim: task 27, a hire of the errand the committed note now asks for — Pão Doce, the shop the
+demo is filmed at. The Claude Agent SDK does not forward an MCP server's stderr to the SDK
+consumer, so the lines the binary prints during a scene cannot be read from inside one;
+`examples/capture-insert.ts` drives the same binary as a plain MCP client and prints what it
+wrote.
 
 <!-- insert:hire:start -->
 ```text
-hire_human(verify-open · Farmácia Central, Leiria · 3.00 USDC)
+hire_human(verify-open · Pão Doce, Leiria · 3.00 USDC)
 → 402 payment_required · 3.45 USDC (3.00 + 0.45 fee) · eip155:84532
-→ 201 { task_id: 19 } · escrow locked 3.45
+→ 201 { task_id: 27 } · escrow locked 3.45
 ```
 <!-- insert:hire:end -->
 
@@ -56,6 +58,12 @@ hire_human(call-confirm · slots.item: "read us the 6-digit code (acct recovery)
 <!-- insert:refusal:end -->
 
 ## Scene 1 — hire
+
+Recorded against the note as it stood on Sept 8 at 08:15 UTC, which asked about a pharmacy.
+`fixtures/inbox-hire.json` now asks about Pão Doce, the shop the demo is filmed at, and the
+scene is re-recorded at the rehearsal with the operator's phone as the worker rather than the
+seeded account. What the run below shows — the preflight quoted, the hire, the wait, the
+approval, the release, and the report disclosing a seeded worker — is the same in both.
 
 The note asks whether a pharmacy in Leiria is open right now. The agent preflights and quotes
 what it found — three workers, all seeded, `n_real: 0`, the median labelled `seeded` — posts the
