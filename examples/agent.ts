@@ -12,9 +12,9 @@
  * package, so the check that it is absent cannot match the sentence saying so. The Agent SDK
  * spawns the `claude` binary, which uses the login already on this machine. Inside a Claude
  * Code session that child refuses to start, so run the script under
- * `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT`. If that still cannot
- * authenticate, the operator mints `CLAUDE_CODE_OAUTH_TOKEN` with `claude setup-token` and
- * puts it in `.env` — named in the README, never printed here, never committed.
+ * `env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT`. If that still cannot authenticate, the
+ * operator mints `CLAUDE_CODE_OAUTH_TOKEN` with `claude setup-token` and puts it in `.env` —
+ * named in the README, never printed here, never committed.
  *
  * **Only the local MCP server can pay.** The hosted server at `/mcp` cannot answer an x402
  * challenge, so `hire_human` there quotes a price and stops. This loop therefore hands the
@@ -183,7 +183,10 @@ function operatorServer(fixture: string) {
  * `BUYER_PRIVATE_KEY` is read from `process.env` and passed straight through; the binary reads
  * it once, builds a paying `fetch` and hands that to `hire_human` alone. `LEGWORK_INSERT=1`
  * asks for the three-line terminal insert, which the binary writes to stderr because its
- * stdout is the MCP protocol.
+ * stdout is the MCP protocol — and which this loop cannot read: the Agent SDK's
+ * `options.stderr` carries the `claude` child's output and nothing from a server under
+ * `options.mcpServers`. The cards in `transcript.md` are captured by driving this same binary
+ * over stdio instead; `README.md` says so where the transcript is described.
  *
  * `node_modules/.bin` goes on the child's PATH so `tsx` resolves however this script was
  * started — through `pnpm --filter`, or by an operator typing the path.
@@ -289,7 +292,6 @@ function asJson(text: string): Record<string, unknown> | null {
 }
 
 async function runScene(scene: Scene, out: Transcript): Promise<number> {
-  const insertLines: string[] = [];
   /** Set once, by `shouldStop`, and read by the PreToolUse gate below. */
   let refused: Record<string, unknown> | null = null;
   const options: Options = {
@@ -331,12 +333,6 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
           ],
         },
       ],
-    },
-    // The binary's insert goes to stderr, which is where the terminal cards (T-44) come from.
-    stderr: (data) => {
-      for (const line of data.split('\n')) {
-        if (line.startsWith('hire_human(') || line.startsWith('→ ')) insertLines.push(line);
-      }
     },
   };
 
@@ -383,10 +379,6 @@ async function runScene(scene: Scene, out: Transcript): Promise<number> {
     }
 
     if (message.type === 'result') {
-      if (insertLines.length > 0) {
-        out.write('terminal insert, as the local binary printed it to stderr:');
-        out.block('text', insertLines.join('\n'));
-      }
       out.write(`_run ended: ${message.subtype}, ${message.num_turns} turns._`);
       return message.is_error && !refused ? 1 : 0;
     }
