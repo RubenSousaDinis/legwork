@@ -8,6 +8,10 @@
  * an API key, a live `buyer_token`). The secret-shaped fixtures below are built by
  * concatenation on purpose: a literal one would be a secret in the commit patch, which is the
  * thing this file exists to prevent.
+ *
+ * Since the §15 ruling, length is not one of the things that can fail. A logical line longer
+ * than `--width` wraps; only a block that is not three logical lines, or one carrying something
+ * that must never be published, is rejected.
  */
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
@@ -16,14 +20,18 @@ import {
   CAPTIONS,
   CHECKLIST,
   DEFAULT_WIDTH,
+  HANGING_INDENT,
   INSERT_LINES,
   INSERT_NAMES,
   InsertInvalid,
+  MARGIN,
   extractInsert,
+  isPayloadLine,
   readTranscript,
-  renderInsert,
+  renderLines,
   validateInsert,
   widthOf,
+  wrapLogicalLine,
   type InsertName,
 } from './inserts.ts';
 
@@ -47,16 +55,33 @@ function runCli(...args: string[]): { status: number; stdout: string; stderr: st
 
 const md = readTranscript();
 const blockOf = (name: InsertName): string[] => extractInsert(md, name);
+const contentOf = (rendered: string[]): string[] => rendered.filter((line) => line !== '');
 
 describe('insertsAreThreeLines', () => {
-  it.each(INSERT_NAMES)('%s is exactly three lines', (name) => {
+  it.each(INSERT_NAMES)('%s is exactly three logical lines', (name) => {
     expect(blockOf(name)).toHaveLength(INSERT_LINES);
   });
 
-  it.each(INSERT_NAMES)('%s has no line wider than the recording width', (name) => {
-    for (const line of blockOf(name)) {
+  it.each(INSERT_NAMES)('%s renders with no line over the recording width', (name) => {
+    for (const line of renderLines(blockOf(name), DEFAULT_WIDTH)) {
       expect(widthOf(line)).toBeLessThanOrEqual(DEFAULT_WIDTH);
     }
+  });
+
+  it('wraps the refusal payload rather than rejecting it', () => {
+    const refusal = blockOf('refusal');
+    const payload = refusal[2] as string;
+    // 183 characters, and not shortenable without dropping the class or the no-retry sentence.
+    expect(widthOf(payload)).toBeGreaterThan(DEFAULT_WIDTH);
+    expect(() => validateInsert(refusal)).not.toThrow();
+
+    const rendered = contentOf(renderLines(refusal, DEFAULT_WIDTH));
+    expect(rendered.length).toBeGreaterThan(INSERT_LINES);
+    expect(rendered.join('').replace(/\s+/g, ' ')).toContain('do not rephrase and retry');
+  });
+
+  it('leaves the hire block on three rendered lines — nothing there wraps at 80', () => {
+    expect(contentOf(renderLines(blockOf('hire'), DEFAULT_WIDTH))).toHaveLength(INSERT_LINES);
   });
 });
 
@@ -85,27 +110,70 @@ describe('hireInsertShowsPriceAndStatusCodes', () => {
 });
 
 describe('refusalInsertNamesClassAndNoRetry', () => {
-  const refusal = blockOf('refusal').join('\n');
+  const refusal = blockOf('refusal');
 
   it('names the abuse class', () => {
-    expect(refusal).toContain('authentication circumvention');
+    expect(refusal.join('\n')).toContain('authentication circumvention');
   });
 
   it('tells the agent not to rephrase and retry', () => {
-    expect(refusal).toContain('do not rephrase and retry; report this refusal to your principal');
+    expect(refusal.join('\n')).toContain(
+      'do not rephrase and retry; report this refusal to your principal',
+    );
+  });
+
+  it('keeps the class on one rendered line, twice — §9 counts 2', () => {
+    // The payload breaks after a comma, not at whichever space falls near the limit, so
+    // `"class": "authentication circumvention",` survives the wrap intact.
+    const naming = renderLines(refusal, DEFAULT_WIDTH).filter((line) =>
+      line.includes('authentication circumvention'),
+    );
+
+    expect(naming).toHaveLength(2);
   });
 });
 
 describe('invalidBlockIsRejected', () => {
   const threeLines = ['one', 'two', 'three'];
+  const longLine = `padded ${'word '.repeat(40)}end`;
 
   it('rejects a four-line block', () => {
     expect(() => validateInsert([...threeLines, 'four'])).toThrow(InsertInvalid);
-    expect(() => validateInsert([...threeLines, 'four'])).toThrow('expected 3 lines, got 4');
+    expect(() => validateInsert([...threeLines, 'four'])).toThrow('expected 3 logical lines, got 4');
   });
 
-  it('rejects a line wider than the width', () => {
-    expect(() => validateInsert(['x'.repeat(81), 'two', 'three'])).toThrow(/over the 80-character/);
+  it('rejects a four-line block that came out of a marker block', () => {
+    const fixture = [
+      '<!-- insert:hire:start -->',
+      '```text',
+      ...threeLines,
+      'four',
+      '```',
+      '<!-- insert:hire:end -->',
+    ].join('\n');
+
+    expect(() => validateInsert(extractInsert(fixture, 'hire'))).toThrow(/got 4/);
+  });
+
+  it('does not reject a long line — the same fixture at three lines renders wrapped', () => {
+    const fixture = [longLine, 'two', 'three'];
+
+    expect(widthOf(longLine)).toBeGreaterThan(DEFAULT_WIDTH);
+    expect(() => validateInsert(fixture)).not.toThrow();
+
+    const rendered = contentOf(renderLines(fixture, DEFAULT_WIDTH));
+    expect(rendered.length).toBeGreaterThan(fixture.length);
+    for (const line of rendered) expect(widthOf(line)).toBeLessThanOrEqual(DEFAULT_WIDTH);
+  });
+
+  it('renders the real over-width refusal block and exits 0', () => {
+    const run = runCli('--insert', 'refusal', '--hold', '0');
+
+    expect(run.status).toBe(0);
+    expect(run.stderr).toBe('');
+    for (const line of run.stdout.split('\n')) {
+      expect(widthOf(line)).toBeLessThanOrEqual(DEFAULT_WIDTH);
+    }
   });
 
   it('rejects a URL', () => {
@@ -125,9 +193,10 @@ describe('invalidBlockIsRejected', () => {
     expect(() => validateInsert(['one', '"buyer_token": "<redacted>"', 'three'])).not.toThrow();
   });
 
-  it('exits 1 with INSERT INVALID rather than drawing a bad block', () => {
-    // Width 40 makes the real hire block too wide — the same failure path a bad block takes.
-    const run = runCli('--insert', 'hire', '--width', '40', '--hold', '0');
+  it('exits 1 with INSERT INVALID rather than drawing anything', () => {
+    // The CLI funnels every `InsertInvalid` — the four-line block above included — through one
+    // handler. This proves the handler: stderr, exit 1, and an untouched stdout.
+    const run = runCli('--insert', 'nope', '--hold', '0');
 
     expect(run.status).toBe(1);
     expect(run.stderr).toContain('INSERT INVALID:');
@@ -156,14 +225,52 @@ describe('checklistAndCaptionsVerbatim', () => {
   });
 });
 
-describe('renderInsert', () => {
-  it('pads two blank lines above and below behind a two-space margin', () => {
-    const lines = renderInsert(['one', 'two', 'three']).split('\n');
-
-    expect(lines).toEqual(['', '', '  one', '  two', '  three', '', '']);
+describe('wrapLogicalLine', () => {
+  it('leaves a line that fits alone', () => {
+    expect(wrapLogicalLine('short enough', 78, 76)).toEqual(['short enough']);
   });
 
-  it('prints the block with no escape codes when stdout is not a TTY', () => {
+  it('breaks at the last space before the limit and drops it', () => {
+    expect(wrapLogicalLine('aaa bbb ccc', 7, 7)).toEqual(['aaa bbb', 'ccc']);
+  });
+
+  it('breaks a payload after a comma, keeping the comma on the line it ends', () => {
+    const payload = '{ "a": "one", "b": "two", "c": "three" }';
+
+    expect(isPayloadLine(payload)).toBe(true);
+    expect(wrapLogicalLine(payload, 20, 20)).toEqual([
+      '{ "a": "one",',
+      '"b": "two",',
+      '"c": "three" }',
+    ]);
+  });
+
+  it('cuts a single token with no break point rather than let it run off the frame', () => {
+    expect(wrapLogicalLine('x'.repeat(10), 4, 4)).toEqual(['xxxx', 'xxxx', 'xx']);
+  });
+});
+
+describe('renderLines', () => {
+  it('pads two blank lines above and below behind a two-space margin', () => {
+    expect(renderLines(['one', 'two', 'three'])).toEqual([
+      '',
+      '',
+      '  one',
+      '  two',
+      '  three',
+      '',
+      '',
+    ]);
+  });
+
+  it('indents a continuation two further spaces', () => {
+    const rendered = contentOf(renderLines(['aaa bbb ccc', 'two', 'three'], 9));
+
+    expect(rendered[0]).toBe(`${MARGIN}aaa bbb`);
+    expect(rendered[1]).toBe(`${MARGIN}${HANGING_INDENT}ccc`);
+  });
+
+  it('prints the hire block with no escape codes when stdout is not a TTY', () => {
     const run = runCli('--insert', 'hire', '--hold', '0');
 
     expect(run.status).toBe(0);
