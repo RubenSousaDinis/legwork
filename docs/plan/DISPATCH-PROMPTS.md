@@ -438,6 +438,15 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 > Implement the brief in issue **T-53** (`docs/plan/T-53-worker-address-is-the-wallet.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-53` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. **Do step 2 of §7 before anything else: change the mock so walletAuth signs as an address that is not the payout key, and watch `bothSessionModes` go red with `403 not_registered`.** That red is the bug, and a green suite that was never red is exactly how this survived the last task. Then fix it. The API and the registry are out of scope — they are already correct. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
 
+
+---
+
+### T-54 — Selfie Check as the demo credential
+
+`T-54-selfie-check-as-the-demo-credential.md` · lane D · size M · class C · no dependencies · added Sept 8, the evening World granted Sandbox access
+
+> Implement the brief in issue **T-54** (`docs/plan/T-54-selfie-check-as-the-demo-credential.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-54` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter; **T-51 is in flight on `apps/dashboard/**` and PR #174 is open against it**, so touch only `app/copy.ts`, `app/about/page.tsx`, `app/deck/page.tsx` and `test/**` there. This changes **no verification code** — `pickPreset` already sends `selfieCheckLegacy`; what changes is what the product is allowed to claim, because Selfie Check does not support one-person-one-account and six surfaces currently say it does. Write `orbCopyIsByteIdenticalToToday` first and keep it green: at `orb` every string must stay byte-identical, because that is how the demo goes back to Orb afterwards. The PR needs the **`interface-change`** label (`packages/shared/src/constants.ts`). If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
 ---
 
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO
