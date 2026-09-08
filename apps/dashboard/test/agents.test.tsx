@@ -12,7 +12,10 @@ describe('agents page', () => {
     const { container } = render(<AgentsPage />);
     const text = container.textContent ?? '';
     expect(text).toContain(`claude mcp add --transport http legwork ${apiUrl()}/mcp`);
+    expect(apiUrl()).not.toMatch(/localhost|127\.0\.0\.1/);
     expect(text).not.toContain('<host>');
+    expect(text).not.toContain('localhost');
+    expect(text).not.toContain('127.0.0.1');
   });
 
   it('agentsPageCarriesTheSixClassesAndTheFeeLine', () => {

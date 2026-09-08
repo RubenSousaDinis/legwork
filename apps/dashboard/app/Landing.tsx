@@ -1,5 +1,5 @@
 import { Chip } from '../components/Chip';
-import { Footprint } from '../components/Footprint';
+import { LogoMark } from '../components/LogoMark';
 import { SiteHeader } from '../components/SiteHeader';
 import { Wordmark } from '../components/Wordmark';
 import { GITHUB_REPO, miniappUrl } from '../lib/urls';
@@ -11,7 +11,12 @@ export function Landing() {
     <main className="landing">
       <SiteHeader />
       <section className="landing-hero">
-        <Wordmark className="landing-wordmark" />
+        <div className="landing-brand">
+          <span className="landing-brand-mark" aria-hidden="true">
+            <LogoMark size={48} />
+          </span>
+          <Wordmark className="landing-wordmark" />
+        </div>
         <h1 className="landing-tagline" data-floor="24">
           {TAGLINE}
         </h1>
@@ -23,7 +28,9 @@ export function Landing() {
       <div className="landing-route" aria-hidden="true">
         <span className="meter-dot" />
         <span className="landing-route-path" />
-        <Footprint dimmed={false} />
+        <span className="landing-route-mark">
+          <LogoMark size={40} />
+        </span>
       </div>
 
       <div className="landing-paths">
@@ -32,8 +39,9 @@ export function Landing() {
             I am a person who can go and look
           </h2>
           <p className="landing-prose" data-floor="24">
-            Verify once with World ID. Claim a task near you — the money is already locked
-            before you start. Photograph the proof. Payment releases on that proof.
+            Open the worker app in World App, verify with World ID, then claim a task near you.
+            The money is already locked before you start. Photograph the proof. Payment releases
+            on that proof.
           </p>
           <a className="landing-link" href={miniappUrl()} data-hit="44">
             Open the worker app ↗
@@ -70,6 +78,10 @@ export function Landing() {
         <span aria-hidden="true">·</span>
         <a className="landing-link" href="/refusals">
           refusals
+        </a>
+        <span aria-hidden="true">·</span>
+        <a className="landing-link" href={miniappUrl()}>
+          worker app ↗
         </a>
         <span aria-hidden="true">·</span>
         <a className="landing-link" href={GITHUB_REPO}>

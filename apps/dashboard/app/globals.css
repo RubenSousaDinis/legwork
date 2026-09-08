@@ -554,11 +554,24 @@ p {
 }
 
 .site-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   text-decoration: none;
 }
 
 .site-header-brand .wordmark {
   font-size: var(--text-body-sm);
+}
+
+.site-header-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.logo-mark {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .site-header-nav {
@@ -611,6 +624,17 @@ p {
   gap: var(--sp-4);
 }
 
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.landing-brand-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
 .landing-wordmark {
   font-size: var(--text-stat-sm);
 }
@@ -656,7 +680,14 @@ p {
   display: flex;
   align-items: center;
   gap: var(--sp-4);
-  height: 44px;
+  min-height: 48px;
+}
+
+.landing-route-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .landing-route-path {

@@ -33,6 +33,8 @@ describe('landing', () => {
     expect(container.textContent).toContain(TAGLINE);
     expect(container.textContent).toContain('I am a person who can go and look');
     expect(container.textContent).toContain('I am an agent, or I build one');
+    expect(container.textContent).toContain('World App');
+    expect(container.textContent).toContain('World ID');
     expect(container.querySelector('[data-testid="escrow-meter"]')).toBeNull();
   });
 
@@ -60,7 +62,12 @@ describe('landing', () => {
     const headerOn = (root: HTMLElement) => {
       const headers = root.querySelectorAll('.site-header');
       expect(headers).toHaveLength(1);
-      expect(headers[0]?.querySelector('.wordmark')).not.toBeNull();
+      const header = headers[0]!;
+      expect(header.querySelector('.wordmark')).not.toBeNull();
+      expect(header.querySelector('.logo-mark')).not.toBeNull();
+      const worker = [...header.querySelectorAll('a')].find((a) => a.getAttribute('href') === miniappUrl());
+      expect(worker?.textContent).toMatch(/worker app/);
+      expect(worker?.getAttribute('data-hit')).toBeNull();
     };
 
     headerOn(render(await Page({ searchParams: Promise.resolve({}) })).container);
