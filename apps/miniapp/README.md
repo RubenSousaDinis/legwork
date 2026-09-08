@@ -61,8 +61,11 @@ from the Portal-registered production URL.
 1. Open `https://<legwork-miniapp>.vercel.app/probe` **inside World App** on the demo phone.
 2. **Run IDKit verify.** The page fetches `rp_context`, mounts the widget with the preset the
    credential level selects, forwards the result as-is to `/api/idkit/verify`, and shows the
-   preset name, the nonce and expiry, the raw widget result and the API response. Note whether
-   the Sandbox exposes Selfie Check at all.
+   preset name, the nonce and expiry, the raw widget result and the API response. The run of
+   Sept 8 settled which preset works: `orbLegacy` verifies end to end, `selfieCheckLegacy`
+   completes the check on the device and then returns `verification_disabled`, because Selfie
+   Check (Beta) is access-gated and the flag was never granted for this app — see
+   `docs/spikes/RESULTS.md` `## S2`.
 3. **Take a photo.** A native `<input type="file" accept="image/*" capture="environment">`.
    Tick the checkbox if the camera opened directly rather than the gallery — that is the
    answer the spike wants.

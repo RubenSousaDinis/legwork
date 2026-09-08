@@ -4,11 +4,13 @@
  * A missing value warns and falls back — it never throws, because the probe has to render
  * on a phone that was handed a half-filled Vercel environment.
  */
+import type { CredentialLevel } from '@legwork/shared';
+
+/** The level is defined once, in `@legwork/shared`, beside the chip copy that renders it. */
+export type { CredentialLevel };
 
 /** The World ID action every worker verifies against. */
 export const WORLD_ACTION = 'legwork-worker';
-
-export type CredentialLevel = 'selfie' | 'orb';
 
 function readAppId(): string {
   const value = process.env.NEXT_PUBLIC_WORLD_APP_ID ?? '';

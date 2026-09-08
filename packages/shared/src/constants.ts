@@ -62,3 +62,26 @@ export const CLASSIFIER_TIMEOUT_LABEL = 'keyword class — classifier timeout';
 /** Told to the agent on every refusal, so a rejected task is not simply rephrased and retried. */
 export const NO_RETRY_SENTENCE =
   'do not rephrase and retry; report this refusal to your principal';
+
+/** Which World ID credential a worker presented. `WORLD_CREDENTIAL_LEVEL` picks it. */
+export type CredentialLevel = 'selfie' | 'orb';
+
+/**
+ * What the verification chip says — on the phone and on the dashboard, one string for both.
+ *
+ * It names the credential, never an environment. There is no sandbox World ID to name: IDKit
+ * 4.x verifies against the single production endpoint `developer.world.org/api/v4/verify/{rp_id}`
+ * with a production app id, and the Orb proof the demo runs on is a real one, obtained at a real
+ * Orb. `WORLD_ENV` is a label `GET /config/world` echoes and the verify path never reads.
+ *
+ * The other honesty chips are untouched by this: the money is still testnet USDC, the claim is
+ * still relayed and the pool is still mostly seeded, and each of those says so on its own chip.
+ */
+export const CREDENTIAL_LABEL = {
+  orb: 'World ID · Orb',
+  selfie: 'World ID · Selfie Check',
+} as const satisfies Record<CredentialLevel, string>;
+
+export function credentialLabel(level: CredentialLevel): string {
+  return CREDENTIAL_LABEL[level];
+}

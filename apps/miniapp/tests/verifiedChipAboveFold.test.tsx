@@ -53,8 +53,8 @@ afterEach(() => {
 describe('layout', () => {
   it('verifiedChipAboveFold', async () => {
     for (const [level, chip] of [
-      ['selfie', 'sandbox Selfie Check'],
-      ['orb', 'sandbox World ID'],
+      ['selfie', 'World ID · Selfie Check'],
+      ['orb', 'World ID · Orb'],
     ] as const) {
       const { container } = await renderHeaderAndPage(level);
 

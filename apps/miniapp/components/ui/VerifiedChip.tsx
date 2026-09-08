@@ -1,3 +1,4 @@
+import { credentialLabel, type CredentialLevel } from '@legwork/shared';
 import type { SessionState } from '../../lib/session';
 import { Chip } from './Chip';
 
@@ -5,13 +6,7 @@ export type VerifiedChipProps = {
   state: SessionState;
   /** One line for a page header; the full banner is the sticky header's second row. */
   compact?: boolean;
-  level: 'selfie' | 'orb';
-};
-
-/** The sandbox disclosure is part of the chip — a visible chip, never fine print. */
-const SANDBOX_LABEL: Record<VerifiedChipProps['level'], string> = {
-  selfie: 'sandbox Selfie Check',
-  orb: 'sandbox World ID',
+  level: CredentialLevel;
 };
 
 /**
@@ -37,7 +32,7 @@ export function VerifiedChip({ state, compact = false, level }: VerifiedChipProp
     return (
       <span className="lw-verified-compact" data-verified="true">
         <Chip tone="verified" floor={20}>
-          Verified human ✓ · sandbox
+          Verified human ✓ · World ID
         </Chip>
       </span>
     );
@@ -51,7 +46,7 @@ export function VerifiedChip({ state, compact = false, level }: VerifiedChipProp
       </span>
       <span>
         <Chip tone="verified" floor={20}>
-          {SANDBOX_LABEL[level]}
+          {credentialLabel(level)}
         </Chip>
       </span>
     </div>

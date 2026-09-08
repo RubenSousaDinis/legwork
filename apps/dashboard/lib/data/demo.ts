@@ -1,5 +1,6 @@
 import {
   ABUSE_CLASSES,
+  CREDENTIAL_LABEL,
   DemoData,
   feeOn,
   fromUsdcUnits,
@@ -232,7 +233,7 @@ export function demoDashboardData(
       // unset and the row renders without it rather than showing a made-up number.
       highlighted: {
         id: d.worker.handle,
-        level: d.worker.credential === 'sandbox World ID' ? 'orb' : 'selfie',
+        level: d.worker.credential === CREDENTIAL_LABEL.orb ? 'orb' : 'selfie',
       },
       rows: poolRows,
     },

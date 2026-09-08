@@ -7,7 +7,7 @@ import { VerifiedChip } from './ui/VerifiedChip';
  * The header's verification state, in two pieces.
  *
  * Row 1 carries a one-line state beside the wordmark: the mono `mini app` caption while the
- * worker is unverified, the compact `Verified human ✓ · sandbox` pill once they are not.
+ * worker is unverified, the compact `Verified human ✓ · World ID` pill once they are not.
  * Row 2 is `VerifiedChip` itself — the `Verify to claim` chip before verification and the
  * full banner after it, because that banner is what every route has to keep above the fold.
  *
