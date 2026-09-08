@@ -51,3 +51,19 @@ export function wrapWorkerText(answer: unknown): WorkerAnswer {
   const note = typeof record.note === 'string' ? record.note : undefined;
   return wrapWorkerAnswer(text, note);
 }
+
+/**
+ * The one line the loop adds to the committed prompt at run time: who the agent is onchain.
+ *
+ * Every task Legwork screens is attributed to an ERC-8004 identity when the hire carries one.
+ * Without it the API reads the post as coming from nobody in particular — `no_identity` — and a
+ * refusal marks no one. The id is the operator's (`BUYER_AGENT_ID`, the identity T-32
+ * registered for the buyer wallet), so it is read from the environment rather than committed,
+ * and the sentence is here so `prompt.test.ts` can pin its shape without the SDK.
+ */
+export function identityLine(agentId: string): string {
+  const id = agentId.trim();
+  if (!/^[0-9]+$/.test(id)) throw new Error('BUYER_AGENT_ID must be a decimal ERC-8004 agent id');
+  return `Your ERC-8004 identity is agent ${id}. Pass agent_id: "${id}" in every hire_human call — it is how Legwork attributes the task, and a refusal, to you rather than to nobody.`;
+}
+

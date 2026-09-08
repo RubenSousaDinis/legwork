@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { shouldStop, wrapWorkerText } from './loop-rules';
+import { identityLine, shouldStop, wrapWorkerText } from './loop-rules';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const read = (name: string): string => readFileSync(join(HERE, name), 'utf8');
@@ -64,6 +64,17 @@ describe('the loop rules', () => {
       _source: 'worker',
       _untrusted: true,
     });
+  });
+});
+
+describe('the identity line', () => {
+  it('identityLineNamesTheAgentId', () => {
+    const line = identityLine(' 9196 ');
+    expect(line).toContain('agent 9196');
+    expect(line).toContain('agent_id: "9196"');
+    expect(line).toContain('hire_human');
+    expect(() => identityLine('0x1f')).toThrow();
+    expect(() => identityLine('')).toThrow();
   });
 });
 
