@@ -1,7 +1,7 @@
 /**
  * The seeded CLI worker — the half of the green loop that walks to the shop.
  *
- *   pnpm cli-worker -- --area ez1dp --place scripts/fixtures/demo-place.json
+ *   pnpm cli-worker -- --area ez1dn --place scripts/fixtures/demo-place.json
  *
  * It drives the **relayed API routes** and nothing else. There is no `claim()` and no
  * `submit()` on any contract in this file: going through the API is what exercises the

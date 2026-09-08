@@ -26,9 +26,10 @@ RPC_URL="http://127.0.0.1:8545"
 API_PORT="${E2E_API_PORT:-3001}"
 API_URL="http://127.0.0.1:${API_PORT}"
 DASHBOARD_URL_LOCAL="http://127.0.0.1:3000"
-# The demo place (scripts/fixtures/demo-place.json) sits in this geohash-5 cell, and so does
-# seeded worker 1 — the CLI worker. The board is filtered by it.
-AREA="ez1dp"
+# The demo place (scripts/fixtures/demo-place.json) sits in this geohash-5 cell — Pão Doce,
+# Parceiros, since Sept 8. The dry-run worker below polls it; demo:run computes the same cell
+# from the fixture's coordinate.
+AREA="ez1dn"
 
 # The public anvil test mnemonic, printed by `anvil` on every start. It is a published test
 # vector, not a secret, and the keys derived from it exist only on chain 31337.
