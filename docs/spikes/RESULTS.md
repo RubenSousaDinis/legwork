@@ -18,13 +18,37 @@ decision: no architecture change. `WorkerRegistry` ships one cloud-verified `ATT
 
 _IDKit 4.x verify end to end + webview probe (S2')_
 
-S2: pending
+S2: PASS on Orb · REFUSED on Selfie Check
 
-outcome: pending
+outcome: IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
+mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
+**"Legwork will see these proofs: Unique Human"**; on approval `POST /idkit/verify` answered **200**
+and the nullifier row was written. Selfie Check — the credential the plan assumed — never worked: the
+same flow with `selfieCheckLegacy` completes the check on the device and then returns
+`{"status":"error","error_code":"verification_disabled","description":"verification_disabled","version":2,"verification_level":"face"}`,
+because Selfie Check (Beta) is access-gated and the feature flag was never granted for
+`app_9eeebbfc580c72269133fb3b93b15440` (`docs.world.org/world-id/credentials/11`: "request access so the
+feature flag can be enabled for your app"). The code appears in no error reference and in neither
+installed package; it is only legible through IDKit's `IDKitDebugReport`, which names the credential.
+Two other findings from the same run: the code is the only thing a failed check surfaces unless the
+report is rendered, and `POST /session` refuses a freshly verified human — `403 forbidden
+{reason: 'not_registered'}` — because a worker session requires the registry binding that
+`POST /register` creates.
 
-evidence: pending
+evidence: the run of Sept 8, 11:02–11:03 UTC, from a local production build behind an https tunnel with
+the API run locally so the tunnel origin could be listed in `MINIAPP_URL` (the deployed API refuses any
+other origin, by design). API log: `POST /idkit/request 200`, `POST /idkit/verify 200` in 2.6 s,
+`POST /session 403`. The refusal payload and the debug report are quoted in `FEEDBACK-WORLD.md` entries
+E5, E6 and E8; the uniqueness reading is E9.
 
-decision: pending
+decision: the demo ships **Orb** — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are
+`orb`, `pickPreset` sends `orbLegacy`. It is the credential the product's "one account per person" claim
+always needed: Selfie Check is "a medium-assurance biometric credential" that does not guarantee
+"strict one-person-one-account uniqueness like Orb verification". The prize track allows it — "Uses
+Selfie Check **or a Selfie Check-compatible World ID credential flow**" — and the refusal is the
+feedback the same track asks for. Access to the face credential has been requested from
+`developers@toolsforhumanity.com`; if it is granted before the freeze, the level is one environment
+value and a deploy. The session ordering was fixed in the mini-app the same day.
 
 ## S3
 

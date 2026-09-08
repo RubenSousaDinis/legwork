@@ -131,3 +131,11 @@ Run the test-name loop first; a single `MISSING TEST` means a README claim is un
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), for the pass that fills the docs.**
+
+- **`docs/spikes/RESULTS.md` `## S2` is no longer pending** — it is filled with the Sept 8 run: Orb verifies (`POST /idkit/verify` 200, "Unique Human"), Selfie Check is refused `verification_disabled` because the credential is access-gated. Read it rather than re-deriving it, and do not soften "REFUSED" into a downgrade: the credential was never available.
+- **The credential the product ships is Orb.** Every doc that says the worker verifies with Selfie Check is wrong now. `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are `orb`; the chip text follows the level. Orb is also what makes "one account per person" true, which several docs assert.
+- **The demo place is Pão Doce**, `node/13464213795`, Rua do Cruzeiro, Leiria, geohash-5 **`ez1dn`** — not Farmácia Central and not `ez1dp`. The seeded pool lives in both cells: `ez1dp` from the original seeding, `ez1dn` from `scripts/seed-area.sh` (workers 21–23, one released task each).
+- **Live addresses and ids** are in `contracts/deployments/base-sepolia.json`; the demo agent is ERC-8004 id **9196**, with one paid-on-proof outcome and no marks.

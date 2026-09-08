@@ -144,3 +144,11 @@ Open the tool JSON and the screenshot side by side first: every visible number m
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), before this task is re-run.**
+
+- **The filmed errand is in `ez1dn`, not `ez1dp`.** Pão Doce sits there, and `scripts/seed-area.sh ez1dn 21 23` seeded three workers into it, each with one released `verify-open` task. `GET /public/preflight?task_type=verify-open&area=ez1dn` reads `active 3 · verified 0 · seeded 3` and `median_source: seeded`; `ez1dp` reads the same numbers from the original pool. Verify both cells, and treat `ez1dn` as the one the demo quotes.
+- **The verified count moves when the operator registers.** That happens once, at Pão Doce, on the deployed origin, so the registry records `ez1dn`. After it, `ez1dn` should read `active 4 · verified 1 · seeded 3` — the line the design pack asks for — and `n_real` becomes 1 once that worker completes a task.
+- **Task 27 is open at Pão Doce**, posted by the demo agent with `agent_id: 9196`, waiting for that worker to claim it.
+- **The credential is Orb**, so a verified worker's `level` reads `orb`, not `selfie`.

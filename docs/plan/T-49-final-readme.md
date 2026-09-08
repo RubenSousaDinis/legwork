@@ -134,3 +134,11 @@ Self-review (lead): click every Basescan link; read the POSTERS count against th
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), for the final README.**
+
+- **Credential: Orb.** The mini-app requests `orbLegacy` through IDKit 4.x; Selfie Check (Beta) is access-gated and was never enabled for our app. `docs/spikes/RESULTS.md` `## S2` carries the evidence and `FEEDBACK-WORLD.md` the error strings.
+- **Place: Pão Doce**, `node/13464213795`, Rua do Cruzeiro, Leiria, cell `ez1dn`.
+- **Onchain, live:** the addresses in `contracts/deployments/base-sepolia.json`, demo agent ERC-8004 id **9196**, and the released tasks the subgraph indexes — task 23 for the agent's own hire, tasks 24–26 for the `ez1dn` seeding, task 27 open at the filmed shop.
+- **Deployments:** each app carries `git.deploymentEnabled` so only `main` deploys; the Hobby plan allows 100 deployments a day and cancelled ones count.
