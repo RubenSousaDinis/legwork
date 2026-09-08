@@ -88,7 +88,15 @@ async function verifyAndSignIn() {
 
 describe('auth flow', () => {
   it('bothSessionModes', async () => {
-    // --- inside World App: nonce, then walletAuth, then the session with that same nonce.
+    // The order is the API's, not a preference. `POST /session` refuses a worker the registry
+    // does not know — `403 forbidden {reason: 'not_registered'}` in both modes — so a human who
+    // has just verified cannot have a session yet. `POST /register` is what makes them a worker,
+    // and it authenticates with the idkit-session cookie `POST /idkit/verify` set. The session
+    // is created after registration returns, and this test pins that order: the first live run
+    // on a phone, Sept 8, ended at the landing screen with `403 forbidden` because the flow
+    // asked for the session first, and this test asserted the wrong sequence.
+
+    // --- inside World App: register, then nonce, then walletAuth, then the session.
     vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
     vi.mocked(MiniKit.walletAuth).mockResolvedValue({
       executedWith: 'minikit',
@@ -98,9 +106,18 @@ describe('auth flow', () => {
     await verifyAndSignIn();
     await screen.findByText('Your payout address');
 
+    // Nothing has been asked of `/session` yet, and nothing signed.
+    expect(calls.some((call) => call.url.endsWith('/api/session'))).toBe(false);
+    expect(vi.mocked(MiniKit.walletAuth)).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByText('Register as a worker'));
+    await waitFor(() => expect(sessionRequests()).toHaveLength(1));
+
+    const registerCall = calls.findIndex((call) => call.url.endsWith('/api/register'));
     const nonceCall = calls.findIndex((call) => call.url.endsWith('/api/session/nonce'));
     const sessionCall = calls.findIndex((call) => call.url.endsWith('/api/session'));
-    expect(nonceCall).toBeGreaterThanOrEqual(0);
+    expect(registerCall).toBeGreaterThanOrEqual(0);
+    expect(nonceCall).toBeGreaterThan(registerCall);
     expect(sessionCall).toBeGreaterThan(nonceCall);
 
     expect(vi.mocked(MiniKit.walletAuth).mock.calls[0]?.[0]).toMatchObject({
@@ -123,10 +140,15 @@ describe('auth flow', () => {
 
     await verifyAndSignIn();
     await screen.findByText('Your payout address');
+    expect(calls.some((call) => call.url.endsWith('/api/session'))).toBe(false);
+
+    fireEvent.click(await screen.findByText('Register as a worker'));
 
     const address = getPayoutAddress();
     expect(address).not.toBeNull();
-    expect(sessionRequests().at(-1)).toEqual({ mode: 'idkit', worker_address: address });
+    await waitFor(() =>
+      expect(sessionRequests().at(-1)).toEqual({ mode: 'idkit', worker_address: address }),
+    );
     expect(screen.getByText('web sign-in — outside World App')).toBeTruthy();
     expect(vi.mocked(MiniKit.walletAuth)).not.toHaveBeenCalled();
   });
