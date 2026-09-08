@@ -9,15 +9,11 @@ import { describe, expect, it } from 'vitest';
  * checked against DESIGN-SPEC.md in one file instead of being hunted through forty `style={{
  * … }}` objects. This test is what keeps it that way.
  *
- * Three exceptions, each named rather than pattern-matched:
- *
- * - the two proof `img` boxes, whose source is an object URL for a blob the phone holds in
- *   memory — `next/image` cannot size it and the aspect ratio is per-instance;
- * - the claim-error line in `TaskCard.tsx`. `tests/tasks/claim.test.tsx` reads that element's
- *   `style` attribute and requires `var(--ink-text)` in it — the assertion that a claim
- *   someone else won is drawn in ink and not in the amber of a refusal. The brief holds
- *   every existing test file green and allows one edited line, in `authFlow.test.tsx`, so
- *   the inline colour stays and is listed here instead of being quietly removed.
+ * Two exceptions, each named rather than pattern-matched: the two proof `img` boxes, whose
+ * source is an object URL for a blob the phone holds in memory — `next/image` cannot size it
+ * and the aspect ratio is per-instance. (The claim-error line in `TaskCard.tsx` was a third
+ * until the lead's sync after T-50: `tests/tasks/claim.test.tsx` now checks its class and tone
+ * rather than its `style` attribute, so the inline colour is gone.)
  */
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -28,11 +24,7 @@ const DESIGN_PROPERTIES =
   /\b(color|fontFamily|fontSize|fontWeight|background|backgroundColor|border|borderColor|borderRadius|letterSpacing)\b/;
 
 /** `file:line` for every inline style the design pass deliberately kept. */
-const ALLOWED = new Set([
-  'app/proof/PaidState.tsx',
-  'app/proof/ProofFlow.tsx',
-  'components/TaskCard.tsx',
-]);
+const ALLOWED = new Set(['app/proof/PaidState.tsx', 'app/proof/ProofFlow.tsx']);
 
 function tsxFiles(directory: string, prefix: string): string[] {
   const found: string[] = [];
