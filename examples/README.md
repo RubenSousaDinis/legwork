@@ -13,6 +13,7 @@ filmed story and the source of the two terminal cards.
 | `fixtures/inbox-injected.json` | The note behind the refusal scene. |
 | `transcript.md` | A real run of both scenes, redacted. |
 | `prompt.test.ts` | The checks that need no model, no key and no network. |
+| `capture-insert.ts` | Drives the local MCP binary as a plain MCP client and prints what it wrote to stderr — how the hire card in `transcript.md` is captured. |
 
 ## The two scenes
 
@@ -85,7 +86,9 @@ imagination — the hire block is the local binary's own stderr, and every figur
 rule in the refusal block is one the run produced.
 
 The hire block is captured by driving the local server over stdio from a plain MCP client
-rather than from inside a scene. The binary does print those lines during a scene, with
+rather than from inside a scene — that client is `capture-insert.ts`, run as
+`pnpm --filter @legwork/examples exec tsx capture-insert.ts` with the same environment as a
+scene. It posts one real task and funds its escrow, so run it when you mean to. The binary does print those lines during a scene, with
 `LEGWORK_INSERT=1` — but the Claude Agent SDK does not forward an MCP server's stderr to the
 SDK consumer, so the loop cannot read its own.
 
