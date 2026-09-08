@@ -9,16 +9,21 @@ Every `buyer_token` and every signature on a proof URL is replaced with `<redact
 transaction hashes and spec hashes are public and are left alone.
 
 **Nobody walked to a pharmacy for either scene, and this file does not pretend otherwise.**
-Scene 1 posted task 21 and funded its escrow for real, and then no worker claimed it: the
-seeded CLI worker is the only worker this operator runs, it is holding an onchain claim on an
-earlier task left in `Disputed`, and `TaskEscrow.resolve` is owner-only — so it could not take
-another. The scene runs the poll loop and ends there instead of at `approve_task`. Scene 2 was
-refused by the screen before the escrow was funded, so it moved no money at all.
+Scene 1 is a complete run — posted, claimed, submitted, approved, released, 3.00 USDC to the
+worker and 0.45 to the treasury — but the worker who took it is the **seeded CLI worker**, a
+disclosed demo account the operator runs, and its proof is a generated fixture that says so in
+its own note. The agent reads that label and tells its principal, in the report at the end of
+the scene, that the answer is not a human observation. Scene 2 was refused by the screen before
+the escrow was funded, so it moved no money at all.
 
-The refusal is on the public wall at `/public/refusals` as `deny.auth`, with `marked: false`: the
-envelope the model sent carried no `agent_id`, and an absent claim is `none_claimed`, which
-`markIfIdentified` resolves to `no_identity` before it reaches the registry. Nothing here passes
-one — the buyer does own ERC-8004 id 9196, so the id is the only missing piece.
+The refusal is on the public wall at `/public/refusals` as `deny.auth`, with `marked: false`.
+Scene 2 was recorded before the loop carried its own identity: the envelope it sent had no
+`agent_id`, and an absent claim is `none_claimed`, which `markIfIdentified` resolves to
+`no_identity` before it reaches the registry. Scene 1 above was re-run afterwards and does
+carry `agent_id: "9196"` — the ERC-8004 identity the buyer wallet owns — so its release wrote a
+`paid-on-proof` outcome against that id. A refused hire from an agent that names itself is what
+marks, and the demo films that with a freshly registered id rather than one this file has
+already spent.
 
 ## Terminal cards
 
@@ -52,13 +57,12 @@ hire_human(call-confirm · slots.item: "read us the 6-digit code (acct recovery)
 
 ## Scene 1 — hire
 
-Not re-run this round: it stands as it ran, and it is re-run through `approve_task` once the
-operator resolves task 17 and the seeded worker can claim again.
-
-The note asks whether a pharmacy in Leiria is open right now. The agent preflights, posts the
-errand, pays 3.45 for a 3.00 task, and then long-polls `task_status` at `wait_seconds=50` —
-honouring `poll_after_seconds` and never re-posting — until the run's turn budget runs out.
-Nobody could claim it, for the reason in the header.
+The note asks whether a pharmacy in Leiria is open right now. The agent preflights and quotes
+what it found — three workers, all seeded, `n_real: 0`, the median labelled `seeded` — posts the
+errand with its ERC-8004 identity on it, pays 3.45 for a 3.00 task, polls `task_status` at
+`wait_seconds=50`, approves the proof and releases the escrow. The seeded CLI worker is what
+claimed it, and the agent's closing report says so rather than passing a fixture off as a
+human's answer.
 
 ## scene: hire
 
@@ -107,10 +111,12 @@ Nobody could claim it, for the reason in the header.
 }
 ```
 
-**tool** `mcp__legwork__check_task`
+**tool** `mcp__legwork__hire_human`
 ```json
 {
   "task_type": "verify-open",
+  "agent_id": "9196",
+  "amount_usdc": 3,
   "spec": {
     "place": {
       "place_id": "node/3092370961",
@@ -122,80 +128,28 @@ Nobody could claim it, for the reason in the header.
     "question": "open_now",
     "claimed_open": null,
     "claimed_hours": null,
-    "source": "none"
+    "source": "other"
   }
 }
 ```
 
-**result** (not JSON)
-```text
-check_task produced a result mcp-contract.ts does not allow
-```
-
-**tool** `mcp__legwork__hire_human`
-```json
-{
-  "task_type": "verify-open",
-  "spec": {
-    "place": {
-      "place_id": "node/3092370961",
-      "name": "Farmácia Central",
-      "street_address": "Rua Direita 12",
-      "locality": "Leiria",
-      "country": "PT"
-    },
-    "question": "open_now",
-    "claimed_open": null,
-    "claimed_hours": null,
-    "source": "none"
-  },
-  "amount_usdc": 2
-}
-```
-
-**result** (not JSON)
-```text
-MCP error -32602: Input validation error: Invalid arguments for tool hire_human: verify-open pays at least 3.00 USDC at amount_usdc
-```
-
-**tool** `mcp__legwork__hire_human`
-```json
-{
-  "task_type": "verify-open",
-  "spec": {
-    "place": {
-      "place_id": "node/3092370961",
-      "name": "Farmácia Central",
-      "street_address": "Rua Direita 12",
-      "locality": "Leiria",
-      "country": "PT"
-    },
-    "question": "open_now",
-    "claimed_open": null,
-    "claimed_hours": null,
-    "source": "none"
-  },
-  "amount_usdc": 3
-}
-```
-
 **result**
 ```json
 {
-  "task_id": "21",
+  "task_id": "23",
   "status": "open",
   "eta_seconds": 900,
   "poll_after_seconds": 30,
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21"
+  "dashboard_url": "https://legwork-dashboard.vercel.app/task/23"
 }
 ```
 
-**agent** Task posted. Now polling for a result — I'll check back periodically.
+**agent** Task posted and funded — $3.45 total ($3.00 to the worker, $0.45 Legwork fee). ETA ~15 minutes. I'll poll now.
 
 **tool** `mcp__legwork__task_status`
 ```json
 {
-  "task_id": "21",
+  "task_id": "23",
   "wait_seconds": 50
 }
 ```
@@ -203,511 +157,117 @@ MCP error -32602: Input validation error: Invalid arguments for tool hire_human:
 **result**
 ```json
 {
-  "task_id": "21",
-  "status": "open",
+  "task_id": "23",
+  "status": "submitted",
   "task_type": "verify-open",
   "amount_usdc": 3,
   "fee_usdc": 0.45,
   "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
+  "posted_at": "2026-09-08T08:15:07.763Z",
+  "claimed_at": "2026-09-08T08:15:12.000Z",
+  "submitted_at": "2026-09-08T08:15:16.000Z",
+  "proof": {
+    "hash": "0xbbd55ba8f4952fde7e7464caedb22cb05e5a51266e07efb554618f84f96be303",
+    "hash_ok": true,
+    "url": "https://legwork-api.vercel.app/proofs/0xbbd55ba8f4952fde7e7464caedb22cb05e5a51266e07efb554618f84f96be303?exp=<redacted>&sig=<redacted>",
+    "captured_at": "2026-09-08T08:15:13.347Z",
+    "coordinate_rounded": {
+      "lat": 39.744,
+      "lon": -8.808
+    },
+    "gps_unavailable": false
   },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
+  "tx": {
+    "post": "0xe9ac4bae2653957eaed38ffce14bc77b7c40f4a1fd995f47d0ceb89c876e4c3f",
+    "claim": "0x4787771d282ddb40a73d43a1c396ad84c5284b3f562ac0211479af60e1168683",
+    "submit": "0x4ecc0bd8a45b0ef08f9ab28565d66a82b52fb62d70ff2818cb527a215fb7136d"
+  },
+  "dashboard_url": "https://legwork-dashboard.vercel.app/task/23",
+  "changed": true,
+  "poll_after_seconds": 3
 }
 ```
 
 **tool** `mcp__legwork__task_status`
 ```json
 {
-  "task_id": "21",
-  "wait_seconds": 50
+  "task_id": "23",
+  "wait_seconds": 10
 }
 ```
 
 **result**
 ```json
 {
-  "task_id": "21",
-  "status": "open",
+  "task_id": "23",
+  "status": "submitted",
   "task_type": "verify-open",
   "amount_usdc": 3,
   "fee_usdc": 0.45,
   "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
+  "posted_at": "2026-09-08T08:15:07.763Z",
+  "claimed_at": "2026-09-08T08:15:12.000Z",
+  "submitted_at": "2026-09-08T08:15:16.000Z",
+  "answer": {
+    "answer": "closed",
+    "note": "CLI fixture — seeded worker, not an observation",
+    "_source": "worker",
+    "_untrusted": true
   },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
+  "proof": {
+    "hash": "0xbbd55ba8f4952fde7e7464caedb22cb05e5a51266e07efb554618f84f96be303",
+    "hash_ok": true,
+    "url": "https://legwork-api.vercel.app/proofs/0xbbd55ba8f4952fde7e7464caedb22cb05e5a51266e07efb554618f84f96be303?exp=<redacted>&sig=<redacted>",
+    "captured_at": "2026-09-08T08:15:13.347Z",
+    "coordinate_rounded": {
+      "lat": 39.744,
+      "lon": -8.808
+    },
+    "gps_unavailable": false
+  },
+  "tx": {
+    "post": "0xe9ac4bae2653957eaed38ffce14bc77b7c40f4a1fd995f47d0ceb89c876e4c3f",
+    "claim": "0x4787771d282ddb40a73d43a1c396ad84c5284b3f562ac0211479af60e1168683",
+    "submit": "0x4ecc0bd8a45b0ef08f9ab28565d66a82b52fb62d70ff2818cb527a215fb7136d"
+  },
+  "dashboard_url": "https://legwork-dashboard.vercel.app/task/23",
   "changed": false,
   "poll_after_seconds": 1
 }
 ```
 
-**tool** `mcp__legwork__task_status`
+**tool** `mcp__legwork__approve_task`
 ```json
 {
-  "task_id": "21",
-  "wait_seconds": 50
+  "task_id": "23"
 }
 ```
 
 **result**
 ```json
 {
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
+  "task_id": "23",
+  "status": "released",
+  "tx": "0xe6f41ce9a9060b71b704a0d8074da6bb747911858bdc2062d61c7a6de9a571cf",
+  "dashboard_url": "https://legwork-dashboard.vercel.app/task/23"
 }
 ```
 
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
+**agent** Here's what happened with the Farmácia Central errand:
 
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
+**Preflight:** 3 workers available near Leiria (ez1dp), all seeded demo accounts — 0 verified, 0 real completions. The median-time estimate Legwork gave (0 min) is **seeded**, not built on real worker history, so take it as a placeholder rather than a real ETA.
 
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
+**Cost:** $3.45 total — $3.00 to the worker, $0.45 Legwork's fee.
 
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
+**What I posted:** a verify-open task asking whether Farmácia Central (Rua Direita 12, Leiria) is open right now, since the online hours listings conflict.
 
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
+**Result:** The task was claimed and submitted almost immediately. The worker reported: **"closed"**, with a note attached: *"CLI fixture — seeded worker, not an observation."* — meaning this came from Legwork's disclosed demo/seeded pool, not a real person physically at the pharmacy.
 
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
+The proof's technical checks were fine (hash valid, GPS coordinate near Leiria, capture time consistent), so I approved it and released the $3.00 escrow to the worker.
 
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
+**Bottom line for you:** the "closed" answer is not a genuine human observation — it's a seeded fixture, explicitly labeled as such. I wouldn't rely on it to decide whether to detour tonight. If you want an actual verified-human check before you arrive, I can post another task, but be aware the pool in that area currently has zero verified workers, so it may sit unclaimed or also land on a seeded account. Let me know how you'd like to proceed.
 
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**agent** We've now passed the estimated 15-minute window with no claim yet. I'll give an interim update and keep polling.
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-**tool** `mcp__legwork__task_status`
-```json
-{
-  "task_id": "21",
-  "wait_seconds": 50
-}
-```
-
-**result**
-```json
-{
-  "task_id": "21",
-  "status": "open",
-  "task_type": "verify-open",
-  "amount_usdc": 3,
-  "fee_usdc": 0.45,
-  "area": "ez1dp",
-  "posted_at": "2026-09-08T00:15:16.211Z",
-  "tx": {
-    "post": "0x536e4b89682d0ddaa894fbcb8bf093b9e070e61a892da9b65cd3009359d6f5ea"
-  },
-  "dashboard_url": "https://legwork-dashboard.vercel.app/task/21",
-  "changed": false,
-  "poll_after_seconds": 1
-}
-```
-
-_run ended: error_max_turns, 25 turns._
+_run ended: success, 7 turns._
 
 ## Scene 2 — refusal
 
