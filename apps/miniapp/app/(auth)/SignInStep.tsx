@@ -14,8 +14,10 @@ export type SignInStepProps = {
 export function SignInStep({ mode }: SignInStepProps) {
   return (
     <section className="lw-card" data-step="signing-in" data-mode={mode ?? 'unknown'}>
-      <p className="lw-section-label">Sign in</p>
-      <p data-floor="20">Signing in…</p>
+      <p className="lw-list-label">Sign in</p>
+      <p className="lw-body" data-floor="20">
+        Signing in…
+      </p>
     </section>
   );
 }

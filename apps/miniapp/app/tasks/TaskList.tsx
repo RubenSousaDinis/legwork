@@ -3,8 +3,8 @@
 import { CLAIM_COOLDOWN_S } from '@legwork/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { EarningsBar } from '../../components/EarningsBar';
 import { TaskCard, type TaskRow } from '../../components/TaskCard';
-import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
@@ -20,6 +20,7 @@ const EARNINGS_POLL_MS = 60_000;
 
 export const EMPTY_STATE = 'No open tasks near you right now — the list refreshes every 3 s.';
 export const NOT_SPENDABLE = 'not spendable';
+export const NEARBY_TASKS = 'NEARBY TASKS';
 
 /** The three 409/403 answers `POST /tasks/:id/claim` is allowed to give, in the worker's words. */
 export const CLAIM_ERRORS: Record<string, string> = {
@@ -201,8 +202,10 @@ export function TaskList() {
 
   return (
     <div data-screen="tasks">
+      <p className="lw-list-label">{NEARBY_TASKS}</p>
+
       {claim === null || pinned === null || pinned === undefined ? null : (
-        <ul style={{ margin: 0, padding: 0 }}>
+        <ul className="lw-list">
           <TaskCard
             claim={claim}
             error={error?.task_id === pinned.task_id ? error.message : undefined}
@@ -216,12 +219,12 @@ export function TaskList() {
       )}
 
       {rest.length === 0 && claim === null ? (
-        <p data-empty="tasks" data-floor="20">
+        <p className="lw-body" data-empty="tasks" data-floor="20">
           {EMPTY_STATE}
         </p>
       ) : null}
 
-      <ul style={{ margin: 0, padding: 0 }}>
+      <ul className="lw-list">
         {rest.map((row) => (
           <TaskCard
             error={error?.task_id === row.task_id ? error.message : undefined}
@@ -235,26 +238,9 @@ export function TaskList() {
         ))}
       </ul>
 
-      <footer
-        style={{
-          alignItems: 'center',
-          borderTop: '1px solid var(--paper-border)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--s-3)',
-          marginTop: 'var(--s-6)',
-          paddingTop: 'var(--s-4)',
-        }}
-      >
-        <a data-hit="44" href="/earnings" style={{ color: 'var(--ink-text)' }}>
-          <span data-earnings="released" data-floor="20">
-            {`earnings ${(earnings ?? 0).toFixed(2)} testnet USDC`}
-          </span>
-        </a>
-        <Chip tone="neutral" floor={20}>
-          {NOT_SPENDABLE}
-        </Chip>
-      </footer>
+      {/* The bar is fixed to the viewport, so the last card needs the height back. */}
+      <div aria-hidden="true" className="lw-earnings-bar__spacer" />
+      <EarningsBar releasedUsdc={earnings} />
     </div>
   );
 }

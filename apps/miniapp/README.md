@@ -88,12 +88,72 @@ After T-05 merges, `app/layout.tsx`, `app/globals.css`, `components/ui/*`,
 frozen; later tasks ask for changes with `BLOCKED:` rather than editing them. `lib/*`,
 `mocks/**` and `app/api/idkit/**` pass to T-24.
 
-## Design notes
+## Design
 
 Paper ground, typed by hand from `DESIGN-SPEC.md`: `--paper-50` page, `--paper-0` cards with a
 1 px `--paper-border` and a soft shadow, `--ink-text` type, teal `--verified-600` / `-700` as
-the only accent, amber `--refusal-on-paper` for refusals. There is no red token in the
-product. Archivo for the wordmark and headlines, Inter for body, JetBrains Mono for ids,
-hashes and chips. Body text never below 16 px, narrated copy never below 20 px
-(`data-floor="20"`), every tappable target at least 44 px (`data-hit="44"`). The worker's
-verification state sits in the sticky header, so it is always above the fold.
+the only accent, amber `--refusal-on-paper` for refusals and nothing else. The status-quo
+colour of the pitch deck appears nowhere in the product. Archivo for the wordmark and
+numerals, Inter for body, JetBrains Mono for ids, hashes, chips and meta.
+
+### The design lives in `app/globals.css`
+
+**No `.tsx` file under `app/` or `components/` carries an inline style that sets a colour, a
+font, a font size, a background or a border.** Every one of those values is a named `lw-*`
+class, so a value can be checked against `DESIGN-SPEC.md` in one file rather than hunted
+through forty style objects. `tests/design/noInlineStyles.test.ts` enforces it and names the
+three exceptions it keeps: the two proof `img` boxes (an object URL for a blob the phone
+holds in memory, which `next/image` cannot size) and the claim-error line in `TaskCard.tsx`,
+whose inline `var(--ink-text)` is read by `tests/tasks/claim.test.tsx`.
+
+`tests/design/globals.test.ts` holds the three things a component diff never shows: the
+`:focus-visible` ring in the accent, the `prefers-reduced-motion` block, and the absence of
+any red keyword or hex in the file.
+
+### The class inventory
+
+| Class | The spec row it implements |
+|---|---|
+| `lw-list-label` | Section label over a list: mono 15/600, UPPERCASE, tracked. |
+| `lw-task-row`, `lw-task-row--collapsed` | One row of the open task card; the collapsed summary. |
+| `lw-task-line`, `lw-task-title`, `lw-task-name` | `type · title` in mono 16/600; the title node; the open card's Inter 21/700 title. |
+| `lw-price`, `lw-price__figure`, `lw-price__unit` | Archivo price numeral and its mono `USDC`, on one baseline that never wraps. |
+| `lw-meta` | Mono 15/500 meta in `--ink-text-3`. Never amber. |
+| `lw-rule` | The route motif as a divider: 1 px dashed `--paper-border`. |
+| `lw-facts` | The landing's three facts, `·` markers, Inter 16/400, leading 1.5. |
+| `lw-cta-caption` | The mono line under the primary button. |
+| `lw-segmented`, `lw-segmented__option`, `lw-segmented__option--on` | The `--paper-100` track, its 44 px segments, and the chosen one in the verified teal. |
+| `lw-tile` | A flat `--paper-100` tile at `--r-tile`, never a card inside a card. |
+| `lw-earnings-bar` | The bar fixed to the bottom of `/tasks`. |
+| `lw-paid` | The released receipt: tint fill, accent border, radius 16. |
+| `lw-stat` | Archivo numerals, tracked −0.03 em, sized by `--xl` / `--md` / `--lg`. |
+| `lw-error-line` | A failure that is not a refusal — ink, not amber. `.lw-error` stays amber and stays for refusals and the payout-key import error. |
+| `lw-textarea` | Every free-text field: mono 15, radius 10, 1 px `--paper-border-2`. |
+| `lw-footprint` | The in-UI glyph, inline SVG, always `--verified-600`. |
+
+Supporting classes carry the same rules where a screen needs them: `lw-card--tight`,
+`lw-card--top`, `lw-card--verified`, `lw-landing-title`, `lw-banner-heading`, `lw-question`,
+`lw-fact`, `lw-note`, `lw-body`, `lw-address`, `lw-actions`, `lw-chips`, `lw-row`,
+`lw-count`, `lw-input`, `lw-field`, `lw-field-row`, `lw-answer-group`, `lw-answer-row`,
+`lw-answer-question`, `lw-waiting-caption`, `lw-photo-slot`, `lw-thumb`, `lw-proof-header`,
+`lw-proof-head`, `lw-pair`, `lw-picker`, `lw-plain-button`, `lw-quiet-link`, `lw-list`,
+`lw-countdown`, `lw-header__brand`, `lw-header__caption`, `lw-header__banner`.
+
+### The floors, as they are enforced
+
+- **16 px** is the body floor. No Inter text renders below it.
+- **15 px** is the floor for mono meta, labels, chips and captions.
+- **20 px** is the floor for anything narrated. It is marked `data-floor="20"`, and
+  `[data-floor='20']` sets `font-size: 20px` in the stylesheet, so the marker is the size —
+  a class on the same element may raise it but never lower it. Where the prototype gave a
+  value under a floor (the verified banner at 17/15, the collapsed price at 17), the floor
+  wins.
+- **44 px** is the hit-target floor. Every tappable element is marked `data-hit="44"` and
+  `[data-hit='44']` sets `min-height` and `min-width`. `tests/hitTargetsMarked.test.tsx` and
+  `tests/tasks/hitTargets.test.tsx` check that every `button`, `a` and file input carries it.
+- Nothing tappable is nested inside another tappable element: an anchor that looks like a
+  button wears the `lw-button` classes rather than wrapping one.
+
+The worker's verification state sits in the sticky header on every route — the compact pill
+beside the wordmark and the full `Verified human ✓ · World ID · one account per person`
+banner under it — so it is always above the fold.

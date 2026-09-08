@@ -88,7 +88,7 @@ export function ReportForm({ taskId }: ReportFormProps) {
   if (phase === 'done' && error === null) {
     return (
       <div className="lw-card" data-state="reported">
-        <p data-floor="20" style={{ margin: '0 0 var(--s-4)' }}>
+        <p className="lw-body lw-body--roomy" data-floor="20">
           {REPORTED_LINE}
         </p>
         {/* The button classes on the anchor itself — a `Button` inside a link would be two
@@ -97,7 +97,6 @@ export function ReportForm({ taskId }: ReportFormProps) {
           className="lw-button lw-button--primary lw-button--lg lw-button--full"
           data-hit="44"
           href="/tasks"
-          style={{ textDecoration: 'none' }}
         >
           {BACK_TO_TASKS}
         </a>
@@ -108,32 +107,17 @@ export function ReportForm({ taskId }: ReportFormProps) {
   return (
     <div data-screen="report">
       {COPY_LINES.map((line) => (
-        <p data-copy="report" key={line} style={{ fontSize: '16px', margin: '0 0 var(--s-2)' }}>
+        <p className="lw-note" data-copy="report" key={line}>
           {line}
         </p>
       ))}
 
-      <fieldset
-        data-picker="abuse-class"
-        style={{ border: 'none', margin: 'var(--s-5) 0 var(--s-4)', padding: 0 }}
-      >
-        <legend className="lw-section-label" style={{ padding: 0 }}>
-          {PICKER_LABEL}
-        </legend>
+      <fieldset className="lw-picker" data-picker="abuse-class">
+        <legend className="lw-list-label">{PICKER_LABEL}</legend>
 
         {/* The six labels come from `packages/shared`, in id order. Nothing here re-types one. */}
         {ABUSE_CLASSES.map((abuseClass) => (
-          <label
-            key={abuseClass}
-            style={{
-              alignItems: 'center',
-              borderBottom: '1px solid var(--paper-border)',
-              display: 'flex',
-              fontSize: '16px',
-              gap: 'var(--s-3)',
-              minHeight: '44px',
-            }}
-          >
+          <label className="lw-picker__row" key={abuseClass}>
             <input
               checked={chosen === abuseClass}
               data-class={abuseClass}
@@ -149,15 +133,12 @@ export function ReportForm({ taskId }: ReportFormProps) {
       </fieldset>
 
       {error === null ? null : (
-        <p
-          data-error="report"
-          style={{ color: 'var(--refusal-on-paper)', fontSize: '16px', margin: '0 0 var(--s-4)' }}
-        >
+        <p className="lw-error-line lw-error-line--roomy" data-error="report" data-tone="refusal">
           {error}
         </p>
       )}
 
-      <div data-floor="20" style={{ marginBottom: 'var(--s-3)' }}>
+      <div className="lw-actions" data-floor="20">
         <Button
           disabled={chosen === null || phase === 'sending'}
           full

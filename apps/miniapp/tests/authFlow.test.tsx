@@ -45,7 +45,7 @@ const { resetSessionForTests } = await import('../lib/session');
 const { getPayoutAddress } = await import('../lib/workerKey');
 const AuthPage = (await import('../app/(auth)/page')).default;
 
-const CTA = 'Verify with World ID — about 30 seconds, one account per person';
+const CTA = 'Verify with World ID';
 
 const WALLET_AUTH_DATA = {
   address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',

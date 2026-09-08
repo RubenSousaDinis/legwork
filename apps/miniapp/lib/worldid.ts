@@ -1,6 +1,6 @@
 'use client';
 
-import { IDKitRequestWidget, type IDKitResult } from '@worldcoin/idkit';
+import { IDKitRequestWidget, type IDKitDebugReport, type IDKitResult } from '@worldcoin/idkit';
 import { orbLegacy, selfieCheckLegacy, type Preset, type RpContext } from '@worldcoin/idkit-core';
 import { createElement, useCallback, useRef, type ReactElement } from 'react';
 import { apiFetch } from './api';
@@ -23,6 +23,42 @@ export type VerifyResponse = {
   nullifier: string;
   level: string;
 };
+
+/**
+ * A widget failure: the code World App sent, plus the SDK's debug report when it has one.
+ * `message` is the bare code, so a caller that only reads `message` sees what it saw before.
+ */
+export class IdkitFailure extends Error {
+  readonly code: string;
+  readonly report: IDKitDebugReport | undefined;
+
+  constructor(code: string, report?: IDKitDebugReport) {
+    super(code);
+    this.name = 'IdkitFailure';
+    this.code = code;
+    this.report = report;
+  }
+}
+
+/** The longest response payload the failure line shows; the console gets the whole report. */
+const REPORT_PAYLOAD_MAX = 400;
+
+/**
+ * One line for the screen and the phone log: the transport, the request id and what World App
+ * answered. The report is the only place World App says *why* a request failed — a bare
+ * `verification_disabled` on the screen is not something the operator can act on.
+ */
+export function summarizeDebugReport(report: IDKitDebugReport | undefined): string {
+  if (!report) return '';
+  const parts: string[] = [report.transport];
+  if (report.request_id) parts.push(`request ${report.request_id}`);
+  const payload = report.response_payload;
+  if (payload !== undefined) {
+    const text = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    parts.push(text.length > REPORT_PAYLOAD_MAX ? `${text.slice(0, REPORT_PAYLOAD_MAX)}…` : text);
+  }
+  return parts.join(' · ');
+}
 
 /**
  * Selfie Check when the Portal granted access, Orb otherwise — and Orb whenever the level is
@@ -96,7 +132,11 @@ export function IdkitVerify({
     allow_legacy_proofs: true,
     app_id: WORLD_APP_ID as `app_${string}`,
     handleVerify,
-    onError: (code: unknown) => onFailed(new Error(String(code))),
+    onError: (code: unknown, debugReport?: IDKitDebugReport) => {
+      // The console line is for the phone log; the failure object is for the screen.
+      console.error('[idkit] verification failed', code, debugReport);
+      onFailed(new IdkitFailure(String(code), debugReport));
+    },
     onOpenChange,
     onSuccess,
     open,
