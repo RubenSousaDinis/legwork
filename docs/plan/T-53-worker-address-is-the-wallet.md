@@ -1,25 +1,28 @@
 ---
 id: T-53
-title: Inside World App the worker's address is the wallet, so walletAuth can sign in
+title: The worker gets in — the wallet is the address, and the list is the front page
 lane: D
 day: 5                               # added Sept 8; confirmed against the deployed API the same evening
-size: S
+size: M                              # grew when the routing swap was folded in
 agent_class: C
 must: true
 depends_on: [T-52]
 owned_paths:
   - apps/miniapp/app/(auth)/**
+  - apps/miniapp/app/tasks/**
+  - apps/miniapp/app/verify/**
+  - apps/miniapp/components/UnverifiedBanner.tsx
   - apps/miniapp/lib/session.ts
   - apps/miniapp/lib/workerKey.ts
   - apps/miniapp/mocks/**
   - apps/miniapp/tests/**
   - apps/miniapp/README.md
   - apps/miniapp/app/support/page.tsx
-labels: [area:miniapp, wave:5, size:S, agent:cloud]
+labels: [area:miniapp, wave:5, size:M, agent:cloud]
 branch: t-53/worker-address-is-the-wallet
 ---
 
-# T-53 — Inside World App the worker's address is the wallet
+# T-53 — The worker gets in
 
 ## 1. Context
 
@@ -62,6 +65,22 @@ this task.
 
 **The demo runs inside World App.** Until this lands, the filmed worker cannot claim.
 
+### The second half: the list is the front page
+
+Folded in on 2026-09-08 from the operator's testing, and it is the same story — a worker who
+cannot get in should still be able to see the work.
+
+`/` is the auth flow, so a visitor's first screen is `Verify with World ID` and there is nothing
+behind it. **The list they should be seeing already exists and already works without a session:**
+`app/tasks/page.tsx:23` renders `<UnverifiedTasks />` for anyone with no session — the real open
+list at the real prices from `GET /public/feed`, no cookie, every claim button disabled until
+they verify (T-42). `UnverifiedBanner` even carries the CTA back the other way, with the comment
+*"Where `Verify with World ID` goes; `/` is the auth screen."*
+
+So the intended design was always list-first with verification as the action. Only the routing
+says otherwise: nothing sends a signed-out visitor from `/` to `/tasks`, so nobody ever sees it.
+This is a routing change, not a build.
+
 ## 2. Exact scope
 
 **The ruling.** Inside World App, the worker's address **is** the walletAuth address. That is
@@ -101,6 +120,23 @@ page has to warn them they can permanently lose — was never a service to them.
    the flow to succeed, which is exactly what production does. A test that has to make the two
    addresses equal to pass is testing the mock.
 
+6. **`/` becomes the task list.** Move the auth flow to `/verify` by relocating
+   `app/(auth)/page.tsx` to `app/(auth)/verify/page.tsx` — a route group adds no path segment,
+   so the file's new home *is* the new URL and its siblings (`Landing.tsx`, `VerifyStep.tsx`,
+   `PayoutKeyStep.tsx`, `RegisterStep.tsx`, `SignInStep.tsx`, `register.ts`, `idkitErrors.ts`)
+   stay where they are. `/` then renders what `app/tasks/page.tsx` renders today: the session
+   probe, then `<UnverifiedTasks />` or the worker's own list.
+7. **`/tasks` keeps working**, rendering the same thing as `/`. Existing links, the post-register
+   redirect and every test that navigates there stay valid; do not break a URL that is already
+   in someone's history.
+8. **The CTA points at the auth flow's new home.** `UnverifiedTasks`'s `verifyHref` becomes
+   `/verify`, and the comment on `UnverifiedBanner`'s prop is updated to match. The three
+   `router.replace('/tasks')` calls in the auth flow may stay as they are — `/tasks` still
+   resolves — or move to `/`; either is correct, so pick one and be consistent.
+9. **Nothing about the unverified view changes.** The rows, the prices, the disabled buttons,
+   the banner copy and `data-screen="tasks-unverified"` are T-42's and are already right. If the
+   list looks wrong at `/`, the fault is the routing you just wrote, not the component.
+
 ## 3. Out of scope
 
 - The API, the contracts and the registry. `POST /register` already takes whatever address it is
@@ -111,13 +147,21 @@ page has to warn them they can permanently lose — was never a service to them.
   `POST /admin/reset-worker` and registers again. Do not write a migration.
 - The area binding, the distance rendering, the claim radius, the empty state — all T-52, merged.
 - The dashboard. `apps/dashboard/**` is T-51's.
+- **The unverified list's contents** — `UnverifiedTasks`'s feed call, filtering and row mapping,
+  and `UnverifiedBanner`'s copy and disabled-button behaviour. You are moving where it renders,
+  not what it renders.
+- The signed-in list's area filtering. A worker's board shows their registered cell and that is
+  deliberate; the signed-out preview is unfiltered and that is also deliberate.
 - Do not touch: `apps/api/**`, `packages/**`, `contracts/**`,
-  `apps/miniapp/app/about/page.tsx`, `apps/miniapp/app/tasks/**`.
+  `apps/miniapp/app/about/page.tsx`, `apps/miniapp/app/support/page.tsx` beyond §2 item 4.
 
 ## 4. Owned paths
 
 ```
 apps/miniapp/app/(auth)/**
+apps/miniapp/app/tasks/**
+apps/miniapp/app/verify/**
+apps/miniapp/components/UnverifiedBanner.tsx
 apps/miniapp/lib/session.ts
 apps/miniapp/lib/workerKey.ts
 apps/miniapp/mocks/**
@@ -156,7 +200,10 @@ holds it or T-52 is not merged: stop. Finish with `gh pr ready`, never `gh pr cr
 3. Then items 1–3 of §2 until it is green for the right reason: `/register` bound the wallet
    address, so `/session` finds it.
 4. Items 4–5, then the README.
-5. Run §9 in full, paste it into the PR, `gh pr ready`.
+5. **Then the routing swap**, items 6–9 of §2, as its own commit. Move the file first and get
+   `/verify` rendering the untouched auth flow before you touch `/` — a move and a rewrite in
+   one commit is unreviewable.
+6. Run §9 in full, paste it into the PR, `gh pr ready`.
 
 ## 8. Acceptance tests
 
@@ -168,6 +215,10 @@ holds it or T-52 is not merged: stop. Finish with `gh pr ready`, never `gh pr cr
 | `worldAppShowsNoPayoutKeyToLose` (`tests/authFlow.test.tsx`) | inside World App the payout step renders the wallet address, and neither the reveal control nor the losing-your-key warning appears |
 | `nullifierConflictSignsInWithTheHeldKey` (existing, renamed copy allowed) | still green; inside World App the button copy names the wallet, not a key |
 | `payoutKeyNeverLeavesTheDevice` (existing) | untouched and green — the web path still never transmits the secret |
+| `rootShowsTheListNotTheSignIn` (`tests/tasks/`) | rendering `/` with no session produces `[data-screen="tasks-unverified"]` and the open rows; the `Verify with World ID` CTA is present as an action, and the auth flow's steps are not on the page |
+| `rootShowsTheWorkersOwnListWhenVerified` (`tests/tasks/`) | with a verified session, `/` renders the worker's list — the same tree `/tasks` renders — and not the unverified preview |
+| `verifyLivesAtItsOwnRoute` (`tests/`) | `/verify` renders the auth flow's first step, and `UnverifiedTasks`'s `verifyHref` is `/verify` |
+| `tasksRouteStillResolves` (`tests/tasks/`) | `/tasks` renders the same thing as `/` — the URL that is already in histories and redirects does not 404 |
 | every existing test file | green; the mini-app suite does not lose a test |
 
 ## 9. Verification commands
@@ -216,6 +267,9 @@ present; `banned-words: clean`; the grep prints the `good` line.
 Task: T-53 — Inside World App the worker's address is the wallet
 owned-paths:
   - apps/miniapp/app/(auth)/**
+  - apps/miniapp/app/tasks/**
+  - apps/miniapp/app/verify/**
+  - apps/miniapp/components/UnverifiedBanner.tsx
   - apps/miniapp/lib/session.ts
   - apps/miniapp/lib/workerKey.ts
   - apps/miniapp/mocks/**
@@ -240,8 +294,16 @@ Check step 2 actually happened: `git log -p` should show a commit where `mockWal
 as a distinct address and `bothSessionModes` is red, before the fix that makes it green. A green
 suite that was never red proves nothing here, which is precisely how this bug survived T-52.
 Then confirm `POST /register`'s body in the World App path carries the wallet address, that the
-web path is untouched, and that no losing-your-key warning renders inside World App. Finally, the
-real check is a phone: registration inside World App followed by a session that is not a 403.
+web path is untouched, and that no losing-your-key warning renders inside World App.
+
+For the routing half, read the commits separately: the move to `/verify` should be a rename with
+no content change, and only the commit after it should touch `/`. Check that
+`UnverifiedTasks` and `UnverifiedBanner` are byte-identical apart from `verifyHref` — the
+components were right all along and this task only changes where they render. `/tasks` must
+still resolve.
+
+Finally, the real check is a phone: open the root with no session and see the open list; then
+registration inside World App followed by a session that is not a 403.
 
 ## 15. Round 2+
 
