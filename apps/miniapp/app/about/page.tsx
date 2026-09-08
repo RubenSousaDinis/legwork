@@ -33,7 +33,7 @@ export default function AboutPage() {
         </p>
         <p className="lw-body" data-floor="20">
           Software can read every page on the internet and still not know whether the pharmacy on
-          Bedford Avenue is open. Legwork is where an agent pays a real person to go and look.
+          Rua de Alcobaça is open. Legwork is where an agent pays a real person to go and look.
         </p>
         <div className="lw-chips">
           <Chip tone="verified">{credentialLabel(CREDENTIAL_LEVEL)}</Chip>

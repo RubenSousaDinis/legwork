@@ -12,7 +12,7 @@ describe('refusals page', () => {
   it('refusalsNeverRawSpec', () => {
     // The live fixture carries the four things a public surface may never render.
     const raw = fixtures.refusals1;
-    const recent = raw.recent[0]!;
+    const recent = raw.recent.find((entry) => 'spec' in entry && 'payer' in entry)!;
     expect(recent.spec).toBe('SPEC-LEAK');
     expect(recent.payer).toBe('0xPAYER');
     expect(recent.agent_id).toBe('8004-1207');

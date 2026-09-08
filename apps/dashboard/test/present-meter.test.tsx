@@ -203,4 +203,15 @@ describe('present meter', () => {
     expect(counter.className).toContain('is-animating');
     expect(counter.getAttribute('data-to')).toBe('1');
   });
+
+  it('escrowMeterMarkupUnchangedAfterFootprintExtraction', () => {
+    const { container } = render(
+      <EscrowMeter featured={featured('locked')} totals={TOTALS} present />,
+    );
+    const meter = container.querySelector('[data-testid="escrow-meter"]') as HTMLElement;
+    expect(container.querySelectorAll('.meter-footprint')).toHaveLength(1);
+    expect(meter.getAttribute('data-testid')).toBe('escrow-meter');
+    expect(meter.getAttribute('data-state')).toBe('locked');
+    expect(meter.getAttribute('data-progress')).toBe('0.5');
+  });
 });
