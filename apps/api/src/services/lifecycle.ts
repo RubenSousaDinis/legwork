@@ -50,7 +50,7 @@ import { getDb } from '../db/client';
 import { tasks } from '../db/schema';
 import { ApiError } from '../errors';
 import { logger } from '../log';
-import { distanceM } from './geo';
+import { distanceM, round100m } from './geo';
 
 /** A `tasks` row, exactly as the frozen schema declares it. */
 export type TaskRow = typeof tasks.$inferSelect;
@@ -468,6 +468,8 @@ export interface WorkerTaskRow {
   state: string;
   seeded: boolean;
   brief: WorkerBrief;
+  /** Task place through `round100m`. Absent when the private row has no coordinate. */
+  coordinate_rounded?: { lat: number; lon: number };
 }
 
 export interface ListRowOptions {
@@ -499,6 +501,9 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
     claimExpiresInS = 0;
   }
 
+  const rounded =
+    coordinate === undefined ? undefined : round100m(coordinate.lat, coordinate.lon);
+
   return {
     task_id: row.taskId.toString(),
     task_type: taskTypeOf(row.taskType),
@@ -510,6 +515,7 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
     state: own ? 'claimed' : 'open',
     seeded: options.seeded,
     brief: workerBrief(row),
+    ...(rounded === undefined ? {} : { coordinate_rounded: rounded }),
   };
 }
 

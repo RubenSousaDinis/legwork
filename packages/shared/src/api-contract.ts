@@ -131,6 +131,8 @@ export const PublicTaskView = z.object({
   price_usdc: z.number(), fee_usdc: z.number(), area: Geohash5, seeded: z.boolean(), posted_at: Iso,
   claimed_at: Iso.optional(), submitted_at: Iso.optional(), released_at: Iso.optional(),
   answer: z.string().optional(), proof: PublicProofView.optional(),
+  /** Task place, 3 decimals (~100 m). The exact coordinate never leaves the private row. */
+  coordinate_rounded: CoordinateRounded.optional(),
   tx: TxSet, links: LinkSet, dashboard_url: z.url(),
 });
 
@@ -148,6 +150,8 @@ const WorkerTaskRow = z.object({
   distance_m: z.number().optional(), claim_expires_in_s: z.number().int().optional(),
   /** `claimed` only for the caller's own live claim; an expired claim shows as `open` with `claim_expires_in_s: 0`. */
   state: z.enum(['open', 'claimed']), seeded: z.boolean(), brief: WorkerBrief,
+  /** Task place, 3 decimals (~100 m). Omitted when the row has no private coordinate. */
+  coordinate_rounded: CoordinateRounded.optional(),
 });
 
 export const Preflight = z.object({
@@ -213,7 +217,7 @@ export const API_ROUTES = {
   taskSpec: { method: 'GET', path: '/tasks/:id/spec', auth: 'worker-session', summary: 'Spec fields, claimant only — the one route that shows spec to a human',
     responses: { 200: z.object({ task_type: TaskTypeSchema, spec: z.record(z.string(), z.unknown()) }), 403: GenericError } },
   publicFeed: { method: 'GET', path: '/public/feed', auth: 'public', summary: 'Last 20 by posted_at; never spec text, an exact coordinate, a buyer token, a payer or a note', responses: { 200: z.object({ tasks: z.array(PublicTaskView) }) } },
-  publicTask: { method: 'GET', path: '/public/task/:id', auth: 'public', summary: 'One task as a stranger sees it: PublicTaskView, coordinate_rounded inside proof, never a url',
+  publicTask: { method: 'GET', path: '/public/task/:id', auth: 'public', summary: 'One task as a stranger sees it: PublicTaskView, coordinate_rounded on the task and inside proof, never a url',
     responses: { 200: PublicTaskView, 404: GenericError } },
   publicRefusals: { method: 'GET', path: '/public/refusals', auth: 'public', summary: 'The six classes zero-filled, the last 20 refusals, and the demo examples; recent never carries reason, spec_hash, agent_id or payer',
     responses: { 200: z.object({
