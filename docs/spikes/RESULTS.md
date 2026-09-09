@@ -8,7 +8,9 @@ S1: code present, proof rejected (expected)
 
 _World ID Router on Base Sepolia (feedback-doc value only)_
 
-outcome: The World ID Router is deployed at `0x42FF98C4E85212a5D31358ACbFe76a621b50fC02` on Base Sepolia and answers. `cast code` returns 356 characters beginning `0x608060405236601057600e6013565b005b600e` — a 178-byte ERC-1967 proxy in front of `WorldIDRouterImplV1` at `0x379c62556c665f1edd25f2c2a0f76bc70a53b2e4`. The operator has no simulator proof for action `legwork-worker`, because S2' runs Selfie Check through the cloud verify endpoint and that path never produces an onchain proof, so the probe is a `verifyProof` staticcall with all-zero arguments. It reverts, and the two groups the router knows about revert for two different reasons: the router reports `groupCount() = 2`, `routeFor(0)` itself reverts `GroupIsDisabled()` (`0x4ac73bb8`) so group 0 is switched off on this chain, and `routeFor(1)` returns the group-1 verifier `0x163b09b4fE21177c455D850BD815B6D583732432`, against which `verifyProof` reverts `NonExistentRoot()` (`0xddae3b71`) — the all-zero root is not in the bridged root history. That is the expected shape of the answer: onchain verification is Orb-only and the identity roots it checks are the bridged ones, while Legwork's workers hold Selfie Check / Orb-level *staging* credentials that are in neither. Nothing downstream changes on this outcome, as the gate says: `WorkerRegistry` ships one cloud-verified `ATTESTED` mode.
+outcome: PASS
+
+The World ID Router is deployed at `0x42FF98C4E85212a5D31358ACbFe76a621b50fC02` on Base Sepolia and answers. `cast code` returns 356 characters beginning `0x608060405236601057600e6013565b005b600e` — a 178-byte ERC-1967 proxy in front of `WorldIDRouterImplV1` at `0x379c62556c665f1edd25f2c2a0f76bc70a53b2e4`. The operator has no simulator proof for action `legwork-worker`, because S2' runs Selfie Check through the cloud verify endpoint and that path never produces an onchain proof, so the probe is a `verifyProof` staticcall with all-zero arguments. It reverts, and the two groups the router knows about revert for two different reasons: the router reports `groupCount() = 2`, `routeFor(0)` itself reverts `GroupIsDisabled()` (`0x4ac73bb8`) so group 0 is switched off on this chain, and `routeFor(1)` returns the group-1 verifier `0x163b09b4fE21177c455D850BD815B6D583732432`, against which `verifyProof` reverts `NonExistentRoot()` (`0xddae3b71`) — the all-zero root is not in the bridged root history. That is the expected shape of the answer: onchain verification is Orb-only and the identity roots it checks are the bridged ones, while Legwork's workers hold Selfie Check / Orb-level *staging* credentials that are in neither. Nothing downstream changes on this outcome, as the gate says: `WorkerRegistry` ships one cloud-verified `ATTESTED` mode.
 
 evidence: `bash scripts/spikes/s1-router.sh` — output pasted in the T-04 PR. Error selectors were decoded against the verified `WorldIDRouterImplV1` ABI, which declares exactly `CannotRenounceOwnership()`, `ExpiredRoot()`, `GroupIsDisabled()`, `ImplementationNotInitialized()`, `NoSuchGroup(uint256)` and `NonExistentRoot()`.
 
@@ -20,7 +22,9 @@ _IDKit 4.x verify end to end + webview probe (S2')_
 
 S2: PASS on Orb · REFUSED on Selfie Check
 
-outcome: IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
+outcome: DOWNGRADED
+
+IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
 mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
 **"Legwork will see these proofs: Unique Human"**; on approval `POST /idkit/verify` answered **200**
 and the nullifier row was written. Selfie Check — the credential the plan assumed — never worked: the
@@ -54,9 +58,13 @@ value and a deploy. The session ordering was fixed in the mini-app the same day.
 
 _x402 exact-EVM verify → post → settle + replay_
 
-Result: PASS
+S3: PASS
 
-PAYMENT_MODE: x402
+outcome: PASS
+
+evidence: https://sepolia.basescan.org/tx/0x77064504cc36f25767635fedb04f37fc663a104bfcebe81f57e199cf1dec8a46
+
+decision: PAYMENT_MODE stays x402. Exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas.
 
 Time used: 11
 
@@ -97,7 +105,9 @@ S5: PASS
 
 _ERC-8004 ABI confirmation — round-trip against the deployed registries_
 
-outcome: Legwork reads and writes the production ERC-8004 registries on Base Sepolia directly. No fallback is needed, so T-13b is not dispatched and nothing is labelled a self-deployed instance. Two throwaway identities were registered from keys that existed only in the spike process; the second gave unsolicited feedback on the first; the read came back exactly as AbuseMark (T-13) will make it.
+outcome: PASS
+
+Legwork reads and writes the production ERC-8004 registries on Base Sepolia directly. No fallback is needed, so T-13b is not dispatched and nothing is labelled a self-deployed instance. Two throwaway identities were registered from keys that existed only in the spike process; the second gave unsolicited feedback on the first; the read came back exactly as AbuseMark (T-13) will make it.
 
 **Addresses (chain 84532).** IdentityRegistry proxy `0x8004A818BFB912233c491871b3d84c89A494BD9e` → implementation `0x7274e874ca62410a93bd8bf61c69d8045e399c02`. ReputationRegistry proxy `0x8004B663056A597Dffe9eCcC1965A193B7388713` → implementation `0x16e0fa7f7c56b9a767e34b192b51f921be31da34`. Both read from the ERC-1967 implementation slot of the live proxies and both match the addresses named in the gate. Both report `getVersion() = "2.0.0"`; `ReputationRegistry.getIdentityRegistry()` returns the IdentityRegistry proxy, so the pair is wired together.
 
@@ -127,7 +137,9 @@ decision: use the live registries. No self-deploy, no T-13b. `IERC8004Identity` 
 
 _Discord answers: Studio URL as "live data from a Graph provider"; Subgraph MCP as "composable"_
 
-outcome: the subgraph is deployed to Subgraph Studio and indexing Base Sepolia at the chain head. The Discord question is **open** — see "Discord" below; nothing here claims it is settled.
+outcome: PASS
+
+The subgraph is deployed to Subgraph Studio and indexing Base Sepolia at the chain head. The Discord questions are **open** — see "Discord" below; nothing here claims they are settled.
 
 **Deployment.** Slug `legwork-base-sepolia`, version label `6653cb4` (the git short SHA of the manifest commit), deployment id `QmQfhYXvMH7hTvtp3inckP2662USA9c5Nbd2gvFaKUiTcv`.
 Studio: https://thegraph.com/studio/subgraph/legwork-base-sepolia
@@ -153,7 +165,9 @@ One to three blocks behind a 2-second chain, moving with it: at the head, not ca
 
 **Query 3 — the external-poster counter.** `{ posterStats(id: "global") { distinctExternalBuyers externalTasks } }` returns `distinctExternalBuyers: 0, externalTasks: 0`. Both buyers who have posted so far are on the operator allowlist — `0x436cA229…` for the seeded five, `0xc1286562…` for task 6 — and `PosterStats` excludes allowlisted buyers by design. Zero is the honest Day-2 answer for the W3 gate, reported as zero.
 
-**Discord: not asked, no answer.** The question — whether a Subgraph Studio query URL on a testnet counts as "consuming live data from a Graph provider" for the Graph track — was **not put to the Graph Discord as of 2026-09-07T15:06Z**: this deploy ran from a non-interactive shell with no Discord access. It stays open and it is the operator's to ask. Nothing in this repo asserts the track is satisfied.
+**Discord (1) Studio query URL as "live data from a Graph provider":** unanswered as of 2026-09-09. The question — whether a Subgraph Studio query URL on a testnet counts as "consuming live data from a Graph provider" for the Graph track — was **not put to the Graph Discord as of 2026-09-07T15:06Z**: this deploy ran from a non-interactive shell with no Discord access. T-46 recorded no later answer. Nothing in this repo asserts the track is satisfied.
+
+**Discord (2) Subgraph MCP as "composable":** unanswered as of 2026-09-09. Same source: not asked as of 2026-09-07T15:06Z; still no answer on 2026-09-09. The Graph Composable track is not claimed.
 
 What the public docs do and do not settle, from reading them rather than from an answer:
 
@@ -163,13 +177,15 @@ What the public docs do and do not settle, from reading them rather than from an
 
 evidence: `pnpm graph codegen && pnpm graph build` green on the filled manifest; `graph deploy` output and all three query responses pasted verbatim into the T-23 PR. The four addresses in `subgraph/subgraph.yaml` match `contracts/deployments/base-sepolia.json` character for character.
 
-decision: Studio is where the subgraph lives for the demo and its query URL is what every consumer reads. The Graph-track question stays **open** pending a Discord answer; anyone writing it up must say "Subgraph Studio, Base Sepolia" and not claim more.
+decision: Studio is where the subgraph lives for the demo and its query URL is what every consumer reads. The Graph-track questions stay **open** — unanswered as of 2026-09-09; anyone writing them up must say "Subgraph Studio, Base Sepolia" and not claim more.
 
 ## Preflight
 
 _live Studio data, Day 9 (T-46) — re-shot after the first real errand_
 
-outcome: `preflight_workers` answers from the live Studio subgraph, and every number it returned
+outcome: PASS
+
+`preflight_workers` answers from the live Studio subgraph, and every number it returned
 is the number the dashboard card renders — field for field, same minute. **The median is drawn
 from a real completion**: `n_real: 1`, `median_source: "real"`, and the card reads
 `median 1 min (real, n=1)`. That is a person, not seeded data. Nothing had aged out of the
@@ -270,8 +286,12 @@ registration cells and completion cells separately, recorded above and not paper
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: green. `pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
+outcome: PASS
+
+`pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
 Sepolia with no human in the loop, exits 0, and prints `RELEASED` last.
+
+Day-5 fresh-install → verify → claim: unanswered as of 2026-09-09. No number appears in T-29's PR, T-33's operator step, `FEEDBACK-WORLD.md`, or `OPERATOR.md`.
 
 Day-3 green loop 16:49 UTC: post/claim/submit/release https://sepolia.basescan.org/tx/0xdab710d01c9259d6919edaa4bd8f57b1b3b3c82355a87af1d3744d16c31fbb60 https://sepolia.basescan.org/tx/0x78c85e57e5ac81c58af27bdb5ef3b278df4d03d4d8adc9b8877df86924f2b544 https://sepolia.basescan.org/tx/0x58064beeb92541339090820a707dfccc2870afa50e10d7a6a34944bb0302aa0d https://sepolia.basescan.org/tx/0x395aeb59530605dae38005edd16a5aab62c39ed41514e61aaa33f211994e1238
 
@@ -535,7 +555,7 @@ agent-side feedback. `BUYER_AGENT_ID=9196` is the demo agent's id and belongs in
 
 ## Locked architecture
 
-- credential level: selfie | orb → narration variant: A | B — _pending_
-- GPS: available | downgraded (photo + server timestamp + tapped confirmation) — _pending_
+- credential level: orb → narration variant: B — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are `orb`; Selfie Check was REFUSED (`verification_disabled`), never available. Variant A is the Selfie Check narration; the product ships Orb.
+- GPS: available — `FEEDBACK-WORLD.md` has no GPS-downgrade entry after the Day-4/5 mini-app build or the Sept 9 Pão Doce errand. The fallback (photo + server timestamp + tapped confirmation) exists in T-33 and is not the locked demo variant.
 - payment: x402 — S3 PASS (Sept 6): exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas
 - ERC-8004: live registries — S5 PASS (Sept 7): production IdentityRegistry `0x8004A818…` and ReputationRegistry `0x8004B663…` on Base Sepolia, interfaces confirmed unchanged, `_safeMint` (a contract holder needs `onERC721Received`), unsolicited feedback legal, `getSummary` needs named clients and lags its receipt by a block; T-13b not dispatched

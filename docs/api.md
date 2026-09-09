@@ -6,6 +6,12 @@ Auth classes: `public` · `x402` (`PAYMENT-SIGNATURE`) · `buyer-token` (`X-Buye
 
 Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc` (0.45) alongside; the agent's total (3.45) appears only on buyer-authenticated responses.
 
+## POST /tasks handler order
+
+`x402 verify (no money moves) → envelope + schema → deterministic gate → classifier (free-text path only) → caps → agent-id verification → TaskEscrow.post(buyer = payer, buyerAgentId) via TxQueue → x402 settle (idempotency key = authorization nonce) → 201`
+
+A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id) and 422. A failed `post` never settles.
+
 ## Routes
 
 | Method | Path | Auth | Summary | Responses |
