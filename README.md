@@ -8,7 +8,7 @@ An agent posts a real-world task — confirm a shop is open, photograph a poster
 sign — and funds it in USDC escrow. A World ID-verified person nearby claims it, does it,
 and submits proof. The escrow releases on proof. Built on Base Sepolia for ETHOnline 2026.
 
-*State of this repo on 2026-09-07: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are under construction. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
+*State of this repo on 2026-09-10: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are deployed and answering, and a World ID-verified person has been paid 3.00 USDC for a real errand on the street. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
 
 ## Start Fresh disclosure
 
@@ -50,11 +50,11 @@ Bot-proof, not fraud-proof.
 
 | Live, not ours | Ours, deployed on Base Sepolia | Seeded and disclosed |
 | --- | --- | --- |
-| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry `0xc33d229046507f4C2E664cbf974542c92eEAbAf4` | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
-| ERC-8004 IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | TaskEscrow `0x641B56dfA3A033D84a75588c18579347A0DE3c6B` | `<N>` seeded task lifecycles |
-| ERC-8004 ReputationRegistry `0x8004B663056A597Dffe9eCcC1965A193B7388713` | Reputation `0x2f731B56D02080190fa2ef7813887B2743551E43` | one real registration (the demo phone) |
-| x402 reference facilitator | AbuseMark `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` | marks operator-attested |
-| USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | Subgraph (Studio) `<studio url>` | relayed claims, gas paid by Legwork |
+| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry [`0xc33d229046507f4C2E664cbf974542c92eEAbAf4`](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
+| ERC-8004 IdentityRegistry [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | TaskEscrow [`0x641B56dfA3A033D84a75588c18579347A0DE3c6B`](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | `<N>` seeded task lifecycles |
+| ERC-8004 ReputationRegistry [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) | Reputation [`0x2f731B56D02080190fa2ef7813887B2743551E43`](https://sepolia.basescan.org/address/0x2f731B56D02080190fa2ef7813887B2743551E43) | one real registration (the demo phone) |
+| x402 reference facilitator | AbuseMark [`0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608`](https://sepolia.basescan.org/address/0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608) | marks operator-attested |
+| USDC [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | Subgraph (Studio) `<studio url>` | relayed claims, gas paid by Legwork |
 | — | Task API + MCP server, mini-app, dashboard `<host>` | operator powers: seed, reset, resolve |
 
 Plain addresses now; T-49 turns them into Basescan links on Day 10.
@@ -159,7 +159,9 @@ Tick only tracks whose bullets are literally met.
 
 ## External posters
 
-_filled by T-49 on Day 10_
+Zero self-funded external posters — logged in [POSTERS.md](POSTERS.md). The subgraph agrees:
+`PosterStats { distinctExternalBuyers: 0, externalTasks: 0 }`. Every task posted so far was paid
+for by the operator's own demo agent, which is on the allowlist and therefore excluded by design.
 
 ## AI usage
 
@@ -168,7 +170,7 @@ This project was built with AI assistance and documents it rather than hiding it
 - Every commit carries the trailer `AI-Usage: <tool + model> drafted <what>; human <reviewed|edited> <what>`, and CI fails a commit without one.
 - Every pull request has an **AI usage** section in its body.
 - The prompts are committed, not described: `examples/prompt.md` for the demo agent, and the screening classifier's system prompt under `packages/screening/src/classifier/`.
-- `docs/AI-USAGE.md` compiles the whole picture — tools, models, what each drafted and what a human changed — on Day 10 (T-49).
+- [`docs/AI-USAGE.md`](docs/AI-USAGE.md) compiles the whole picture — every tool and model named in the trailers, with a row per pull request and per commit. All 373 trailers on `main` are accounted for; none are rolled into an "other".
 
 The Reputation contract is re-implemented from the same threat model, written from a blank file after kickoff.
 
@@ -180,12 +182,51 @@ The repo is MIT licensed.
 
 ## Addresses and endpoints
 
-_filled by T-49 on Day 10_
+Base Sepolia, chain id 84532. Addresses are copied from
+[`contracts/deployments/base-sepolia.json`](contracts/deployments/base-sepolia.json); every deploy
+transaction is linked, which is also the Start Fresh evidence — the contracts were deployed at
+**2026-09-07T11:33:42Z**, from block 46506271.
+
+### Ours
+
+| Contract | Address | Deploy tx |
+| --- | --- | --- |
+| [WorkerRegistry](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | `0xc33d229046507f4C2E664cbf974542c92eEAbAf4` | [`0x9169775d…`](https://sepolia.basescan.org/tx/0x9169775d1e3d6551cfcd1d1d189a432910737b59d876bd3b1775f4535fabb142) |
+| [TaskEscrow](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | `0x641B56dfA3A033D84a75588c18579347A0DE3c6B` | [`0x04da18be…`](https://sepolia.basescan.org/tx/0x04da18be1d99b1f47896f1a216a05e91e9bbf49f3a119db36cb521455c93eff0) |
+| [Reputation](https://sepolia.basescan.org/address/0x2f731B56D02080190fa2ef7813887B2743551E43) | `0x2f731B56D02080190fa2ef7813887B2743551E43` | [`0xb8d35fd3…`](https://sepolia.basescan.org/tx/0xb8d35fd32ea5a99d5c7ecbcd078dfdaae7d1c5d2f67b9c2cf3b6cfc44ca1005e) |
+| [AbuseMark](https://sepolia.basescan.org/address/0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608) | `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` | [`0x3f8dd1b2…`](https://sepolia.basescan.org/tx/0x3f8dd1b2d898c7b2a53265305e61ad8fa821ddd41285738c2a00999bf46e8c3e) |
+
+### Live, not ours
+
+| What | Address |
+| --- | --- |
+| [ERC-8004 IdentityRegistry](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
+| [ERC-8004 ReputationRegistry](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
+| [USDC](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+
+### Endpoints
+
+| What | URL |
+| --- | --- |
+| Task API | https://legwork-api.vercel.app |
+| MCP mount | `https://legwork-api.vercel.app/mcp` — `claude mcp add --transport http legwork https://legwork-api.vercel.app/mcp` |
+| Mini-app (the worker's phone) | https://legwork-miniapp.vercel.app |
+| Dashboard | https://legwork-dashboard.vercel.app |
+| Subgraph (Studio public query URL) | https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4 |
+
+The subgraph link is the public Studio query URL. No URL in this repository embeds `GRAPH_API_KEY`.
 
 ## Docs
 
 - [Day-1 spike results](docs/spikes/RESULTS.md)
 - [Threat model](docs/threat-model.md)
+- [Keys and operator powers](docs/keys.md)
+- [Task API reference](docs/api.md)
+- [MCP tools reference](docs/mcp.md)
+- [Submission pack](docs/submission.md)
+- [AI usage](docs/AI-USAGE.md)
 - [World ID feedback](FEEDBACK-WORLD.md)
 - [External posters](POSTERS.md)
-- [Task briefs](docs/plan/)
+- [Agent skill](SKILL.md)
+- [Task briefs](docs/plan/) — the disclosed pre-kickoff plan, copied at kickoff
+- [Examples](examples/)
