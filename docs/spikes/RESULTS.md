@@ -22,7 +22,7 @@ _IDKit 4.x verify end to end + webview probe (S2')_
 
 S2: PASS on Orb · REFUSED on Selfie Check
 
-outcome: PASS
+outcome: DOWNGRADED
 
 IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
 mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
@@ -65,10 +65,6 @@ outcome: PASS
 evidence: https://sepolia.basescan.org/tx/0x77064504cc36f25767635fedb04f37fc663a104bfcebe81f57e199cf1dec8a46
 
 decision: PAYMENT_MODE stays x402. Exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas.
-
-Result: PASS
-
-PAYMENT_MODE: x402
 
 Time used: 11
 

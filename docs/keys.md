@@ -27,7 +27,7 @@ Owner of the four contracts, all single-signer; multisig is roadmap.
 | `setAllowlistedBuyer` | Marks a buyer whose tasks a seeded worker may claim |
 | `setMarkCooldown` | Sets the minimum interval between two marks against one agent |
 
-Today I am on both sides of this: my agent, my phone, my key resolves disputes. The contract doesn't know that, and that's the point of putting it in a contract.
+today I am on both sides of this: my agent, my phone, my key resolves disputes. The contract doesn't know that, and that's the point of putting it in a contract.
 
 Honesty lines that follow from this table (verbatim in README and narration): "cloud-verified, operator-attested — onchain World ID verification is Orb-only today" · "our custody is the one block between settlement and escrow, and we say so".
 
