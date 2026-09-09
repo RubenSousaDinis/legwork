@@ -5,6 +5,7 @@ import { Chip } from '../../components/ui/Chip';
 import { apiFetch } from '../../lib/api';
 import { requireVerified } from '../../lib/session';
 import { getPayoutAddress } from '../../lib/workerKey';
+import { WithdrawForm } from './WithdrawForm';
 
 /**
  * `/earnings` — what this account actually earned, and nothing else.
@@ -16,6 +17,12 @@ import { getPayoutAddress } from '../../lib/workerKey';
  *
  * The figure is testnet USDC on Base Sepolia and says so twice — the unit beside the numeral
  * and the chip beside that. Nobody should leave this screen thinking they can spend it.
+ *
+ * Below it, the one thing a worker can do with the figure: move it. `WithdrawForm` is the
+ * gasless withdrawal — the phone signs two EIP-3009 authorizations it builds itself, Legwork
+ * relays them and pays the gas, and keeps 2 % of what was moved for doing so. That 2 % is a
+ * separate charge from the 15 % a hiring agent pays on top of a task, and neither figure is
+ * ever described as the other.
  */
 
 const BASESCAN_ADDRESS = 'https://sepolia.basescan.org/address/';
@@ -116,6 +123,10 @@ export default function EarningsPage() {
           </a>
         </p>
       </div>
+
+      {/* Moving it. The payout address has no ETH and never will, so the phone signs and
+          Legwork submits — see `WithdrawForm`, which builds every payload it signs. */}
+      {address === null ? null : <WithdrawForm />}
     </div>
   );
 }
