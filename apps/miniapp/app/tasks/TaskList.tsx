@@ -49,6 +49,16 @@ export const CLAIM_ERRORS: Record<string, string> = {
     'This account is a seeded demo worker; it can only claim operator-funded tasks.',
 };
 
+/**
+ * `AlreadyClaimed` answers two different questions with one word: someone else got there
+ * first, or *you* already hold a claim — the API separates them by sending `active_task_id`
+ * only in the second case. Telling a worker holding task 31 that someone claimed it first is
+ * a lie about their own claim, and it sent an operator looking for a task they already had.
+ */
+export function heldByYou(taskId: string): string {
+  return `You already have task #${taskId} claimed. Submit it or release it before claiming another.`;
+}
+
 const GENERIC_ERROR = 'That did not go through. Try again in a moment.';
 
 type TasksResponse = { tasks: TaskRow[] };
@@ -63,6 +73,10 @@ function errorCode(thrown: unknown): string | null {
 
 function claimErrorMessage(thrown: unknown): string {
   const code = errorCode(thrown);
+  if (code === 'AlreadyClaimed' && thrown instanceof ApiError) {
+    const body = thrown.body as { active_task_id?: unknown } | null;
+    if (typeof body?.active_task_id === 'string') return heldByYou(body.active_task_id);
+  }
   if (code === 'too_far_to_claim' && thrown instanceof ApiError) {
     const body = thrown.body as { distance_m?: unknown } | null;
     const distance = typeof body?.distance_m === 'number' ? body.distance_m : undefined;
