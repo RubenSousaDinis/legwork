@@ -48,7 +48,7 @@ const PROBLEMS = [
 export default function SupportPage() {
   return (
     <>
-      <section className="lw-card lw-card--top">
+      <section className="lw-card">
         <p className="lw-list-label">SUPPORT</p>
         <p className="lw-landing-title">Legwork pays you for proof, not for answers.</p>
         <p className="lw-body" data-floor="20">
@@ -73,7 +73,7 @@ export default function SupportPage() {
       <section className="lw-card">
         <p className="lw-list-label">WHEN SOMETHING GOES WRONG</p>
         {PROBLEMS.map((problem) => (
-          <div className="lw-answer-row" key={problem.q}>
+          <div className="lw-answer-row lw-answer-row--stack" key={problem.q}>
             <p className="lw-answer-question" data-floor="20">
               {problem.q}
             </p>
