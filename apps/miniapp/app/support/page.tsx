@@ -20,7 +20,7 @@ const STEPS = [
 const PROBLEMS = [
   {
     q: 'Verification did not finish.',
-    a: 'Close the sheet and start again from the first screen. A World ID that already has a worker account cannot make a second one — restore the first with your payout key instead.',
+    a: 'Close the sheet and start again from the first screen. A World ID that already has a worker account cannot make a second one — restore the first with your payout key instead, or sign in with your World App wallet if you registered inside World App.',
   },
   {
     q: 'There are no tasks near me.',
@@ -36,7 +36,7 @@ const PROBLEMS = [
   },
   {
     q: 'I lost my payout key.',
-    a: 'The key is generated on your phone and stored only on your phone. Nobody else has a copy. Without it the worker account behind that World ID cannot be restored.',
+    a: 'The key is generated on your phone and stored only on your phone. Nobody else has a copy. Without it the worker account behind that World ID cannot be restored. Inside World App the payout address is the World App wallet, so there is no separate key to lose.',
   },
 ] as const;
 

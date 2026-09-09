@@ -355,6 +355,8 @@ export const handlers = [
 
     // walletAuth: the MiniKit signature is the proof. The signing address has to already
     // be in the registry — from `/register` on the happy path, or from a 409 fixture.
+    // That address is the World App wallet, not the generated payout key: `/register`
+    // binds whatever `worker_address` it is given, and the session looks up the signer.
     const payloadAddress =
       typeof body?.payload?.address === 'string' ? body.payload.address : '';
     const bound = workerInRegistry(payloadAddress);
