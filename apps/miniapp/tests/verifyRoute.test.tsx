@@ -11,7 +11,6 @@ const { resetSessionForTests, setSessionState } = await import('../lib/session')
 const { setScenario } = await import('../mocks/scenarios');
 const { VERIFY_BUTTON } = await import('../app/(auth)/Landing');
 const VerifyPage = (await import('../app/(auth)/verify/page')).default;
-const { UnverifiedTasks } = await import('../app/tasks/UnverifiedTasks');
 
 beforeEach(() => {
   localStorage.clear();
@@ -23,15 +22,10 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('the auth flow lives at /verify', () => {
-  it('verifyLivesAtItsOwnRoute', async () => {
+  it('verifyRouteStillRendersTheFlow', async () => {
     render(<VerifyPage />);
     expect(await screen.findByRole('button', { name: VERIFY_BUTTON })).toBeTruthy();
     expect(document.querySelector('[data-auth-step="landing"]')).not.toBeNull();
     expect(document.querySelector('[data-step="landing"]')).not.toBeNull();
-    cleanup();
-
-    render(<UnverifiedTasks />);
-    const cta = await screen.findByRole('link', { name: 'Verify with World ID' });
-    expect(cta.getAttribute('href')).toBe('/verify');
   });
 });

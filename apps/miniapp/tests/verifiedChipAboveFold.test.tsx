@@ -20,25 +20,27 @@ const VERIFIED = {
   registered: true,
 };
 
+const { VerifiedState } = await import('../components/VerifiedState');
+const { SiteNav } = await import('../components/SiteNav');
+const { resetSessionForTests, setSessionState } = await import('../lib/session');
+const AuthPage = (await import('../app/(auth)/verify/page')).default;
+
 /**
  * The header is `app/layout.tsx`'s, reproduced here because a layout is not renderable on its
- * own: a sticky `<header>` before `<main>`, so the verification state is above the fold on
- * every route and on every phone.
+ * own: brand, nav, verified state, then `<main>`, so the verification state is above the fold
+ * on every route and on every phone.
  */
-async function renderHeaderAndPage(level: 'selfie' | 'orb') {
-  vi.resetModules();
-  vi.stubEnv('NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL', level);
-
-  const { VerifiedState } = await import('../components/VerifiedState');
-  const { setSessionState } = await import('../lib/session');
-  const AuthPage = (await import('../app/(auth)/verify/page')).default;
-
+function renderHeaderAndPage(level: 'selfie' | 'orb') {
+  resetSessionForTests();
   setSessionState({ ...VERIFIED, level });
 
   return render(
     <>
       <header className="lw-header">
-        <span className="lw-wordmark">LEGWORK</span>
+        <span className="lw-header__brand">
+          <span className="lw-wordmark">LEGWORK</span>
+        </span>
+        <SiteNav />
         <VerifiedState />
       </header>
       <main className="lw-main">
@@ -50,16 +52,16 @@ async function renderHeaderAndPage(level: 'selfie' | 'orb') {
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllEnvs();
+  resetSessionForTests();
 });
 
 describe('layout', () => {
-  it('verifiedChipAboveFold', async () => {
+  it('verifiedChipAboveFold', () => {
     for (const [level, chip] of [
       ['selfie', 'World ID · Selfie Check'],
       ['orb', 'World ID · Orb'],
     ] as const) {
-      const { container } = await renderHeaderAndPage(level);
+      const { container } = renderHeaderAndPage(level);
 
       // The sticky header, not merely somewhere on the page: `main` scrolls, the header does not.
       const header = container.querySelector('header');

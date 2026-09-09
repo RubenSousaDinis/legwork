@@ -1,3 +1,4 @@
+import { cleanup, render } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EARNINGS_ZERO } from '../mocks/handlers';
@@ -8,7 +9,7 @@ vi.mock('@worldcoin/minikit-js', () => ({
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 
-const { resetSessionForTests, restoreSession, setSessionState, signOut } =
+const { resetSessionForTests, restoreSession, setSessionState, signOut, useSession, useSessionReady } =
   await import('../lib/session');
 
 const MIRROR_KEY = 'legwork.session.v1';
@@ -27,6 +28,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   localStorage.clear();
   resetSessionForTests();
 });
@@ -57,5 +59,26 @@ describe('session', () => {
     expect(loggedOut).toBe(true);
     expect(restored.status).toBe('unverified');
     expect(localStorage.getItem(MIRROR_KEY)).toBeNull();
+  });
+
+  it('verifiedWorkerSeesNoFlashOnFirstPaint', async () => {
+    localStorage.setItem(MIRROR_KEY, JSON.stringify(MIRROR));
+    resetSessionForTests();
+
+    function Probe() {
+      const state = useSession();
+      const ready = useSessionReady();
+      return <div data-ready={String(ready)} data-status={state.status} />;
+    }
+
+    const { container } = render(<Probe />);
+    const node = container.firstChild as HTMLElement;
+    expect(node.getAttribute('data-status')).toBe('verified');
+    expect(node.getAttribute('data-ready')).toBe('false');
+
+    await vi.waitFor(() => {
+      expect((container.firstChild as HTMLElement).getAttribute('data-ready')).toBe('true');
+    });
+    expect((container.firstChild as HTMLElement).getAttribute('data-status')).toBe('verified');
   });
 });

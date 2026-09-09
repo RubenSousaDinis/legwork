@@ -12,13 +12,15 @@ proof and earnings (T-33) and the rest build on top of it.
 | Route | What it is |
 |---|---|
 | `/` | The open task list. A visitor with no session sees the public feed behind `Verify to claim`; a verified worker sees their own board. |
-| `/verify` | The auth flow: World ID, payout address, register. |
+| `/verify` | The auth flow on its own URL: World ID, payout address, register. The same machine also runs in the login modal. |
 | `/tasks` | The same list as `/` — kept so existing links and post-register redirects still resolve. |
 | `/probe` | The S2' spike page: four readouts (IDKit, camera, geolocation, `walletAuth`), an environment readout and a copyable JSON dump. |
 | `POST /api/idkit/request` | **Temporary (T-05).** RP-signed `rp_context` for IDKit v4. Deleted by T-24 once the API's `/idkit/*` routes exist. |
 | `POST /api/idkit/verify` | **Temporary (T-05).** Forwards the IDKit result, unchanged, to World's v4 verify endpoint. Deleted by T-24. |
 
-The list is the front page: verification is the action, not the gate. `/verify` is where `Verify with World ID` goes.
+The list is the front page: verification is the action, not the gate. `Login with World ID`
+opens the auth flow in a modal from the navbar or the unverified board; `/verify` still
+hosts the same flow on its own URL.
 
 Everything else under `/api/*` is rewritten to the API (`next.config.ts`, `afterFiles`), so
 the mini-app is a single origin inside the World App webview. A route handler that exists
@@ -139,10 +141,12 @@ The JSON dump carries no secret and no environment value other than the credenti
 
 ## What is frozen here
 
-After T-05 merges, `app/layout.tsx`, `app/globals.css`, `components/ui/*`,
-`components/VerifiedState.tsx`, `next.config.ts`, `vitest.config.ts` and `package.json` are
-frozen; later tasks ask for changes with `BLOCKED:` rather than editing them. `lib/*`,
-`mocks/**` and `app/api/idkit/**` pass to T-24.
+After T-05 merged, `app/layout.tsx`, `app/globals.css`, `components/ui/*`,
+`components/VerifiedState.tsx`, `next.config.ts`, `vitest.config.ts` and `package.json` were
+frozen. T-55 unfroze `app/layout.tsx`, `app/globals.css`, `components/ui/*` and
+`components/VerifiedState.tsx` for the navbar, the login modal and the header grid.
+`next.config.ts`, `vitest.config.ts` and `package.json` stay frozen. `lib/session.ts` is
+owned by this task for logout and the first-paint mirror.
 
 ## Design
 
@@ -186,6 +190,8 @@ any red keyword or hex in the file.
 | `lw-error-line` | A failure that is not a refusal — ink, not amber. `.lw-error` stays amber and stays for refusals and the payout-key import error. |
 | `lw-textarea` | Every free-text field: mono 15, radius 10, 1 px `--paper-border-2`. |
 | `lw-footprint` | The in-UI glyph, inline SVG, always `--verified-600`. |
+| `lw-nav`, `lw-nav__link`, `lw-nav__auth` | Header links and the Login / Logout control. |
+| `lw-modal`, `lw-modal__panel`, `lw-modal__bar` | The login overlay: a div scrim above the header, not a `<dialog>`. |
 
 Supporting classes carry the same rules where a screen needs them: `lw-card--tight`,
 `lw-card--top`, `lw-card--verified`, `lw-landing-title`, `lw-banner-heading`, `lw-question`,
@@ -193,7 +199,8 @@ Supporting classes carry the same rules where a screen needs them: `lw-card--tig
 `lw-count`, `lw-input`, `lw-field`, `lw-field-row`, `lw-answer-group`, `lw-answer-row`,
 `lw-answer-question`, `lw-waiting-caption`, `lw-photo-slot`, `lw-thumb`, `lw-proof-header`,
 `lw-proof-head`, `lw-pair`, `lw-picker`, `lw-plain-button`, `lw-quiet-link`, `lw-list`,
-`lw-countdown`, `lw-header__brand`, `lw-header__caption`, `lw-header__banner`.
+`lw-countdown`, `lw-header__brand`, `lw-header__caption`, `lw-header__banner`,
+`lw-header__state`.
 
 ### The floors, as they are enforced
 

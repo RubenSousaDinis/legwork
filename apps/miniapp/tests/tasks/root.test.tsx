@@ -33,12 +33,14 @@ describe('the list is the front page', () => {
     expect(document.querySelector('[data-screen="tasks-unverified"]')).not.toBeNull();
     expect(await screen.findByText('Is it open right now?')).toBeTruthy();
 
-    const cta = screen.getByRole('link', { name: VERIFY_CTA });
-    expect(cta.getAttribute('href')).toBe('/verify');
+    const cta = screen.getByRole('button', { name: VERIFY_CTA });
+    expect(cta.getAttribute('data-cta')).toBe('verify');
+    expect(cta.getAttribute('data-hit')).toBe('44');
+    expect(cta.getAttribute('href')).toBeNull();
 
     expect(document.querySelector('[data-auth-step]')).toBeNull();
     expect(document.querySelector('[data-step="landing"]')).toBeNull();
-    expect(screen.queryByRole('button', { name: VERIFY_CTA })).toBeNull();
+    expect(screen.queryByRole('link', { name: VERIFY_CTA })).toBeNull();
   });
 
   it('rootShowsTheWorkersOwnListWhenVerified', async () => {

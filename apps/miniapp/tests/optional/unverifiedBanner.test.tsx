@@ -53,8 +53,9 @@ describe('unverified state', () => {
       expect(button.getAttribute('aria-disabled')).toBe('true');
     }
 
-    const cta = screen.getByText('Verify with World ID');
-    expect(cta.getAttribute('href')).toBe('/verify');
+    const cta = screen.getByRole('button', { name: 'Login with World ID' });
+    expect(cta.tagName).toBe('BUTTON');
+    expect(cta.getAttribute('href')).toBeNull();
     expect(cta.getAttribute('data-hit')).toBe('44');
 
     // Rule (9): the seeded row says so, and the real one does not.
