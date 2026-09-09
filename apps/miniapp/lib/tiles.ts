@@ -28,7 +28,13 @@ export function osmTileUrl(z: number, x: number, y: number): string {
 
 const MAX_TILES = 4;
 const MIN_ZOOM = 10;
-const MAX_ZOOM = 15;
+/*
+ * z16 is ~610 m of tile at this latitude. The board's tasks are normally a neighbourhood
+ * apart — the three open in Parceiros span 350 m — and at z15 a whole neighbourhood fell
+ * inside one tile, so the pins landed in a corner of a 2.4 km map. Not higher: at z18 the
+ * same three put a pin at 95% of the width, and a 44 px pin there hangs off the edge.
+ */
+const MAX_ZOOM = 16;
 
 export function gridFor(points: LatLon[]): TileGrid | null {
   if (points.length === 0) return null;
