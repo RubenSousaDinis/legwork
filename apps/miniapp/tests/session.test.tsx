@@ -1,7 +1,6 @@
 import { cleanup, render } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EARNINGS_ZERO } from '../mocks/handlers';
 import { server } from '../mocks/server';
 
 vi.mock('@worldcoin/minikit-js', () => ({
@@ -41,11 +40,13 @@ describe('session', () => {
         loggedOut = true;
         return new HttpResponse(null, { status: 204 });
       }),
-      http.get('*/api/me/earnings', () => {
+      // The probe is `GET /session`: a session route answering whether the session is alive,
+      // re-issuing the cookie while it does. A revoked session must 401 here.
+      http.get('*/api/session', () => {
         if (loggedOut) {
           return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
         }
-        return HttpResponse.json(EARNINGS_ZERO);
+        return HttpResponse.json({ worker: MIRROR.worker, nullifier: MIRROR.nullifier, mode: MIRROR.mode });
       }),
     );
 

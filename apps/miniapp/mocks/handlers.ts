@@ -362,6 +362,23 @@ export const handlers = [
 
   http.get('*/api/session/nonce', () => json(SESSION_NONCE_RESPONSE)),
 
+  /*
+   * The session probe. It answers on the same signal the old `/me/earnings` probe did —
+   * `scenario().earnings === 'unauthorized'` is how every existing test says "this phone holds
+   * no worker session", and the probe moving routes must not change what those tests mean.
+   * The identity comes from the mock registry when one is bound, so a 200 still describes a
+   * worker the registry knows rather than a canned success.
+   */
+  http.get('*/api/session', () => {
+    if (scenario().earnings === 'unauthorized') return json(UNAUTHORIZED, { status: 401 });
+    const bound = registry[0];
+    return json({
+      worker: bound?.worker ?? WORKER_ADDRESS,
+      nullifier: bound?.nullifier ?? NULLIFIER,
+      mode: 'idkit' as const,
+    });
+  }),
+
   http.post('*/api/session', async ({ request }) => {
     const body = (await request.json()) as {
       mode?: unknown;

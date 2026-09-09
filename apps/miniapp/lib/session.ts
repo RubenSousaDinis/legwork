@@ -198,13 +198,18 @@ export function createIdkitSession(worker_address: string): Promise<SessionRespo
 }
 
 /**
- * The session probe. `GET /me/earnings` needs a worker-session cookie and nothing else, so a
- * 200 means the cookie survived and the worker is registered; a 401 means start over.
+ * The session probe. `GET /session` needs a worker-session cookie and nothing else, so a 200
+ * means the cookie survived and the worker is registered; a 401 means start over.
+ *
+ * It is a session route rather than `/me/earnings` for two reasons: asking the thing that owns
+ * sessions whether a session is alive is the honest question, and that route re-issues the
+ * cookie at the full TTL while it answers — so a worker who opens the app keeps their session,
+ * and one who does not is signed out when it lapses rather than in the middle of an errand.
  */
 export async function restoreSession(): Promise<SessionState> {
   const mirror = readMirror();
   try {
-    await apiFetch<unknown>('/me/earnings');
+    await apiFetch<unknown>('/session');
   } catch {
     clearMirror();
     publish({ state: UNVERIFIED, ready: true });
