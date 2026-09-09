@@ -436,13 +436,21 @@ export function workerBrief(row: Pick<TaskRow, 'taskType' | 'specJson'>): Worker
   return { a: spec.a, b: spec.b, criterion_id: str(spec.criterion_id) };
 }
 
-/** `photo-of · Padaria Central · Rua Direita 12`; a `compare-two` has a criterion, not a place. */
+/**
+ * What the errand is *about*: `Padaria Central · Rua Direita 12`, or the criterion for a
+ * `compare-two`. Deliberately no task type — every surface that shows this already shows the
+ * type beside it, as a chip on the mini-app card, so carrying it here printed it twice.
+ *
+ * Empty when the spec names no place. A caller with nothing to render must say what the
+ * errand asks rather than an empty line or a stray separator; `` `type ·  · ` `` was the shape
+ * an operator read on a phone as an unlabelled task.
+ */
 export function titleOf(row: Pick<TaskRow, 'taskType' | 'specJson'>): string {
   const spec = row.specJson as Record<string, unknown>;
-  const type = taskTypeOf(row.taskType);
-  if (type === 'compare-two') return `compare-two · ${str(spec.criterion_id)}`;
+  if (taskTypeOf(row.taskType) === 'compare-two') return str(spec.criterion_id);
   const place = briefPlace(spec);
-  return `${type} · ${place?.name ?? ''} · ${place?.street_address ?? ''}`;
+  if (place === undefined) return '';
+  return [place.name, place.street_address].filter((part) => part !== '').join(' · ');
 }
 
 // ---------------------------------------------------------------- distance

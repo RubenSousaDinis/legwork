@@ -226,11 +226,27 @@ describe('workerBrief', () => {
 
   it('titles a place task by place and a comparison by criterion', () => {
     expect(titleOf({ taskType: TASK_TYPE_BIT['photo-of'], specJson: SPECS['photo-of'] })).toBe(
-      'photo-of · Padaria Central · Rua Direita 12',
+      'Padaria Central · Rua Direita 12',
     );
     expect(
       titleOf({ taskType: TASK_TYPE_BIT['compare-two'], specJson: SPECS['compare-two'] }),
-    ).toBe('compare-two · more_legible');
+    ).toBe('more_legible');
+  });
+
+  // The card prints the type itself, next to the title. A title that repeated it read
+  // `verify-open · verify-open · Churrasqueira · Rua de Parceiros` on a phone.
+  it('leaves the task type out of the title', () => {
+    for (const type of ['verify-open', 'photo-of', 'call-confirm', 'compare-two'] as const) {
+      expect(titleOf({ taskType: TASK_TYPE_BIT[type], specJson: SPECS[type] })).not.toContain(type);
+    }
+  });
+
+  // A task whose spec carries no place has nothing to name, and an empty string is the
+  // honest answer — `type ·  · ` is not a title, it is punctuation.
+  it('is empty when the spec names no place', () => {
+    expect(titleOf({ taskType: TASK_TYPE_BIT['verify-open'], specJson: { question: 'open_now' } })).toBe(
+      '',
+    );
   });
 });
 
@@ -403,7 +419,7 @@ describe('GET /tasks/list', () => {
       task_type: 'verify-open',
       price_usdc: 3,
       distance_m: 0,
-      title: 'verify-open · Padaria Central · Rua Direita 12',
+      title: 'Padaria Central · Rua Direita 12',
       seeded: false,
     });
     // The worker's number is 3.00 — never the 3.45 the escrow locks.
