@@ -167,13 +167,104 @@ decision: Studio is where the subgraph lives for the demo and its query URL is w
 
 ## Preflight
 
-_live Studio data, Day 8 (T-46)_
+_live Studio data, Day 9 (T-46) — re-shot after the first real errand_
 
-outcome: pending
+outcome: `preflight_workers` answers from the live Studio subgraph, and every number it returned
+is the number the dashboard card renders — field for field, same minute. **The median is drawn
+from a real completion**: `n_real: 1`, `median_source: "real"`, and the card reads
+`median 1 min (real, n=1)`. That is a person, not seeded data. Nothing had aged out of the
+seven-day window and no re-seed was needed.
 
-evidence: pending
+**The call.** Made against the deployed MCP server at `POST $API_BASE_URL/mcp` (streamable HTTP,
+stateless), tool `preflight_workers`, arguments `{"task_type":"verify-open","area":"ez1dn"}`.
+`ez1dn` is the cell the real errand was completed in. Captured `2026-09-09T17:19:56Z`:
 
-decision: pending
+```json
+{
+  "active": 3,
+  "verified": 0,
+  "seeded": 3,
+  "n_real": 1,
+  "score_floor": 1,
+  "median_minutes": 1,
+  "median_source": "real",
+  "dashboard_url": "https://legwork-dashboard.vercel.app"
+}
+```
+
+Not the fixture: diffed against `packages/subgraph-client/fixtures/preflight.json`, which prints
+`OK: live` — the fixture describes `0x5eed…`/`0x0417…` addresses that do not exist on Base Sepolia.
+
+**Where the real completion came from.** On 2026-09-09 a World ID-verified worker walked to a shop
+on Rua do Cruzeiro in Leiria, photographed the door and its hours sign, and was paid 3.00 USDC.
+The release transaction carries the two USDC `Transfer` logs the escrow promises —
+`3_000_000` to the worker and `450_000` to the treasury — and the worker is
+`0xaed0c1102e45b7f528224eacb9309a0925015810`, `seeded: false`, `completed: 1` in the index. It is
+the first non-seeded completion the subgraph has ever held.
+
+**The seven-day window: every counted timestamp is inside it.**
+`{ workers(where:{seeded:true}){ id seeded lastCompletedAt } }`, checked against `now − 604800`
+(cutoff `1788369607`):
+
+```
+0x1d6662abfbcc49751235717fd18a30242cbfad37 1788781022 IN
+0x244183988b0779990c4c0a581aff797b99c87a4c 1788796528 IN
+0x24f9c1b734d304dd7c753c5253656c1389e076c6 1788780998 IN
+0x5a95ec323ecce89d9f92ec59faec37d8fab88f66 1788857026 IN
+0x79d2de6f266839da58f3467df69104ba037981d3 1788796420 IN
+0x7b4eb10df800881f73bc1d85bdef02f82386271e 1788855340 IN
+0x87b90a409b0a84c378f8b11903eccdaa2cf74cab 1788781006 IN
+0x8b02a09a50f91debed73c9ea4dd9f6ad7a1bc0eb 1788856986 IN
+0x98e4682f8a1a6201907eeab9f7826a0ba4e408a9 1788781014 IN
+0xc24f49b0262cbfb52bc10a59dcfb4b33c3c04358 1788856944 IN
+```
+
+Ten seeded workers carry a `lastCompletedAt`; all ten are `IN`, none near the edge. **No re-seed
+was needed and none was run**; the window constant, the `sinceTs` argument and the fixtures are
+untouched.
+
+The index is at the head, so the numbers are not a lag artefact: `_meta.block.number = 46603057`
+and `hasIndexingErrors: false`, against an `eth_blockNumber` of `46603059` — two blocks on a
+two-second chain.
+
+**`verified: 0` beside `n_real: 1` is not a contradiction, and it is worth writing down.** The two
+fields count different things against different cells. `verified` counts workers whose own
+`Worker.area` is the queried cell; `n_real` counts completions whose *task* was in it. The worker
+registered in `ez19y` and did the errand in `ez1dn`, so they are real in the median and invisible
+in the split. A worker who registers in one cell and works in another is counted by the second
+field and not the first. Nothing was changed to close the gap: the phone was not re-registered, no
+area was edited, and `demo-data.json` was left alone.
+
+For the same reason the split reads `3 active · 0 verified · 3 seeded` rather than the
+`4 active · 1 verified · 3 seeded` the brief originally predicted. No area produces that split;
+the lead amended §2 on Sept 9 with the measured values for all three candidate cells.
+
+**The card.** `docs/media/preflight-card.png`, captured from the deployed dashboard at
+`2026-09-09T17:23:04Z`, about three minutes after the tool call above. It reads
+`3 active · 0 verified · 3 seeded` over `score ≥ 1 · median 1 min (real, n=1)`. Every number on it
+appears in the JSON: `3 = active`, `0 = verified`, `3 = seeded`, `1 = score_floor`,
+`1 min = median_minutes`, `(real, n=1) = median_source` with `n_real`. Nothing was edited, rounded
+or re-run for a better figure. The card now lives at `/live` rather than `/` — T-51 made `/` the
+landing page — and the still frames the same `section.preflight.card` the Day-8 still did.
+
+In plain words: three workers have finished a `verify-open` errand in this area in the last seven
+days, and the typical one took about a minute — measured from a real person's errand, not from
+seeded data. No World ID-verified worker is *registered* in this particular cell, because the one
+who worked here registered in the next one over.
+
+evidence: the §9 commands, run by hand against the deployed MCP server, the Studio query URL and
+Base Sepolia, with their output pasted into the T-46 PR alongside the PNG. §9's first command was
+written `npx @legwork/mcp call preflight_workers …`; it cannot run, because `@legwork/mcp` is a
+private workspace package (`npm error 404 '@legwork/mcp@*' is not in this registry`) whose `bin`
+points at `dist/bin/legwork-mcp.js`, and no package in this repo emits `dist` — `build` is
+`tsc --noEmit` everywhere. The call was made instead as a JSON-RPC `tools/call` against the hosted
+mount, which is what §2 asks for either way. The lead corrected §9 in PR #201.
+
+decision: the tool, the reduction and the card are correct and honest, and as of Day 9 the numbers
+behind them are real. The Day-8 capture recorded `1 active · 0 verified · 1 seeded` with a seeded
+median and said it should be re-shot once the pool was real; this is that re-shoot. The remaining
+gap — `verified: 0` while a real worker is active in the cell — is a property of counting
+registration cells and completion cells separately, recorded above and not papered over.
 
 ## Timing
 
