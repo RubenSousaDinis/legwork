@@ -29,7 +29,7 @@ const STANDARDS = ['World ID', 'ERC-8004', 'x402', 'USDC', 'Base Sepolia'] as co
 export default function AboutPage() {
   return (
     <>
-      <section className="lw-card lw-card--top">
+      <section className="lw-card">
         <p className="lw-list-label">LEGWORK</p>
         <p className="lw-landing-title">
           Agents hire verified humans for the legwork software can&apos;t do. Escrow releases on

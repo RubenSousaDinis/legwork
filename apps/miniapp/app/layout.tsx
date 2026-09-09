@@ -13,6 +13,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#faf9f5',
 };
 
 const FONTS =
@@ -21,6 +22,10 @@ const FONTS =
 /**
  * The in-UI glyph — DESIGN-SPEC "Iconography": no icon font, no emoji, no filled icon set.
  * A bare footprint, typed as two ellipses, always in the verified teal.
+ *
+ * The header stays a flat list of children (brand, nav, verified state) so the verified
+ * chip stays above the fold. On a phone the nav's links pin to the bottom; CSS does that,
+ * not a second header tree.
  */
 function Footprint() {
   return (

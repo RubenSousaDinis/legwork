@@ -22,6 +22,8 @@ describe('globals.css', () => {
     expect(CSS).toContain('prefers-reduced-motion: reduce');
     expect(CSS).toContain('--r-tile:');
     expect(CSS).toContain('--r-card-sm:');
+    expect(CSS).toContain('@media (max-width: 639px)');
+    expect(CSS).toContain('.lw-nav__tabs');
 
     // No red token anywhere — not the hex, not a keyword, not in a comment.
     expect(CSS.toLowerCase()).not.toContain('#e5484d');

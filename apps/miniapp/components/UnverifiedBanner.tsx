@@ -92,7 +92,7 @@ export function UnverifiedBanner({ tasks }: UnverifiedBannerProps) {
                   T-33's `Segmented` and `Back to tasks` make. */}
               <button
                 aria-disabled="true"
-                className="lw-button lw-button--ghost"
+                className="lw-button lw-button--ghost lw-button--full"
                 data-hit="44"
                 disabled
                 type="button"

@@ -5,12 +5,15 @@ vi.mock('@worldcoin/idkit', () => ({ IDKitRequestWidget: () => null }));
 vi.mock('@worldcoin/minikit-js', () => ({
   MiniKit: { install: vi.fn(), isInstalled: vi.fn(() => false), walletAuth: vi.fn(), user: {} },
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/',
+}));
 
 const { resetSessionForTests, setSessionState } = await import('../../lib/session');
 const { setScenario } = await import('../../mocks/scenarios');
 const { resetAuthModalForTests } = await import('../../components/AuthModal');
-const { SiteNav } = await import('../../components/SiteNav');
+const { SiteNav, pathMatchesNav } = await import('../../components/SiteNav');
 const { VerifiedState } = await import('../../components/VerifiedState');
 const { VERIFY_CTA } = await import('../../components/UnverifiedBanner');
 
@@ -77,5 +80,36 @@ describe('site nav', () => {
     for (const node of Array.from(inNav!.querySelectorAll('a, button'))) {
       expect(node.getAttribute('data-hit')).toBe('44');
     }
+  });
+
+  it('phoneShellKeepsFourTabsAndAShortLogin', () => {
+    const { container } = renderHeader({ status: 'unverified' });
+    const nav = container.querySelector('.lw-nav');
+    const tabs = container.querySelector('.lw-nav__tabs');
+    expect(nav).not.toBeNull();
+    expect(tabs).not.toBeNull();
+    expect(tabs?.parentElement).toBe(nav);
+
+    const labels = Array.from(tabs!.querySelectorAll('a')).map((node) => node.textContent);
+    expect(labels).toEqual(['Tasks', 'Earnings', 'About', 'Support']);
+    expect(screen.getByRole('link', { name: 'Tasks' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'About' }).getAttribute('aria-current')).toBeNull();
+
+    const login = screen.getByRole('button', { name: VERIFY_CTA });
+    expect(login.getAttribute('aria-label')).toBe(VERIFY_CTA);
+    expect(login.querySelector('.lw-nav__auth-short')?.textContent).toBe('Login');
+    expect(login.querySelector('.lw-nav__auth-full')?.textContent).toBe(VERIFY_CTA);
+  });
+
+  it('pathMatchesNavTreatsJobScreensAsTasks', () => {
+    expect(pathMatchesNav('/', '/')).toBe(true);
+    expect(pathMatchesNav('/tasks', '/')).toBe(true);
+    expect(pathMatchesNav('/proof/1024', '/')).toBe(true);
+    expect(pathMatchesNav('/compare/9', '/')).toBe(true);
+    expect(pathMatchesNav('/report/9', '/')).toBe(true);
+    expect(pathMatchesNav('/about', '/')).toBe(false);
+    expect(pathMatchesNav('/about', '/about')).toBe(true);
+    expect(pathMatchesNav('/earnings', '/earnings')).toBe(true);
+    expect(pathMatchesNav('/earnings', '/')).toBe(false);
   });
 });
