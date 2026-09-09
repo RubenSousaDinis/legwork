@@ -5,7 +5,10 @@ vi.mock('@worldcoin/idkit', () => ({ IDKitRequestWidget: () => null }));
 vi.mock('@worldcoin/minikit-js', () => ({
   MiniKit: { install: vi.fn(), isInstalled: vi.fn(() => false), walletAuth: vi.fn(), user: {} },
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/',
+}));
 
 const { resetSessionForTests, setSessionState } = await import('../../lib/session');
 const { setScenario } = await import('../../mocks/scenarios');
