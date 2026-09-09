@@ -48,7 +48,7 @@ const { NONCE, registerRequests, sessionRequests } = await import('../mocks/hand
 const { setScenario } = await import('../mocks/scenarios');
 const { resetSessionForTests } = await import('../lib/session');
 const { getPayoutAddress } = await import('../lib/workerKey');
-const AuthPage = (await import('../app/(auth)/page')).default;
+const AuthPage = (await import('../app/(auth)/verify/page')).default;
 
 const CTA = 'Verify with World ID';
 

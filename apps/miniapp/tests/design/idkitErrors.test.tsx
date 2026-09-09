@@ -30,7 +30,7 @@ const { setScenario } = await import('../../mocks/scenarios');
 const { resetSessionForTests } = await import('../../lib/session');
 const { describeIdkitError, IDKIT_FALLBACK_SENTENCE } = await import('../../app/(auth)/idkitErrors');
 const { VERIFY_BUTTON } = await import('../../app/(auth)/Landing');
-const AuthPage = (await import('../../app/(auth)/page')).default;
+const AuthPage = (await import('../../app/(auth)/verify/page')).default;
 
 beforeEach(() => {
   localStorage.clear();

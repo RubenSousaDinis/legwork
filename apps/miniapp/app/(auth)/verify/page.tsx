@@ -4,36 +4,36 @@ import type { RpContext } from '@worldcoin/idkit-core';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Chip } from '../../components/ui/Chip';
-import { ApiError } from '../../lib/api';
+import { Chip } from '../../../components/ui/Chip';
+import { ApiError } from '../../../lib/api';
 import {
   lastAreaSource,
   rememberRegisteredArea,
   resolveArea,
   type AreaSource,
-} from '../../lib/area';
-import { CREDENTIAL_LEVEL } from '../../lib/env';
+} from '../../../lib/area';
+import { CREDENTIAL_LEVEL } from '../../../lib/env';
 import {
   createIdkitSession,
   createWalletAuthSession,
   setSessionState,
   useSession,
   walletAddress,
-} from '../../lib/session';
-import { loadOrCreatePayoutKey } from '../../lib/workerKey';
+} from '../../../lib/session';
+import { loadOrCreatePayoutKey } from '../../../lib/workerKey';
 import {
   IdkitFailure,
   requestRpContext,
   summarizeDebugReport,
   type VerifyResponse,
-} from '../../lib/worldid';
-import { describeIdkitError, type IdkitErrorDescription } from './idkitErrors';
-import { Landing } from './Landing';
-import { PayoutKeyStep } from './PayoutKeyStep';
-import { RegisterStep } from './RegisterStep';
-import { registerWorker } from './register';
-import { SignInStep } from './SignInStep';
-import { VerifyStep } from './VerifyStep';
+} from '../../../lib/worldid';
+import { describeIdkitError, type IdkitErrorDescription } from '../idkitErrors';
+import { Landing } from '../Landing';
+import { PayoutKeyStep } from '../PayoutKeyStep';
+import { RegisterStep } from '../RegisterStep';
+import { registerWorker } from '../register';
+import { SignInStep } from '../SignInStep';
+import { VerifyStep } from '../VerifyStep';
 
 /**
  * The worker's first minute: verify once with World ID, sign in, get a payout address,
