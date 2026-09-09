@@ -76,6 +76,15 @@ export const RELAYED_CHIP = 'relayed claim · gas paid by Legwork';
 export const PAID_FOR_THE_PROOF = 'you are paid for the proof, not the answer';
 export const CLAIM_EXPIRED = 'claim expired — it returned to the pool';
 
+/**
+ * The claim window closing does not hand the task back: `TaskEscrow.expire` is what moves the
+ * state, it needs `claimedAt + submitTTL` rather than the claim TTL, and nothing fires it by
+ * itself. Until then `activeClaimOf` still names this task and the worker cannot claim
+ * anything else — so the way out has to stay on the card.
+ */
+export const CLAIM_STILL_HELD =
+  'This task is still assigned to you on-chain, so you cannot claim another until you hand it back.';
+
 /** The claim window as a sentence. 1800 s is 30 min; never written as a bare `30m`. */
 export const TTL_LINE = `claim within ${Math.round(DEFAULT_CLAIM_TTL_S / 60)} min`;
 
@@ -256,7 +265,13 @@ export function TaskCard({
 
           {claimed ? (
             <div data-row="claim">
-              <ClaimedActions claim={claim} onRelease={onRelease} router={router} taskId={row.task_id} />
+              <ClaimedActions
+                claim={claim}
+                onRelease={onRelease}
+                router={router}
+                stillHeld={row.state === 'claimed'}
+                taskId={row.task_id}
+              />
             </div>
           ) : (
             <ClaimButton onClaim={onClaim} row={row} />
@@ -381,6 +396,8 @@ type ClaimedActionsProps = {
   onRelease: () => void;
   router: ReturnType<typeof useRouter>;
   taskId: string;
+  /** `GET /tasks/list` still marking this row `claimed` — it is ours until we give it back. */
+  stillHeld: boolean;
 };
 
 /**
@@ -391,7 +408,7 @@ type ClaimedActionsProps = {
  * through a prop `TaskCard` does not have: the stored claim is the one thing the card and the
  * list both read, so the next poll un-pins the card on its own.
  */
-function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProps) {
+function ClaimedActions({ claim, onRelease, router, stillHeld, taskId }: ClaimedActionsProps) {
   // Reset during render, not in an effect: `Countdown` is a child, so its effects run first,
   // and a claim that is already past its deadline would have its `onExpire` undone by a
   // parent effect firing afterwards.
@@ -406,10 +423,22 @@ function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProp
   }, []);
 
   if (clock.expired) {
+    if (!stillHeld) {
+      return (
+        <p className="lw-body" data-claim="expired" data-floor="20">
+          {CLAIM_EXPIRED}
+        </p>
+      );
+    }
     return (
-      <p className="lw-body" data-claim="expired" data-floor="20">
-        {CLAIM_EXPIRED}
-      </p>
+      <div className="lw-actions" data-claim="expired">
+        <p className="lw-body" data-floor="20">
+          {CLAIM_STILL_HELD}
+        </p>
+        <Button variant="ghost" onClick={onRelease}>
+          release this claim
+        </Button>
+      </div>
     );
   }
 
