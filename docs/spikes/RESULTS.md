@@ -559,3 +559,39 @@ agent-side feedback. `BUYER_AGENT_ID=9196` is the demo agent's id and belongs in
 - GPS: available — `FEEDBACK-WORLD.md` has no GPS-downgrade entry after the Day-4/5 mini-app build or the Sept 9 Pão Doce errand. The fallback (photo + server timestamp + tapped confirmation) exists in T-33 and is not the locked demo variant.
 - payment: x402 — S3 PASS (Sept 6): exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas
 - ERC-8004: live registries — S5 PASS (Sept 7): production IdentityRegistry `0x8004A818…` and ReputationRegistry `0x8004B663…` on Base Sepolia, interfaces confirmed unchanged, `_safeMint` (a contract holder needs `onERC721Received`), unsolicited feedback legal, `getSummary` needs named clients and lags its receipt by a block; T-13b not dispatched
+
+## Legibility
+
+_Day 8, T-47 — live `/present` composited with the paid phone frame, read at 1280×720_
+
+outcome: released composite recorded. Refusal composite not built: no sibling is marked, so the meter cannot show `LOCKED 3.45` with mark counter `1` and `REFUSED · authentication circumvention`. Live copy also differs from the brief in two places a `hide=` cut cannot fix: the pool chip and the preflight trio.
+
+evidence:
+
+- Date: 2026-09-09
+- Rehearsal task **33** (Pão Doce / `ez1dn`, not seeded). Txs `0x4ede45…7356` / `0xaaf35a…39b7` / `0x5b650d…d6e4` / `0xce6f5a…8935`. Amount **3.00**, fee **0.45**. Proof `captured_at` `2026-09-09T12:59:53.684Z` (`proof ✓ 13:59:53` on the meter).
+- Dashboard URL: `/present?task=33` (no `hide=`, no `&crop=1`). `DATA_MODE=live`. Playwright Chromium 1920×1080, `deviceScaleFactor: 1`, no browser chrome.
+- PiP: height **560** px (brief starts at 480; one step up so the paid line stays readable), 60 px inset, bottom-right over row 3. Phone frame is the restaged paid screen for task 33 (operator approved after the map and Basescan-link recapture); there was no `phone.mov` on this machine.
+- Readers: operator + agent. Distance: 60–70 cm, 100 % zoom on the 1280-wide PNG.
+- `hide=`: none
+- Narration deltas: none from a cut. Live strings the shoot must use: pool `1 real · +23 seeded (demo data)`; preflight `3 · 0 · 3` (`active · verified · seeded`); T-46 already has those numbers. Verified chip in the PiP is `Verified human ✓ · World ID · Orb`, not `sandbox`.
+- T-39 latest `floors.json` (CI on `main` after #194): floor 24 → 16.00 px at 720p; floor 32 → 21.33 px at 720p.
+
+| # | checklist | released | refusal |
+|---|---|---|---|
+| 1 | `+20 seeded (demo data)` on the pool chip | fail (`+23`) | n/a |
+| 2 | refusal class `authentication circumvention` and its one-line reason | n/a | fail (no marked row; screening `PASSED`) |
+| 3 | preflight `4 · 1 · 3` with `active · verified · seeded` | fail (`3 · 0 · 3`) | n/a |
+| 4 | meter `LOCKED 3.45` / `RELEASED 3.00 · +0.45` with `proof ✓` | pass | fail (no locked featured task; 32 is refunded) |
+| 5 | mark counter `1` and the `task-refused:` line | fail (`0 marks`) | fail |
+| 6 | wall clock and `t+mm:ss since posted` | pass (`17:15:39` · `t+3:16:33 since posted`) | n/a |
+| 7 | PiP `Verified human ✓` and `Released · 3.00 USDC` | pass | n/a |
+| 8 | no face, no name, no key, no seed phrase | pass | n/a |
+| 9 | no URL, chrome, overlay, cursor, `DEMO DATA`, or `· local` | pass | n/a |
+| 10 | pool `1 real · +20 seeded (demo data)` and two `seeded` chips | fail (`+23`; feed rows in frame are released/refunded) | n/a |
+| 11 | meter and row 1 inside x 437–843 of the 1280 PNG | pass | n/a |
+| 12 | PiP does not cover a narrated element | pass (over row 3; meter, pool, preflight stay clear) | n/a |
+
+frame read: 2026-09-09 · filmed with the same URL
+
+decision: ship the released PNG as the shoot frame for the paid beat. Do not pretend the pool is `+20` or the preflight is `4 · 1 · 3`. The refusal beat stays open until the operator marks one rehearsal refusal and there is a live `LOCKED 3.45` featured task to pin.
