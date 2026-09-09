@@ -1422,6 +1422,9 @@ body.lw-modal-open {
   border-radius: var(--r-tile);
   overflow: hidden;
   min-height: 220px;
+  /* A square grid at 100% width is one screen tall on a phone. Cap it so the list below
+     stays reachable without scrolling past a full viewport of tiles. */
+  max-height: 60svh;
 }
 
 .lw-map__grid {

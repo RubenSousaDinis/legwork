@@ -162,7 +162,9 @@ describe('claiming', () => {
     await screen.findByText(TITLE);
     const before = requests.count('GET', '/api/tasks/list');
     await claimFirstTask();
-    expect(await screen.findByText(/claimed this task first/)).toBeTruthy();
+    // The fixture carries `active_task_id`, so this is the caller's own claim, not a race —
+    // see `claimHeldByYou.test.tsx`. Either way the board was wrong and refetches.
+    expect(await screen.findByText(/You already have task #1024 claimed/)).toBeTruthy();
     // The list was already wrong, so it asked again rather than waiting out the 3 s.
     await waitFor(() => expect(requests.count('GET', '/api/tasks/list')).toBe(before + 1));
     cleanup();

@@ -10,6 +10,9 @@ export const ODBL_LINE =
 export const TILES_FAILED = 'Map tiles could not load.';
 export const MAP_EMPTY = 'No locations to plot.';
 
+/** Rows exist but none carries a coordinate — a silent empty map reads as a broken one. */
+export const MAP_NO_COORDINATES = 'These tasks carry no map location yet.';
+
 export type MapRow = {
   task_id: string;
   title: string;
@@ -85,7 +88,7 @@ export function TaskMap({
 
       {grid === null && !tilesFailed ? (
         <p className="lw-body lw-map__empty" data-floor="20" data-map="empty">
-          {MAP_EMPTY}
+          {rows.length > 0 && pins.length === 0 ? MAP_NO_COORDINATES : MAP_EMPTY}
         </p>
       ) : null}
 

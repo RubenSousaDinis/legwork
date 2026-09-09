@@ -129,6 +129,15 @@ export function placePrefix(row: TaskRow): string | null {
   return place === undefined ? null : `${place.street_address}, ${place.locality}`;
 }
 
+/**
+ * What to call this errand on the card. `title` is the place — `Churrasqueira · Rua de
+ * Parceiros` — and is empty when the spec named none, in which case the question is the only
+ * true thing left to show. Never blank, never a bare separator.
+ */
+export function taskName(row: TaskRow): string {
+  return row.title === '' ? QUESTION[row.task_type] : row.title;
+}
+
 export const DIRECTIONS_LABEL = 'Get directions';
 
 /** Google Maps directions to the posted address — never a coordinate. */
@@ -191,7 +200,7 @@ export function TaskCard({
                 className="lw-task-title lw-task-name"
                 {...(claimed ? { 'data-floor': '20' } : {})}
               >
-                {row.title}
+                {taskName(row)}
               </span>
               <PriceTag price={row.price_usdc} />
             </span>
@@ -208,7 +217,7 @@ export function TaskCard({
               <span className="lw-chips">
                 <span className="lw-task-line">
                   {`${row.task_type} · `}
-                  <span className="lw-task-title">{row.title}</span>
+                  <span className="lw-task-title">{taskName(row)}</span>
                 </span>
                 {row.seeded ? (
                   <Chip tone="seeded" floor={20}>
@@ -408,13 +417,17 @@ function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProp
     <div className="lw-actions">
       <Countdown label="claim expires in" onExpire={onExpire} until={claim.claim_expires_at} />
 
-      <p className="lw-chips">
-        <Chip tone="neutral" floor={20}>
-          <a data-hit="44" href={`${BASESCAN_TX}${claim.tx}`} rel="noreferrer" target="_blank">
-            {`tx ${shortTx(claim.tx)} ↗`}
-          </a>
-        </Chip>
-      </p>
+      {/* A claim recovered from the board carries no receipt — the row does not have one to
+          give. Better no chip than a Basescan link to nothing. */}
+      {claim.tx === '' ? null : (
+        <p className="lw-chips">
+          <Chip tone="neutral" floor={20}>
+            <a data-hit="44" href={`${BASESCAN_TX}${claim.tx}`} rel="noreferrer" target="_blank">
+              {`tx ${shortTx(claim.tx)} ↗`}
+            </a>
+          </Chip>
+        </p>
+      )}
 
       <Button variant="primary" size="lg" full onClick={() => router.push(`/proof/${taskId}`)}>
         Go to proof

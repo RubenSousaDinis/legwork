@@ -11,7 +11,7 @@ const { http, HttpResponse } = await import('msw');
 const { server } = await import('../../mocks/server');
 const { TASK_PLACE_COORDS, TASKS_TWO_ROWS } = await import('../../mocks/handlers');
 const { GPS_UNAVAILABLE_CHIP, TaskList } = await import('../../app/tasks/TaskList');
-const { ODBL_LINE, TILES_FAILED } = await import('../../components/TaskMap');
+const { MAP_NO_COORDINATES, ODBL_LINE, TaskMap, TILES_FAILED } = await import('../../components/TaskMap');
 
 const PADARIA = 'Padaria Central · Rua de Alcobaça 12, Leiria';
 const PLACE = TASK_PLACE_COORDS['1024']!;
@@ -51,6 +51,23 @@ afterEach(() => {
 });
 
 describe('the board map', () => {
+  it('mapSaysWhenNoRowCarriesACoordinate', () => {
+    // Rows with no coordinate used to render an empty frame and nothing else, which reads as
+    // broken rather than as "the API sent no location for these".
+    const { container } = render(
+      <TaskMap
+        gpsUnavailableChip="GPS unavailable in webview — disclosed"
+        located={false}
+        onSelect={() => {}}
+        rows={[{ task_id: '1', title: 'Is it open right now?' }]}
+        selectedId={null}
+        worker={null}
+      />,
+    );
+    expect(container.textContent).toContain(MAP_NO_COORDINATES);
+    expect(container.querySelectorAll('[data-pin]')).toHaveLength(0);
+  });
+
   it('mapPinsEveryTaskAndTheWorker', async () => {
     stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
     render(<TaskList />);
