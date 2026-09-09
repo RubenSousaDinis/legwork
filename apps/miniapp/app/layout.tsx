@@ -6,7 +6,14 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Legwork — worker',
+  applicationName: 'Legwork',
   description: 'Claim a nearby task, photograph the proof, get paid in USDC on Base Sepolia.',
+  appleWebApp: {
+    capable: true,
+    title: 'Legwork',
+    statusBarStyle: 'default',
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
