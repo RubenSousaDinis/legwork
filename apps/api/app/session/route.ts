@@ -5,7 +5,7 @@ import { rateLimit, clientKey } from '@/src/http/rateLimit';
 import { ApiError } from '@/src/errors';
 import { getChain } from '@/src/chain';
 import { rawQuery } from '@/src/db/client';
-import { consumeNonce, issueWorkerSession, requireIdkitSession } from '@/src/session';
+import { consumeNonce, issueWorkerSession, refreshWorkerSession, requireIdkitSession, requireWorkerSession } from '@/src/session';
 import { verifyWalletAuth } from '@/src/siwe';
 
 export const runtime = 'nodejs';
@@ -106,6 +106,17 @@ export const POST = route(async (req) => {
   return Response.json(
     { worker, nullifier, mode: body.mode, token: session.token },
     { headers: { 'set-cookie': session.cookie } },
+  );
+});
+
+/** Re-issues the worker cookie so an active session keeps its TTL. */
+export const GET = route(async (req) => {
+  rateLimit(`session-refresh:${clientKey(req)}`, { limit: 60, windowS: 60 });
+  const session = await requireWorkerSession(req);
+  const cookie = await refreshWorkerSession(session);
+  return Response.json(
+    { worker: session.worker, nullifier: session.nullifier, mode: session.mode },
+    { headers: { 'set-cookie': cookie } },
   );
 });
 

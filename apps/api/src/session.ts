@@ -2,7 +2,7 @@
  * Two sessions, one after the other.
  *
  * `lw_idkit` is the short-lived proof that a human just finished World ID; `lw_worker` is
- * the twelve-hour proof that a registered worker is holding this phone. Neither is ever the
+ * the proof that a registered worker is holding this phone. Neither is ever the
  * *only* check — `POST /session` also asks the chain whether the address is a worker,
  * because a database row is a claim and the registry is the record.
  *
@@ -11,7 +11,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, lt, ne } from 'drizzle-orm';
 import { getConfig } from './config';
 import { getDb } from './db/client';
 import { idkitSessions, sessions } from './db/schema';
@@ -20,7 +20,7 @@ import { ApiError } from './errors';
 export const IDKIT_COOKIE = 'lw_idkit';
 export const WORKER_COOKIE = 'lw_worker';
 export const IDKIT_TTL_S = 15 * 60;
-export const WORKER_TTL_S = 12 * 60 * 60;
+export const WORKER_TTL_S = 30 * 86_400;
 /** Long enough for a wallet round trip, short enough that a stolen one is stale. */
 export const NONCE_TTL_S = 10 * 60;
 
@@ -222,4 +222,25 @@ export async function requireWorkerSession(req: Request): Promise<WorkerSession>
     throw ApiError.of('unauthorized');
   }
   return { worker: sub, nullifier, mode: mode as SessionMode };
+}
+
+/** A new cookie with the full TTL, so an active worker is not logged out mid-errand. */
+export async function refreshWorkerSession(claims: WorkerSession): Promise<string> {
+  const token = await sign(
+    { sub: claims.worker, nullifier: claims.nullifier, mode: claims.mode, kind: 'worker' },
+    WORKER_TTL_S,
+  );
+  await getDb()
+    .update(sessions)
+    .set({ expiresAt: new Date(Date.now() + WORKER_TTL_S * 1000) })
+    .where(and(eq(sessions.worker, claims.worker), ne(sessions.mode, NONCE_MODE)));
+  return serialiseCookie(WORKER_COOKIE, token, WORKER_TTL_S);
+}
+
+/** Deletes the worker's sessions rows and returns the cookie-clearing header. */
+export async function revokeWorkerSession(claims: WorkerSession): Promise<string> {
+  await getDb()
+    .delete(sessions)
+    .where(and(eq(sessions.worker, claims.worker), ne(sessions.mode, NONCE_MODE)));
+  return clearCookie(WORKER_COOKIE);
 }
