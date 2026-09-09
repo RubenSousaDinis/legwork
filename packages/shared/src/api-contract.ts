@@ -81,6 +81,70 @@ export const PaymentRequired = z.object({
 });
 export const CapExceeded = z.object({ error: z.literal('cap_exceeded'), open_tasks: z.number().int(), daily_usdc: z.number() });
 export const TxResult = z.object({ task_id: TaskId, status: Status, tx: TxHash });
+
+/**
+ * One EIP-3009 `TransferWithAuthorization` leg, signed on the worker's phone.
+ *
+ * `value`, `valid_after` and `valid_before` are decimal strings: they are `uint256` on the
+ * wire and a JSON number would silently round one. The API never builds this — it verifies
+ * the signature, checks the arithmetic and relays it.
+ */
+export const SignedAuthorization = z.object({
+  from: EvmAddress,
+  to: EvmAddress,
+  value: z.string().regex(/^\d+$/),
+  valid_after: z.string().regex(/^\d+$/),
+  valid_before: z.string().regex(/^\d+$/),
+  nonce: z.string().regex(/^0x[0-9a-f]{64}$/),
+  signature: z.string().regex(/^0x[0-9a-f]+$/),
+});
+
+/** `POST /me/withdraw` — the destination the worker typed, and the two legs it signed. */
+export const WithdrawRequest = z.object({
+  to: EvmAddress,
+  payout: SignedAuthorization,
+  fee: SignedAuthorization,
+});
+
+/**
+ * The withdrawal, as the phone reads it back.
+ *
+ * `fee_tx: null` with `fee_pending: true` is the one asymmetric answer this API gives: the
+ * payout landed and the 2 % did not, so the worker has their money and Legwork is owed a fee
+ * it will chase itself. It is a 200 because a 500 would tell a worker their withdrawal failed
+ * while the money was already in their wallet.
+ */
+export const Withdrawn = z.object({
+  payout_tx: TxHash,
+  fee_tx: TxHash.nullable(),
+  payout_usdc: z.number(),
+  fee_usdc: z.number(),
+  /** Present and `true` only when the payout landed and the fee leg did not. */
+  fee_pending: z.literal(true).optional(),
+  /** Present and `true` only when the same pair was sent again: the row is re-read, never re-broadcast. */
+  replay: z.literal(true).optional(),
+});
+
+/** `POST /me/withdraw` refuses before any chain call, and says which rule it is. */
+export const WithdrawRefused = z.object({
+  error: z.literal('withdraw_refused'),
+  reason: z.enum(['below_minimum', 'fee_mismatch', 'wrong_fee_recipient', 'wrong_destination', 'authorization_expired']),
+  /** The floor, echoed on `below_minimum` so the phone never has to know it separately. */
+  min_withdraw_usdc: z.number().optional(),
+});
+
+/**
+ * Not this worker's money. `not_the_signer` is an authorization that does not recover to the
+ * session's worker, which is an attempt to spend an address the caller does not hold the key
+ * to — a 403 and not a 400, and refused before anything reaches a node.
+ */
+export const WithdrawForbidden = z.object({
+  error: z.literal('forbidden'),
+  reason: z.enum(['not_the_signer', 'not_worker']),
+});
+
+/** The payout leg itself failed, so nothing moved and the same pair can be sent again. */
+export const WithdrawFailed = z.object({ error: z.literal('withdraw_failed') });
 export const Ok = z.object({ ok: z.literal(true), tx: TxHash.optional() });
 
 export const GenericError = z.discriminatedUnion('error', [
@@ -214,6 +278,8 @@ export const API_ROUTES = {
     request: z.object({ class: z.enum(ABUSE_CLASSES) }), responses: { 200: z.object({ recorded: z.literal(true) }) } },
   earnings: { method: 'GET', path: '/me/earnings', auth: 'worker-session', summary: 'Earned-only: sums TaskReleased to this worker',
     responses: { 200: z.object({ released_usdc: z.number(), completed: z.number().int(), score: z.number(), distinct_raters: z.number().int() }) } },
+  withdraw: { method: 'POST', path: '/me/withdraw', auth: 'worker-session', summary: 'Gasless withdrawal: two EIP-3009 authorizations the phone signed, relayed payout leg first and fee leg second, with Legwork paying the gas and keeping 2 % of the amount withdrawn. A signature that does not recover to the session worker is 403 and reaches no chain call; a fee that is not withdrawFeeOn(amount), a destination the payout leg does not name, or an amount under MIN_WITHDRAW_USDC is 422. Replayed on the payout nonce. A fee leg that fails after the payout landed is still a 200, with fee_tx null and fee_pending true',
+    request: WithdrawRequest, responses: { 200: Withdrawn, 400: InvalidRequest, 401: GenericError, 403: WithdrawForbidden, 409: GenericError, 422: WithdrawRefused, 503: WithdrawFailed } },
   taskSpec: { method: 'GET', path: '/tasks/:id/spec', auth: 'worker-session', summary: 'Spec fields, claimant only — the one route that shows spec to a human',
     responses: { 200: z.object({ task_type: TaskTypeSchema, spec: z.record(z.string(), z.unknown()) }), 403: GenericError } },
   publicFeed: { method: 'GET', path: '/public/feed', auth: 'public', summary: 'Last 20 by posted_at; never spec text, an exact coordinate, a buyer token, a payer or a note', responses: { 200: z.object({ tasks: z.array(PublicTaskView) }) } },

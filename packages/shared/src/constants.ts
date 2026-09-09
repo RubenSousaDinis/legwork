@@ -18,6 +18,35 @@ export function priceWithFee(amountUnits: bigint): bigint {
   return amountUnits + feeOn(amountUnits);
 }
 
+/**
+ * The withdrawal fee: 2 % of what a worker moves off their payout address, and all Legwork
+ * earns for paying the gas on a payout address that has never held any ETH.
+ *
+ * It is a separate charge from `FEE_BPS` and is never described as part of it. The task fee
+ * is 15 % ON TOP of the posted rate and is paid by the agent — 3.45 paid, 3.00 to the worker,
+ * 0.45 to the treasury. This one is taken out of an amount the worker chooses to move, on the
+ * day they choose to move it, and only then.
+ */
+export const WITHDRAW_FEE_BPS = 200n;
+
+/**
+ * The worker absorbs no rounding dust. Integer division truncates, so the remainder of
+ * `amountUnits × 200 / 10 000` is left on the payout side: `payout = amountUnits − fee` is
+ * always the larger half of a unit that will not divide. `payout + fee === amountUnits` for
+ * every input, and the direction the truncation falls is towards the worker, never towards
+ * Legwork.
+ */
+export function withdrawFeeOn(amountUnits: bigint): bigint {
+  return (amountUnits * WITHDRAW_FEE_BPS) / 10_000n;
+}
+
+/**
+ * Below this, 2 % does not cover what the same transfer would cost on mainnet, so the
+ * withdrawal is refused with the number said out loud rather than quietly paying to move
+ * dust. A worker under it keeps their balance where it is and loses nothing.
+ */
+export const MIN_WITHDRAW_USDC = 1.0;
+
 export function toUsdcUnits(n: number): bigint {
   return BigInt(Math.round(n * 10 ** USDC_DECIMALS));
 }
