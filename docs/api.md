@@ -7532,7 +7532,9 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {}
 }
 ```
 
