@@ -18,6 +18,7 @@ import {
   createWalletAuthSession,
   setSessionState,
   useSession,
+  walletAddress,
 } from '../../lib/session';
 import { loadOrCreatePayoutKey } from '../../lib/workerKey';
 import {
@@ -42,13 +43,13 @@ import { VerifyStep } from './VerifyStep';
 type Step = 'landing' | 'verifying' | 'signing-in' | 'payout-key' | 'register';
 
 const CONFLICT_MESSAGE =
-  'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.';
+  'This World ID already has a worker account. Sign in with your World App wallet to continue.';
 
 const BROWSER_CONFLICT_MESSAGE =
   'Open this in World App to sign in with the key this phone holds, or paste the key you exported.';
 
 const MISMATCH_MESSAGE =
-  'That account is bound to a different payout address. Paste the key you exported when you registered — Legwork cannot recover it for you.';
+  'That account is bound to a different payout address.';
 
 /** Long enough to read the transaction chip, short enough that nobody taps twice. */
 const REDIRECT_DELAY_MS = 2500;
@@ -163,11 +164,20 @@ export default function AuthPage() {
       thrown.status === 409 &&
       (thrown.body as { error?: string } | null)?.error === 'nullifier_already_registered'
     ) {
-      // One person, one worker account: the way back in is the payout key, not a second World ID.
-      setConflict(true);
-      setPayoutAddress(loadOrCreatePayoutKey().address);
-      setSessionState({ status: 'unverified' });
-      setStep('payout-key');
+      // One person, one worker account. Inside World App the way back in is the wallet;
+      // outside it, the generated payout key.
+      void (async () => {
+        setConflict(true);
+        if (miniKitInstalled()) {
+          setMode('walletAuth');
+          const wallet = await walletAddress();
+          setPayoutAddress(wallet);
+        } else {
+          setPayoutAddress(loadOrCreatePayoutKey().address);
+        }
+        setSessionState({ status: 'unverified' });
+        setStep('payout-key');
+      })();
       return;
     }
     setError(screenError(thrown));
@@ -182,25 +192,36 @@ export default function AuthPage() {
     const sessionMode = miniKitInstalled() ? ('walletAuth' as const) : ('idkit' as const);
     setMode(sessionMode);
 
-    // The payout key is the worker's address in idkit mode, and the address `POST /register`
-    // binds in both, so it exists before anything is sent.
-    const { address } = loadOrCreatePayoutKey();
-    setPayoutAddress(address);
+    void (async () => {
+      // Inside World App the wallet is the worker; on the web the generated payout key is.
+      const address =
+        sessionMode === 'walletAuth' ? await walletAddress() : loadOrCreatePayoutKey().address;
+      if (address === null) {
+        setError({
+          sentence: 'World App did not return a wallet address.',
+          code: 'wallet',
+        });
+        setSessionState({ status: 'unverified' });
+        setStep('landing');
+        return;
+      }
+      setPayoutAddress(address);
 
-    // No session yet, on purpose. `POST /session` refuses a worker the registry does not know
-    // — `403 forbidden {reason: 'not_registered'}` in both modes — and a human who has just
-    // verified is exactly that. The session is created after `POST /register` returns, which
-    // is what makes them a worker; until then the idkit-session cookie from `POST
-    // /idkit/verify` is the only credential this flow needs, and it is what `/register` reads.
-    setSessionState({
-      status: 'verified',
-      nullifier: response.nullifier,
-      level: response.level,
-      mode: sessionMode,
-      worker: address,
-      registered: false,
-    });
-    setStep('payout-key');
+      // No session yet, on purpose. `POST /session` refuses a worker the registry does not know
+      // — `403 forbidden {reason: 'not_registered'}` in both modes — and a human who has just
+      // verified is exactly that. The session is created after `POST /register` returns, which
+      // is what makes them a worker; until then the idkit-session cookie from `POST
+      // /idkit/verify` is the only credential this flow needs, and it is what `/register` reads.
+      setSessionState({
+        status: 'verified',
+        nullifier: response.nullifier,
+        level: response.level,
+        mode: sessionMode,
+        worker: address,
+        registered: false,
+      });
+      setStep('payout-key');
+    })();
   }, []);
 
   const register = useCallback(async () => {
@@ -242,7 +263,7 @@ export default function AuthPage() {
   }, [payoutAddress, mode, router]);
 
   const signInExisting = useCallback(async () => {
-    if (payoutAddress === null || !miniKitInstalled()) return;
+    if (!miniKitInstalled()) return;
     setBusy(true);
     setError(null);
     try {
@@ -266,7 +287,7 @@ export default function AuthPage() {
     } finally {
       setBusy(false);
     }
-  }, [payoutAddress, router]);
+  }, [router]);
 
   return (
     <div data-auth-step={step}>
@@ -310,6 +331,7 @@ export default function AuthPage() {
           onImported={setPayoutAddress}
           onRetryLocation={() => void refreshArea()}
           onSignIn={miniKitInstalled() ? () => void signInExisting() : undefined}
+          wallet={miniKitInstalled()}
         />
       ) : null}
 

@@ -8,6 +8,9 @@ import { exportPrivateKey, importPrivateKey } from '../../lib/workerKey';
 
 const BASESCAN = 'https://sepolia.basescan.org/address/';
 
+export const WALLET_PAYOUT_COPY = 'Your World App wallet is your payout address';
+export const SIGN_IN_WITH_WALLET = 'Sign in with your World App wallet';
+
 export type PayoutKeyStepProps = {
   address: string;
   /** Opened straight away when a 409 said this World ID already has a worker account. */
@@ -22,6 +25,11 @@ export type PayoutKeyStepProps = {
   area?: string | null;
   areaSource?: AreaSource;
   onRetryLocation?: () => void;
+  /**
+   * Inside World App the wallet is the payout address: no key to reveal, import, or lose.
+   * The web path keeps the generated key and the controls that go with it.
+   */
+  wallet?: boolean;
 };
 
 /**
@@ -40,6 +48,7 @@ export function PayoutKeyStep({
   area = null,
   areaSource = 'default',
   onRetryLocation,
+  wallet = false,
 }: PayoutKeyStepProps) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -77,8 +86,10 @@ export function PayoutKeyStep({
 
   return (
     <section className="lw-card" data-step="payout-key">
-      <p className="lw-list-label">Your payout address</p>
-      {conflict ? (
+      <p className={wallet ? 'lw-body' : 'lw-list-label'} {...(wallet ? { 'data-floor': '20' } : {})}>
+        {wallet ? WALLET_PAYOUT_COPY : 'Your payout address'}
+      </p>
+      {conflict && !wallet ? (
         <p className="lw-list-label lw-list-label--flush" data-label="held-key">
           this phone holds
         </p>
@@ -90,68 +101,74 @@ export function PayoutKeyStep({
         </a>
       </p>
 
-      {/* A flat tile, not a nested card: one card inside another reads as two surfaces. */}
-      <div className="lw-tile" data-warning="payout-key" data-floor="20">
-        Stored only in this browser. If you clear site data you lose access to unpaid earnings.
-        Legwork never sees this key.
-      </div>
+      {wallet ? null : (
+        <>
+          {/* A flat tile, not a nested card: one card inside another reads as two surfaces. */}
+          <div className="lw-tile" data-warning="payout-key" data-floor="20">
+            Stored only in this browser. If you clear site data you lose access to unpaid earnings.
+            Legwork never sees this key.
+          </div>
+
+          <div className="lw-actions lw-actions--top">
+            {revealed === null ? (
+              <Button variant="ghost" full onClick={reveal}>
+                Reveal and copy private key
+              </Button>
+            ) : (
+              <>
+                <p className="lw-address" data-revealed="true">
+                  {revealed}
+                </p>
+                <Button variant="ghost" full onClick={copy}>
+                  Copy private key
+                </Button>
+                <Button variant="ghost" full onClick={() => setRevealed(null)}>
+                  Hide
+                </Button>
+                {copied ? (
+                  <p className="lw-chips">
+                    <Chip tone="neutral" floor={20}>
+                      copied
+                    </Chip>
+                  </p>
+                ) : null}
+              </>
+            )}
+
+            <Button variant="ghost" full onClick={() => setShowImport((open) => !open)}>
+              Import an existing payout key
+            </Button>
+
+            {showImport ? (
+              <div data-import="open">
+                <label className="lw-list-label lw-list-label--flush" htmlFor="payout-key-import">
+                  Import an existing payout key
+                </label>
+                <textarea
+                  className="lw-textarea"
+                  id="payout-key-import"
+                  onChange={(event) => setDraft(event.target.value)}
+                  rows={3}
+                  spellCheck={false}
+                  value={draft}
+                />
+                <div className="lw-actions lw-actions--top">
+                  <Button variant="ghost" full onClick={restore}>
+                    Restore
+                  </Button>
+                  {error === null ? null : <p className="lw-error">{error}</p>}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </>
+      )}
 
       <div className="lw-actions lw-actions--top">
-        {revealed === null ? (
-          <Button variant="ghost" full onClick={reveal}>
-            Reveal and copy private key
-          </Button>
-        ) : (
-          <>
-            <p className="lw-address" data-revealed="true">
-              {revealed}
-            </p>
-            <Button variant="ghost" full onClick={copy}>
-              Copy private key
-            </Button>
-            <Button variant="ghost" full onClick={() => setRevealed(null)}>
-              Hide
-            </Button>
-            {copied ? (
-              <p className="lw-chips">
-                <Chip tone="neutral" floor={20}>
-                  copied
-                </Chip>
-              </p>
-            ) : null}
-          </>
-        )}
-
-        <Button variant="ghost" full onClick={() => setShowImport((open) => !open)}>
-          Import an existing payout key
-        </Button>
-
-        {showImport ? (
-          <div data-import="open">
-            <label className="lw-list-label lw-list-label--flush" htmlFor="payout-key-import">
-              Import an existing payout key
-            </label>
-            <textarea
-              className="lw-textarea"
-              id="payout-key-import"
-              onChange={(event) => setDraft(event.target.value)}
-              rows={3}
-              spellCheck={false}
-              value={draft}
-            />
-            <div className="lw-actions lw-actions--top">
-              <Button variant="ghost" full onClick={restore}>
-                Restore
-              </Button>
-              {error === null ? null : <p className="lw-error">{error}</p>}
-            </div>
-          </div>
-        ) : null}
-
         {conflict ? (
           onSignIn ? (
             <Button variant="primary" size="lg" full disabled={busy} onClick={onSignIn}>
-              Sign in with this key
+              {SIGN_IN_WITH_WALLET}
             </Button>
           ) : null
         ) : (

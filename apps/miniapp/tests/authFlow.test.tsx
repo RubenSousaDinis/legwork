@@ -32,7 +32,12 @@ vi.mock('@worldcoin/idkit', () => ({
 }));
 
 vi.mock('@worldcoin/minikit-js', () => ({
-  MiniKit: { install: vi.fn(), isInstalled: vi.fn(() => false), walletAuth: vi.fn() },
+  MiniKit: {
+    install: vi.fn(),
+    isInstalled: vi.fn(() => false),
+    walletAuth: vi.fn(),
+    user: { walletAddress: undefined as string | undefined },
+  },
 }));
 
 const replace = vi.fn();
@@ -60,6 +65,7 @@ const WALLET_AUTH_DATA = {
  * key is how this bug survived T-52.
  */
 function mockWalletAuth() {
+  MiniKit.user = { walletAddress: WALLET_AUTH_DATA.address };
   vi.mocked(MiniKit.walletAuth).mockImplementation(async () => ({
     executedWith: 'minikit',
     data: { ...WALLET_AUTH_DATA },
@@ -76,6 +82,7 @@ beforeEach(() => {
   replace.mockClear();
   vi.mocked(MiniKit.isInstalled).mockReturnValue(false);
   vi.mocked(MiniKit.walletAuth).mockReset();
+  MiniKit.user = {};
   // A visitor with no cookie: the session probe 401s, so the landing renders.
   setScenario({ earnings: 'unauthorized' });
 
@@ -114,7 +121,7 @@ describe('auth flow', () => {
     mockWalletAuth();
 
     await verifyAndSignIn();
-    await screen.findByText('Your payout address');
+    await screen.findByText('Your World App wallet is your payout address');
 
     // Nothing has been asked of `/session` yet, and nothing signed.
     expect(calls.some((call) => call.url.endsWith('/api/session'))).toBe(false);
@@ -138,7 +145,7 @@ describe('auth flow', () => {
     expect(sessionRequests()).toEqual([
       {
         mode: 'walletAuth',
-        payload: { ...WALLET_AUTH_DATA, address: getPayoutAddress() },
+        payload: { ...WALLET_AUTH_DATA },
         nonce: NONCE,
       },
     ]);
@@ -151,6 +158,7 @@ describe('auth flow', () => {
     calls = [];
     vi.mocked(MiniKit.walletAuth).mockClear();
     vi.mocked(MiniKit.isInstalled).mockReturnValue(false);
+    MiniKit.user = {};
 
     await verifyAndSignIn();
     await screen.findByText('Your payout address');
@@ -216,6 +224,7 @@ describe('auth flow', () => {
     );
     expect(screen.queryByText('Register as a worker')).toBeNull();
     expect(screen.queryByText('Sign in with this key')).toBeNull();
+    expect(screen.queryByText('Sign in with your World App wallet')).toBeNull();
   });
 
   it('nullifierConflictSignsInWithTheHeldKey', async () => {
@@ -234,6 +243,7 @@ describe('auth flow', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText('Sign in with this key')).toBeNull();
+    expect(screen.queryByText('Sign in with your World App wallet')).toBeNull();
     expect(sessionRequests()).toHaveLength(0);
     expect(registerRequests()).toHaveLength(0);
     expect(replace).not.toHaveBeenCalledWith('/tasks');
@@ -247,17 +257,16 @@ describe('auth flow', () => {
     vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
     mockWalletAuth();
 
-    const heldInside = loadOrCreatePayoutKey();
-    bindRegisteredWorker({ worker: heldInside.address, nullifier: NULLIFIER });
+    bindRegisteredWorker({ worker: WALLET_AUTH_DATA.address, nullifier: NULLIFIER });
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
     expect(
       await screen.findByText(
-        'This World ID already has a worker account. If this phone still holds its payout key, sign in. Otherwise paste the key you exported.',
+        'This World ID already has a worker account. Sign in with your World App wallet to continue.',
       ),
     ).toBeTruthy();
-    fireEvent.click(await screen.findByText('Sign in with this key'));
+    fireEvent.click(await screen.findByText('Sign in with your World App wallet'));
 
     await waitFor(() => expect(sessionRequests().at(-1)).toMatchObject({ mode: 'walletAuth' }));
     expect(registerRequests()).toHaveLength(0);
@@ -272,14 +281,10 @@ describe('auth flow', () => {
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
-    fireEvent.click(await screen.findByText('Sign in with this key'));
+    fireEvent.click(await screen.findByText('Sign in with your World App wallet'));
 
-    expect(
-      await screen.findByText(
-        'That account is bound to a different payout address. Paste the key you exported when you registered — Legwork cannot recover it for you.',
-      ),
-    ).toBeTruthy();
-    expect(screen.getByLabelText('Import an existing payout key').tagName).toBe('TEXTAREA');
+    expect(await screen.findByText('That account is bound to a different payout address.')).toBeTruthy();
+    expect(screen.queryByLabelText('Import an existing payout key')).toBeNull();
     expect(replace).not.toHaveBeenCalledWith('/tasks');
     expect(registerRequests()).toHaveLength(0);
   });
@@ -312,5 +317,46 @@ describe('auth flow', () => {
       expect(JSON.stringify(init?.headers ?? {})).not.toContain(secret);
       expect(String(init?.body ?? '')).not.toContain(secret);
     }
+  });
+
+  it('walletAuthAddressIsTheRegisteredAddress', async () => {
+    const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
+    vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
+    mockWalletAuth();
+
+    await verifyAndSignIn();
+    fireEvent.click(await screen.findByText('Register as a worker'));
+    await waitFor(() => expect(registerRequests()).toHaveLength(1));
+
+    const generated = loadOrCreatePayoutKey().address;
+    expect(generated).not.toBe(WALLET_AUTH_DATA.address);
+    expect(registerRequests()[0]).toMatchObject({ worker_address: WALLET_AUTH_DATA.address });
+    expect((registerRequests()[0] as { worker_address: string }).worker_address).not.toBe(
+      generated,
+    );
+  });
+
+  it('webPathStillUsesTheGeneratedKey', async () => {
+    await verifyAndSignIn();
+    await screen.findByText('Your payout address');
+    expect(screen.getByText('Reveal and copy private key')).toBeTruthy();
+    expect(screen.getByText('Import an existing payout key')).toBeTruthy();
+
+    fireEvent.click(await screen.findByText('Register as a worker'));
+    await waitFor(() => expect(registerRequests()).toHaveLength(1));
+    expect(registerRequests()[0]).toMatchObject({ worker_address: getPayoutAddress() });
+  });
+
+  it('worldAppShowsNoPayoutKeyToLose', async () => {
+    vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
+    mockWalletAuth();
+
+    await verifyAndSignIn();
+    expect(await screen.findByText('Your World App wallet is your payout address')).toBeTruthy();
+    expect(screen.getByText(WALLET_AUTH_DATA.address)).toBeTruthy();
+    expect(screen.queryByText('Reveal and copy private key')).toBeNull();
+    expect(screen.queryByText('Import an existing payout key')).toBeNull();
+    expect(screen.queryByText(/If you clear site data you lose access/)).toBeNull();
+    expect(document.querySelector('[data-warning="payout-key"]')).toBeNull();
   });
 });
