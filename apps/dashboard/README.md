@@ -60,7 +60,7 @@ Read on the server only, never from a `NEXT_PUBLIC_*` var and never in a client 
 | `DATA_MODE=live\|demo` | server only | picks the adapter |
 | `NEXT_PUBLIC_API_BASE_URL` | server, `next.config.ts` | live fetches and the `/api` rewrite. Loopback here is a rewrite target, not a public host. |
 | `NEXT_PUBLIC_SUBGRAPH_QUERY_URL` | server and browser | the publishable subgraph query URL |
-| `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `World ID · Orb`, anything else `World ID · Selfie Check` |
+| `WORLD_CREDENTIAL_LEVEL` | server only | `selfie` renders `World ID · Selfie Check`; unset or unknown stays `orb`, matching `resolvedCredentialLevel()` and the worker app |
 | `NEXT_PUBLIC_ADMIN_UI` | build time | `1` mounts `/admin`; anything else, unset included, 404s |
 | `NEXT_PUBLIC_MINIAPP_URL` | landing + support + header | worker-app origin printed on `/`. Loopback or unset → `https://legwork-miniapp.vercel.app`. |
 
@@ -91,6 +91,12 @@ never attributed to an agent by guesswork.
 `getLiveDashboardData({ level })`; the env is read only when no level is given. Without
 that an `orb` deployment would render `World ID · Orb` on load and `World ID · Selfie
 Check` from the first tick.
+
+When no level is given, `live.ts` falls back to `resolvedCredentialLevel()` from
+`app/copy.ts` — one resolver for the whole app. It used to hold its own ternary that read
+the opposite way, so an unset env put `World ID · Selfie Check` on the Supply card while
+the landing page, `/about` and the worker's phone all read `World ID · Orb` from the same
+missing variable.
 
 `lib/live/` polls it every 3 s. The poller never overlaps requests, does nothing at all
 when the response says `changed: false`, calls `onChange` only when the mapped result

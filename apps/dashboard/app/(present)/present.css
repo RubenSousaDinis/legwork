@@ -409,11 +409,24 @@
  * Rule (9): `1 real · +20 seeded (demo data)` is one locked string and is never
  * shortened. At its 32-px floor it is 625 px wide and the Supply card's content box
  * is 538, so the chip wraps instead of being cut by `.card { overflow: hidden }`.
+ *
+ * It wraps on purpose rather than wherever the card edge lands. The 420-px content box
+ * takes `1 real · +23 seeded` and cannot take `(demo`, so the break falls between the
+ * count and its disclosure — the two halves the string is actually made of — instead of
+ * stranding `data)` alone on a centred second line. Two lines are not a pill, so the
+ * radius drops to the badge's 12 and the text sets left, like every other line on the
+ * card; the chip sits at its own width rather than stretching to the card's.
  */
+.stage .pool-headline {
+  align-items: flex-start;
+}
 .stage .pool-headline .chip {
   white-space: normal;
-  text-align: center;
-  border-radius: calc(28 * var(--u));
+  text-align: left;
+  line-height: 1.28;
+  max-width: calc(420 * var(--u));
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  border-radius: calc(12 * var(--u));
 }
 
 /* ------------------------------------------------------------ screening log */
