@@ -1452,12 +1452,6 @@ body.lw-modal-open {
   pointer-events: none;
 }
 
-/* The layer is transparent to taps so the map behind it stays readable; each pin takes its
-   own back, or `onSelect` never fires and the pin is decoration. */
-.lw-map-pin {
-  pointer-events: auto;
-}
-
 .lw-map-pin {
   position: absolute;
   left: var(--pin-x);
