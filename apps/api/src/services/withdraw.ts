@@ -52,8 +52,10 @@
  *
  * That is why a failed fee leg is a **200** with `fee_tx: null` and `fee_pending: true`, and
  * never a 500. A 500 here would tell a worker their withdrawal failed while the money was
- * already in their wallet, and they would try again. The row records `fee_pending` and the
- * log line says so; chasing it is the operator's problem, not the worker's.
+ * already in their wallet, and they would try again. The row records `fee_pending` so the
+ * miss is counted, not so it can be recovered: the fee authorization is not stored, and it
+ * expires in an hour, so a failed fee is forfeit. That is Legwork's 2 %, which is the risk
+ * this design carries.
  *
  * `apps/api/src/services/hire.ts` reports `float_absorbed` the same way on the same
  * primitive from the buyer's side, for the same reason.
