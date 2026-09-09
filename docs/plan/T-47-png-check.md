@@ -40,7 +40,7 @@ Every legibility rule so far was declared (T-10), measured in demo mode (T-39) a
 
 ## 4. Owned paths
 ```
-docs/spikes/RESULTS.md   (section "## Legibility" only)
+docs/spikes/RESULTS.md   # the "Legibility" section only
 docs/media/present-1280x720.png
 ```
 
