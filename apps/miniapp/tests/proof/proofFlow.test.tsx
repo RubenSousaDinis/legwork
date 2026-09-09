@@ -185,4 +185,25 @@ describe('the proof screen', () => {
     expect(proof.gps).toEqual({ lat: 39.7495, lon: -8.8078, accuracy_m: 12 });
     expect(proof.gps_unavailable).toBe(false);
   });
+
+  it('submitWarnsBeforeTheCameraWhenOutsideTheFence', async () => {
+    const { metresNorthOf, TASK_PLACE_COORDS } = await import('../../mocks/handlers');
+    const { autoDisputeLine } = await import('../../app/proof/ProofFlow');
+    const far = metresNorthOf(TASK_PLACE_COORDS['1024']!, 400);
+    stubGeolocation(geolocationAt(far.lat, far.lon, 12));
+
+    await openProofScreen();
+
+    expect(
+      await screen.findByText(
+        'You are ~400 m from Padaria Central. A proof taken here will be refused — the photo must be within 150 m.',
+      ),
+    ).toBeTruthy();
+    expect(document.querySelector('[data-capture="photo"]')).not.toBeNull();
+    expect(screen.getByText('Take the photo')).toBeTruthy();
+
+    expect(autoDisputeLine('geofence')).toBe(
+      'Submitted, but flagged: geofence. The operator will resolve it — nothing has been paid yet.',
+    );
+  });
 });

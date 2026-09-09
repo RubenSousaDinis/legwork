@@ -130,3 +130,10 @@ Open the PNG at 100 % first and do the read yourself before reading the table. T
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), for the recording pass.**
+
+- **The two terminal inserts are ready and were recorded once already**: `pnpm --silent --filter scripts inserts -- --insert hire|refusal`. The hire card names **Pão Doce** and **task 27**; the refusal card is three logical lines that wrap to seven rendered ones inside 80 columns. Run the commands with `env -u NODE_OPTIONS` — a Node inspector in the operator's shell prints "Debugger listening" into the frame otherwise — and `pnpm --silent`, or pnpm's own banner puts the repository path on screen.
+- **The chips say Orb now.** The credential is `orb`, so the verified banner reads `sandbox World ID` rather than `sandbox Selfie Check`. If a real Orb verification is on camera, check the word `sandbox` against what actually happened before filming it: the app id is a production one and an Orb proof is a real proof. That wording is an open lead item.
+- **The place on every surface is Pão Doce, Rua do Cruzeiro, Leiria**, cell `ez1dn`.

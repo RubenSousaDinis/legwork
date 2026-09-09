@@ -5,7 +5,7 @@ import { rateLimit, clientKey } from '@/src/http/rateLimit';
 import { ApiError } from '@/src/errors';
 import { getChain } from '@/src/chain';
 import { rawQuery } from '@/src/db/client';
-import { consumeNonce, issueWorkerSession, requireIdkitSession } from '@/src/session';
+import { consumeNonce, issueWorkerSession, refreshWorkerSession, requireIdkitSession, requireWorkerSession } from '@/src/session';
 import { verifyWalletAuth } from '@/src/siwe';
 
 export const runtime = 'nodejs';
@@ -49,6 +49,20 @@ async function workerOfNullifier(nullifier: string): Promise<string | undefined>
 }
 
 /**
+ * The dev path T-29's brief pre-identified: a seeded worker (`deploy.sh`, `seedWorker`) has no
+ * World ID and so no `nullifiers` row, but the registry holds its synthetic nullifier. When the
+ * table has nothing and the registry says `isSeeded`, the session binds to `nullifierOf` — a
+ * value the chain wrote, never one the caller supplied. A registered human without a row is
+ * still refused: the row is the record of the proof this API verified.
+ */
+async function seededNullifierOf(worker: string): Promise<string | undefined> {
+  const chain = getChain();
+  const address = getAddress(worker);
+  if (!(await chain.isSeeded(address))) return undefined;
+  return (await chain.nullifierOf(address)).toString();
+}
+
+/**
  * The registry is the record and the row is only a claim, so `isWorker` is asked in both
  * modes. A database that has been restored, edited or seeded wrongly still cannot mint a
  * session for an address the chain does not know.
@@ -84,14 +98,25 @@ export const POST = route(async (req) => {
     }
   }
 
-  const nullifier = await nullifierOfWorker(worker);
-  if (!nullifier) throw ApiError.of('forbidden', { reason: 'not_registered' });
   await requireRegisteredWorker(worker);
+  const nullifier = (await nullifierOfWorker(worker)) ?? (await seededNullifierOf(worker));
+  if (!nullifier) throw ApiError.of('forbidden', { reason: 'not_registered' });
 
   const session = await issueWorkerSession({ worker, nullifier, mode: body.mode });
   return Response.json(
     { worker, nullifier, mode: body.mode, token: session.token },
     { headers: { 'set-cookie': session.cookie } },
+  );
+});
+
+/** Re-issues the worker cookie so an active session keeps its TTL. */
+export const GET = route(async (req) => {
+  rateLimit(`session-refresh:${clientKey(req)}`, { limit: 60, windowS: 60 });
+  const session = await requireWorkerSession(req);
+  const cookie = await refreshWorkerSession(session);
+  return Response.json(
+    { worker: session.worker, nullifier: session.nullifier, mode: session.mode },
+    { headers: { 'set-cookie': cookie } },
   );
 });
 

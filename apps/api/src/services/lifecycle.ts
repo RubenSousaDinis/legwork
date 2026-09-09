@@ -6,7 +6,7 @@
  * | Route | Auth | Body / query | 200 | Other |
  * |---|---|---|---|---|
  * | `GET /tasks/list?area=&lat=&lon=` | worker-session | — | `{tasks: WorkerTaskRow[]}` | — |
- * | `POST /tasks/:id/claim` | worker-session | — | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}` |
+ * | `POST /tasks/:id/claim` | worker-session | optional `{lat, lon}` | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}`; 422 `{error: 'too_far_to_claim', distance_m, radius_m}` |
  * | `POST /tasks/:id/release-claim` | worker-session | — | `{tx}` | 409 `conflict` |
  * | `POST /tasks/:id/submit` | worker-session | `{proofHash?, …per-type proof}` | `{tx, status: 'submitted'}` | 400 `invalid_request`; 409 `conflict` |
  * | `POST /tasks/:id/report` | worker-session | `{class}` | `{recorded: true}` | 404 |
@@ -33,6 +33,7 @@
  * that pass for one task, which is what `GET /tasks/:id` (T-19) calls on a status read.
  */
 import {
+  CLAIM_RADIUS_M,
   TASK_STATE,
   TASK_TYPES,
   TASK_TYPE_BIT,
@@ -49,7 +50,7 @@ import { getDb } from '../db/client';
 import { tasks } from '../db/schema';
 import { ApiError } from '../errors';
 import { logger } from '../log';
-import { distanceM } from './geo';
+import { distanceM, round100m } from './geo';
 
 /** A `tasks` row, exactly as the frozen schema declares it. */
 export type TaskRow = typeof tasks.$inferSelect;
@@ -145,6 +146,9 @@ export async function mirrorFromChain(
   row: TaskRow,
   chainTask: ChainTask,
   tx?: { claim?: string; submit?: string; release?: string },
+  // A seeded worker or a seeded task makes the row demo data — the rule `observations.ts`
+  // already applies. The feed reads `tasks.seeded`, so the row has to carry it too.
+  opts?: { workerSeeded?: boolean },
 ): Promise<TaskRow> {
   const state = dbState(chainTask.state);
   const zeroHash = /^0x0{64}$/.test(chainTask.proofHash);
@@ -160,6 +164,7 @@ export async function mirrorFromChain(
     ...(tx?.claim ? { txClaim: tx.claim } : {}),
     ...(tx?.submit ? { txSubmit: tx.submit } : {}),
     ...(tx?.release ? { txRelease: tx.release } : {}),
+    ...(opts?.workerSeeded && !row.seeded ? { seeded: true } : {}),
     updatedAt: new Date(),
   };
 
@@ -207,6 +212,34 @@ export function assertClaimableBy(
   if (pre.isSeeded && !pre.buyerAllowlisted) return { error: 'SeededCannotClaimExternal' };
   if (!isClaimable(chainTask, now)) return { error: 'AlreadyClaimed' };
   return undefined;
+}
+
+export interface TooFarToClaim {
+  error: 'too_far_to_claim';
+  distance_m: number;
+  radius_m: number;
+}
+
+/**
+ * Optional GPS on a claim: when both coordinates are present and the place is further than
+ * `CLAIM_RADIUS_M`, the worker is too far to start. Absent coordinates are not a refusal —
+ * a worker with no fix is not punished for it, and the 150 m proof fence still applies at
+ * submit. Uses the same `distanceM` helper as the proof geofence; not a second haversine.
+ */
+export function tooFarToClaim(
+  from: { lat: number; lon: number } | undefined,
+  row: Pick<TaskRow, 'exactLat' | 'exactLon'>,
+): TooFarToClaim | undefined {
+  if (from === undefined) return undefined;
+  const place = taskCoordinate(row);
+  if (place === undefined) return undefined;
+  const distance = distanceM(from, place);
+  if (distance <= CLAIM_RADIUS_M) return undefined;
+  return {
+    error: 'too_far_to_claim',
+    distance_m: Math.round(distance),
+    radius_m: CLAIM_RADIUS_M,
+  };
 }
 
 /** `Open`, or a `Claimed` whose claim TTL has run out — the contract's own lazy expiry. */
@@ -403,13 +436,21 @@ export function workerBrief(row: Pick<TaskRow, 'taskType' | 'specJson'>): Worker
   return { a: spec.a, b: spec.b, criterion_id: str(spec.criterion_id) };
 }
 
-/** `photo-of · Padaria Central · Rua Direita 12`; a `compare-two` has a criterion, not a place. */
+/**
+ * What the errand is *about*: `Padaria Central · Rua Direita 12`, or the criterion for a
+ * `compare-two`. Deliberately no task type — every surface that shows this already shows the
+ * type beside it, as a chip on the mini-app card, so carrying it here printed it twice.
+ *
+ * Empty when the spec names no place. A caller with nothing to render must say what the
+ * errand asks rather than an empty line or a stray separator; `` `type ·  · ` `` was the shape
+ * an operator read on a phone as an unlabelled task.
+ */
 export function titleOf(row: Pick<TaskRow, 'taskType' | 'specJson'>): string {
   const spec = row.specJson as Record<string, unknown>;
-  const type = taskTypeOf(row.taskType);
-  if (type === 'compare-two') return `compare-two · ${str(spec.criterion_id)}`;
+  if (taskTypeOf(row.taskType) === 'compare-two') return str(spec.criterion_id);
   const place = briefPlace(spec);
-  return `${type} · ${place?.name ?? ''} · ${place?.street_address ?? ''}`;
+  if (place === undefined) return '';
+  return [place.name, place.street_address].filter((part) => part !== '').join(' · ');
 }
 
 // ---------------------------------------------------------------- distance
@@ -435,6 +476,8 @@ export interface WorkerTaskRow {
   state: string;
   seeded: boolean;
   brief: WorkerBrief;
+  /** Task place through `round100m`. Absent when the private row has no coordinate. */
+  coordinate_rounded?: { lat: number; lon: number };
 }
 
 export interface ListRowOptions {
@@ -466,6 +509,9 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
     claimExpiresInS = 0;
   }
 
+  const rounded =
+    coordinate === undefined ? undefined : round100m(coordinate.lat, coordinate.lon);
+
   return {
     task_id: row.taskId.toString(),
     task_type: taskTypeOf(row.taskType),
@@ -477,6 +523,7 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
     state: own ? 'claimed' : 'open',
     seeded: options.seeded,
     brief: workerBrief(row),
+    ...(rounded === undefined ? {} : { coordinate_rounded: rounded }),
   };
 }
 

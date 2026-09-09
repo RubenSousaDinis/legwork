@@ -1,6 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { render } from '@testing-library/react';
 import { poolString } from '../lib/format';
 import { getLiveDashboardData, refusalCounts } from '../lib/data/live';
+import { ScreeningLog } from '../components/ScreeningLog';
+import { TaskRow } from '../components/TaskRow';
 import { http, HttpResponse } from 'msw';
 import {
   downHandlers,
@@ -28,14 +31,15 @@ describe('live adapter', () => {
     server.use(...liveHandlers(fixtures.refusals1));
     const result = await getLiveDashboardData();
 
-    // Four funded rows plus the one refusal, newest first.
-    expect(result.feed).toHaveLength(5);
+    // Four funded rows plus two refusals (the five-key wire row and the leaky extra), newest first.
+    expect(result.feed).toHaveLength(6);
     expect(result.feed.map((r) => r.taskId.replace(/^refused-.*/, 'refused'))).toEqual([
       '7',
       '8',
       'refused',
       '6',
       '5',
+      'refused',
     ]);
 
     const refused = result.feed[2]!;
@@ -120,21 +124,28 @@ describe('live adapter', () => {
     server.use(...liveHandlers(fixtures.refusals1));
     const result = await getLiveDashboardData();
 
-    // One REFUSED line plus one PASSED line per funded row, newest first.
+    // Two REFUSED lines plus one PASSED line per funded row, newest first.
     expect(result.screening.map((l) => l.outcome)).toEqual([
       'passed',
       'passed',
       'refused',
       'passed',
       'passed',
+      'refused',
     ]);
     const refused = result.screening[2]!;
     expect(refused.class).toBe('authentication circumvention');
     expect(refused.ruleId).toBe('kw-otp-readback');
     expect(refused.marked).toBe(true);
+    expect(refused.reason).toBeUndefined();
     // `ScreeningLine` has no spec-text field, so there is nothing here to leak.
     expect(Object.keys(refused)).not.toContain('spec');
-    for (const line of result.screening) expect(line.specHash).toMatch(/^0x[0-9a-f]{64}$/);
+    // Funded rows still carry a hash from the feed or the subgraph. A live refusal
+    // has none: the wire does not send spec_hash, and the adapter must not invent one.
+    for (const line of result.screening) {
+      if (line.outcome === 'passed') expect(line.specHash).toMatch(/^0x[0-9a-f]{64}$/);
+      else expect(line.specHash).toBe('');
+    }
   });
 
   it('liveNamesTheSourceThatFailedAndNeverSubstitutesDemoNumbers', async () => {
@@ -189,14 +200,143 @@ describe('live adapter', () => {
     // The public feed carries no requester identity, and the adapter does not want one.
     expect(JSON.stringify(fixtures.feed)).not.toContain('buyer_agent_id');
 
-    // The refusal fixture deliberately carries the four fields no surface may render.
-    const recent = fixtures.refusals1.recent[0]!;
-    expect(recent.spec).toBe('SPEC-LEAK');
-    expect(recent.payer).toBe('0xPAYER');
-    expect(recent.agent_id).toBe('8004-1207');
-    expect(recent.mark_tx).toBe('0xMARK');
+    // The first recent entry is the five keys the API actually returns.
+    const fiveKey = fixtures.refusals1.recent[0]!;
+    expect(Object.keys(fiveKey).sort()).toEqual(['at', 'class', 'marked', 'rule_id', 'task_type']);
+    // A later entry still carries the four fields no surface may render, so this
+    // assertion has a subject proving they are dropped.
+    const leaky = fixtures.refusals1.recent.find((entry) => 'spec' in entry && 'payer' in entry)!;
+    expect(leaky.spec).toBe('SPEC-LEAK');
+    expect(leaky.payer).toBe('0xPAYER');
+    expect(leaky.agent_id).toBe('8004-1207');
+    expect(leaky.mark_tx).toBe('0xMARK');
 
     expect(fixtures.pool.workers.filter((w) => !w.seeded && !w.reset)).toHaveLength(1);
     expect(fixtures.pool.workers.filter((w) => w.seeded)).toHaveLength(20);
+  });
+
+  it('liveRefusalRendersItsClassOnce', async () => {
+    server.use(
+      ...liveHandlers({
+        recent: [
+          {
+            at: '2026-09-05T10:30:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            marked: false,
+          },
+        ],
+      }),
+    );
+    const result = await getLiveDashboardData();
+    const refused = result.feed.find((r) => r.state === 'refused')!;
+    expect(refused.refusal?.reason).toBeUndefined();
+
+    const { container } = render(<TaskRow row={refused} />);
+    const floor = container.querySelector('[data-floor="32"]')!;
+    expect(floor.className).toBe('task-row-refusal');
+    const classHits = (floor.textContent ?? '').split('authentication circumvention').length - 1;
+    expect(classHits).toBe(1);
+    expect(floor.textContent).not.toContain('·');
+  });
+
+  it('liveRefusalOmitsTheSpecLabelWhenTheWireSendsNoHash', async () => {
+    // `/public/refusals.recent` withholds `spec_hash` for the same reason it withholds
+    // `reason`, so a live refused line has no hash to print. The label went out on its
+    // own — a bare `spec` — until it was made conditional.
+    server.use(
+      ...liveHandlers({
+        recent: [
+          {
+            at: '2026-09-05T10:30:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            rule_id: 'deny.auth',
+            marked: false,
+          },
+        ],
+      }),
+    );
+    const result = await getLiveDashboardData();
+    const refused = result.screening.find((l) => l.outcome === 'refused')!;
+    expect(refused.specHash).toBe('');
+
+    const { container } = render(<ScreeningLog lines={[refused]} />);
+    expect(container.querySelector('.screening-spec')).toBeNull();
+    expect(container.textContent).not.toContain('spec ');
+    // The half that does exist still renders.
+    expect(container.textContent).toContain('authentication circumvention · deny.auth');
+  });
+
+  it('liveRefusalUsesTheRuleIdAsTheSecondPart', async () => {
+    server.use(
+      ...liveHandlers({
+        recent: [
+          {
+            at: '2026-09-05T10:30:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            rule_id: 'deny.auth',
+            marked: false,
+          },
+        ],
+      }),
+    );
+    const result = await getLiveDashboardData();
+    const refused = result.feed.find((r) => r.state === 'refused')!;
+    expect(refused.refusal?.ruleId).toBe('deny.auth');
+
+    const { container } = render(<TaskRow row={refused} />);
+    const floor = container.querySelector('[data-floor="32"]')!;
+    expect(floor.textContent).toBe('authentication circumvention · deny.auth');
+  });
+
+  it('refusedRowSaysNoMoneyMovedOnce', async () => {
+    server.use(...liveHandlers(fixtures.refusals1));
+    const result = await getLiveDashboardData();
+    const refused = result.feed.find((r) => r.state === 'refused')!;
+    expect(refused.meta).toMatch(/^posted \d{2}:\d{2}$/);
+    expect(refused.meta).not.toContain('no money moved');
+
+    const { container } = render(<TaskRow row={refused} />);
+    const text = container.textContent ?? '';
+    expect(text.split('no money moved')).toHaveLength(2);
+    expect(refused.type).toBe('call-confirm');
+    expect(text).toContain('self-reported answer + timestamp (unverified)');
+  });
+
+  it('screeningLogRefusedLineHasNoDuplicateClass', async () => {
+    server.use(
+      ...liveHandlers({
+        recent: [
+          {
+            at: '2026-09-05T10:30:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            rule_id: 'deny.auth',
+            marked: false,
+          },
+          {
+            at: '2026-09-05T10:00:00.000Z',
+            task_type: 'call-confirm',
+            class: 'authentication circumvention',
+            marked: false,
+          },
+        ],
+      }),
+    );
+    const result = await getLiveDashboardData();
+    const withRule = result.screening.find((l) => l.outcome === 'refused' && l.ruleId === 'deny.auth')!;
+    const without = result.screening.find((l) => l.outcome === 'refused' && !l.ruleId)!;
+    expect(withRule.reason).toBeUndefined();
+    expect(without.reason).toBeUndefined();
+
+    const { container } = render(<ScreeningLog lines={[withRule, without]} />);
+    const reasons = [...container.querySelectorAll('.screening-reason')];
+    expect(reasons[0]?.textContent).toBe('authentication circumvention · deny.auth');
+    expect(reasons[1]?.textContent).toBe('authentication circumvention');
+    for (const el of reasons) {
+      expect((el.textContent ?? '').split('authentication circumvention')).toHaveLength(2);
+    }
   });
 });

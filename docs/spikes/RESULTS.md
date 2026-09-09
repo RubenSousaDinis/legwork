@@ -18,13 +18,37 @@ decision: no architecture change. `WorkerRegistry` ships one cloud-verified `ATT
 
 _IDKit 4.x verify end to end + webview probe (S2')_
 
-S2: pending
+S2: PASS on Orb · REFUSED on Selfie Check
 
-outcome: pending
+outcome: IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
+mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
+**"Legwork will see these proofs: Unique Human"**; on approval `POST /idkit/verify` answered **200**
+and the nullifier row was written. Selfie Check — the credential the plan assumed — never worked: the
+same flow with `selfieCheckLegacy` completes the check on the device and then returns
+`{"status":"error","error_code":"verification_disabled","description":"verification_disabled","version":2,"verification_level":"face"}`,
+because Selfie Check (Beta) is access-gated and the feature flag was never granted for
+`app_9eeebbfc580c72269133fb3b93b15440` (`docs.world.org/world-id/credentials/11`: "request access so the
+feature flag can be enabled for your app"). The code appears in no error reference and in neither
+installed package; it is only legible through IDKit's `IDKitDebugReport`, which names the credential.
+Two other findings from the same run: the code is the only thing a failed check surfaces unless the
+report is rendered, and `POST /session` refuses a freshly verified human — `403 forbidden
+{reason: 'not_registered'}` — because a worker session requires the registry binding that
+`POST /register` creates.
 
-evidence: pending
+evidence: the run of Sept 8, 11:02–11:03 UTC, from a local production build behind an https tunnel with
+the API run locally so the tunnel origin could be listed in `MINIAPP_URL` (the deployed API refuses any
+other origin, by design). API log: `POST /idkit/request 200`, `POST /idkit/verify 200` in 2.6 s,
+`POST /session 403`. The refusal payload and the debug report are quoted in `FEEDBACK-WORLD.md` entries
+E5, E6 and E8; the uniqueness reading is E9.
 
-decision: pending
+decision: the demo ships **Orb** — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are
+`orb`, `pickPreset` sends `orbLegacy`. It is the credential the product's "one account per person" claim
+always needed: Selfie Check is "a medium-assurance biometric credential" that does not guarantee
+"strict one-person-one-account uniqueness like Orb verification". The prize track allows it — "Uses
+Selfie Check **or a Selfie Check-compatible World ID credential flow**" — and the refusal is the
+feedback the same track asks for. Access to the face credential has been requested from
+`developers@toolsforhumanity.com`; if it is granted before the freeze, the level is one environment
+value and a deploy. The session ordering was fixed in the mini-app the same day.
 
 ## S3
 
@@ -253,11 +277,50 @@ and should be re-shot once the pool is real.
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: pending
+outcome: green. `pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
+Sepolia with no human in the loop, exits 0, and prints `RELEASED` last.
 
-evidence: pending
+Day-3 green loop 16:49 UTC: post/claim/submit/release https://sepolia.basescan.org/tx/0xdab710d01c9259d6919edaa4bd8f57b1b3b3c82355a87af1d3744d16c31fbb60 https://sepolia.basescan.org/tx/0x78c85e57e5ac81c58af27bdb5ef3b278df4d03d4d8adc9b8877df86924f2b544 https://sepolia.basescan.org/tx/0x58064beeb92541339090820a707dfccc2870afa50e10d7a6a34944bb0302aa0d https://sepolia.basescan.org/tx/0x395aeb59530605dae38005edd16a5aab62c39ed41514e61aaa33f211994e1238
 
-decision: pending
+evidence: task 12, buyer `0xc1286562DCD771eD76ED59e3D2A51DCe92d349d7` paying 3.45 USDC through
+x402, worker the seeded CLI account `0x7b4EB10df800881f73BC1d85BDeF02f82386271e`. The release
+receipt is read with viem and asserted as integers off the two USDC `Transfer` logs, never off
+the API's own `amount_usdc`:
+
+```
+release 0x395aeb59… status success, block 46515746, 2026-09-07T16:49:40Z
+  Transfer 0x7b4EB10df800881f73BC1d85BDeF02f82386271e 3000000
+  Transfer 0xABFDB572E3d6093113Cdb9c1C1599E8699226D52 450000
+  getTask(12).state = 4 (Released)
+```
+
+Five defects had to be fixed to get here. Three were reported by T-29 and fixed by the lead in
+PR #132 — `nonces.next_nonce` was `NOT NULL` while `PgNonceLock` inserts `NULL`, so every
+relayed chain write 503'd on a database that had never sent one; `POST /session` had no path for
+a seeded worker with no `nullifiers` row; and `scripts` was not a workspace package. A fourth was
+operator config: the `proofs` bucket allowed only the three image types, so storing the retained
+original as `application/octet-stream` — which T-18 specifies, and which the mini-app upload
+needs just as much — answered 500. Nothing in the repository creates that bucket, so a fresh
+Supabase project will hit it again and the hosting notes should say so.
+
+The fifth is T-29's own and is worth writing down, because it will surface anywhere a script
+drives this API. **A Base Sepolia read can trail the receipt that caused it**, and each
+serverless invocation is a different connection to a different node, so the route that decides
+from `getTask` sees a state the chain has already left. It showed three faces in one afternoon:
+`POST /submit` answering `409 not_claimed_by_caller` seconds after our own claim landed; a row
+carrying `tx.claim` while `status` stayed `open`; and a row carrying `tx.submit` while `status`
+stayed `claimed`. The scripts now retry that one 409, resume a claim they already hold rather
+than stranding an errand for a 30-minute TTL, and sweep as the buyer polls — `/admin/sweep`
+reconciles every non-final row, which is the re-read those rows are waiting for. It adds urgency
+and never authority.
+
+That last point is a note for T-17 as much as for this task: the mirror after a successful write
+records the transaction hash from a read that may still show the previous state, so the row can
+disagree with the chain until something sweeps. Three live tasks (9, 10, 11) were recovered
+through the resumable-claim path rather than left to expire, and all three released correctly.
+
+decision: the Day-3 money loop is proven three days before it meets the phone. `demo:run` is
+what `e2e.yml` (T-36) and the pre-record checklist (T-44) drive.
 
 ## Deploy
 

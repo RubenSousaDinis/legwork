@@ -5,6 +5,7 @@
  * `middleware.ts`: that file runs on the edge runtime, where neither the Postgres driver nor
  * pino can be opened. There is deliberately no `middleware.ts` in this app.
  */
+import { dbReady } from '../db/client';
 import { randomUUID } from 'node:crypto';
 import { ApiError, toApiError } from '../errors';
 import { childLogger } from '../log';
@@ -77,6 +78,7 @@ export function route(handler: Handler): (req: Request, ctx: RouteContext) => Pr
       log.info({ method: req.method, path, status, duration_ms: Date.now() - startedAt }, 'request');
 
     try {
+      await dbReady();
       const res = await handler(req, ctx);
       done(res.status);
       return withHeaders(res, cors);

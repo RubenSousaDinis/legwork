@@ -33,3 +33,4 @@ export {
 } from './x402/paths';
 export { DirectFundingGateway } from './direct/gateway';
 export { selectGateway, type PaymentMode, type SelectGatewayDeps } from './select';
+export type { X402Network } from './gateway';

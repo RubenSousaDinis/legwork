@@ -150,7 +150,7 @@ describe('live dashboard', () => {
       </LiveDashboard>,
     );
     const chips = () => [...container.querySelectorAll('.chip')].map((c) => c.textContent);
-    expect(chips()).toContain('sandbox World ID');
+    expect(chips()).toContain('World ID · Orb');
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3000);
@@ -158,8 +158,8 @@ describe('live dashboard', () => {
     await settle(() => true);
 
     // The browser cannot read a server-only env, so the poll carries the level it was
-    // given. Without that the chip would silently downgrade to `sandbox Selfie Check`.
-    expect(chips()).toContain('sandbox World ID');
-    expect(chips()).not.toContain('sandbox Selfie Check');
+    // given. Without that the chip would silently downgrade to `World ID · Selfie Check`.
+    expect(chips()).toContain('World ID · Orb');
+    expect(chips()).not.toContain('World ID · Selfie Check');
   });
 });

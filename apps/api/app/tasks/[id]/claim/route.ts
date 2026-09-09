@@ -17,6 +17,7 @@ import {
   mirrorFromChain,
   revertName,
   secondsToDate,
+  tooFarToClaim,
   type ClaimBlock,
 } from '@/src/services/lifecycle';
 
@@ -31,6 +32,21 @@ export const maxDuration = 60;
  */
 function conflict(body: ClaimBlock): Response {
   return Response.json(body, { status: 409 });
+}
+
+async function optionalFix(req: Request): Promise<{ lat: number; lon: number } | undefined> {
+  const raw = await req.text();
+  if (raw.length === 0) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw ApiError.of('invalid_request', { field: '(root)', reason: 'expected a JSON body' });
+  }
+  if (parsed === null || typeof parsed !== 'object') return undefined;
+  const body = parsed as { lat?: unknown; lon?: unknown };
+  if (typeof body.lat !== 'number' || typeof body.lon !== 'number') return undefined;
+  return { lat: body.lat, lon: body.lon };
 }
 
 const TaskId = /^\d+$/;
@@ -70,6 +86,9 @@ export const POST = route(async (req, ctx) => {
   });
   if (blocked) return conflict(blocked);
 
+  const far = tooFarToClaim(await optionalFix(req), row);
+  if (far) return Response.json(far, { status: 422 });
+
   let tx: { hash: string };
   try {
     tx = await chain.claimFor(taskId, caller);
@@ -97,7 +116,7 @@ export const POST = route(async (req, ctx) => {
 
   // Never guessed from the request: the row is whatever `getTask` says it is now.
   const settled = await chain.getTask(taskId);
-  await mirrorFromChain(row, settled, { claim: tx.hash });
+  await mirrorFromChain(row, settled, { claim: tx.hash }, { workerSeeded: isSeeded });
 
   return Response.json({ tx: tx.hash, ...claimDeadlines(settled) });
 });

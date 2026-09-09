@@ -16,12 +16,14 @@ One test per row, named after the attack, is the artifact a judge opens. **FIX**
 | **FIX** Worker-authored text injected into the buyer's agent | Answer = enum + ≤120-char escaped note, wrapped as untrusted data in the tool result | MCP contract test | `packages/mcp/test/contract.test.ts` |
 | **FIX** Proof photos deanonymise the worker | Private store, EXIF stripped, signed URLs, rounded coordinate in every public record, `geohash5` in the subgraph | `/proofs` unit test | `apps/api/app/proofs/proofs.test.ts` |
 | **FIX** Operator key compromise | Four keys with one job each; `pause` on `post`/`claim` only; single-signer disclosed | `test_Pause_NeverBlocksRelease` | `contracts/test/TaskEscrow.release.t.sol` |
+| **FIX** A compromised API redirects a worker's gasless withdrawal | The phone signs EIP-3009 authorizations with the payout key. The payloads are built on the phone from the worker's own input; the API only relays them and pays gas. A compromised API can refuse a withdrawal or delay it, and cannot redirect one. | `signWithdrawalBuildsBothLegsLocally`, `withdrawRejectsASignatureFromAnotherAddress` | `apps/miniapp/tests/withdraw/signWithdrawal.test.ts` · `apps/api/src/services/withdraw.test.ts` |
 | **DOC** Photo is a photo of a photo / edited | We anchor, we do not authenticate; loss bounded at one task; reputation keyed to the nullifier; second-worker re-verification is the roadmap; forensics out of scope | README | — |
 | **DOC** GPS spoofing | "GPS is self-reported and spoofable; we anchor it, geofence it, and dispute outside the radius — we do not prove it." | README | — |
 | **DOC** Self-dealing (operator's own worker farms reputation) | Per-nullifier dedup caps it at one voice; the filmed run has the operator on both sides and says so | README, narration | — |
 | **DOC** Dispute / auto-release boundary race | One constant; documented, not built | README | — |
 | **DOC** Worker-directed harm (a lure, a stakeout, 23:00) | Daylight-hours default, max distance and a kill switch **before the first external poster** (pre-W3, not hackathon); `Report task` if built | README | — |
 | **DOC** Worker's approximate location exposed to the poster | Rounded coordinate only; stated | README | — |
+| **DOC** Task's approximate location exposed to every reader | Rounded coordinate only (3 decimals, about 100 m), published so a worker can decide whether to walk there; the exact coordinate stays on the private row | `publicFeedPublishesOnlyTheRoundedCoordinate` | — |
 | **DOC** Settle → post custody block | The operator float holds the task's funds between `post` and `settle`; stated | README, narration | — |
 
 Not a row: reentrancy. USDC has no transfer hooks; a plain-ERC20 escrow has no callback surface.

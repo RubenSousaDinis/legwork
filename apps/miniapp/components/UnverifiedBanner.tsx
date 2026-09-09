@@ -1,4 +1,7 @@
+'use client';
+
 import type { TaskType } from '@legwork/shared';
+import { openAuthModal } from './AuthModal';
 import { Chip } from './ui/Chip';
 import { MonoTag } from './ui/MonoTag';
 
@@ -18,7 +21,7 @@ import { MonoTag } from './ui/MonoTag';
 
 export const VERIFY_HEADING = 'Verify to claim';
 export const REAL_PRICES_LINE = 'real tasks, real prices — verification takes about a minute';
-export const VERIFY_CTA = 'Verify with World ID';
+export const VERIFY_CTA = 'Login with World ID';
 export const NO_OPEN_TASKS = 'no open tasks right now';
 
 /** One open row of `GET /public/feed`, narrowed to what a locked list can honestly show. */
@@ -33,62 +36,41 @@ export type UnverifiedTask = {
 
 export type UnverifiedBannerProps = {
   tasks: UnverifiedTask[];
-  /** Where `Verify with World ID` goes; `/` is the auth screen. */
+  /** Kept so existing callers still typecheck; the CTA opens the login modal. */
   verifyHref?: string;
 };
 
-export function UnverifiedBanner({ tasks, verifyHref = '/' }: UnverifiedBannerProps) {
+export function UnverifiedBanner({ tasks }: UnverifiedBannerProps) {
   return (
     <div data-screen="unverified">
-      <div
-        className="lw-card"
-        data-banner="verify"
-        style={{ borderColor: 'var(--verified-border-light)', marginBottom: 'var(--s-4)' }}
-      >
-        <p
-          data-floor="20"
-          style={{
-            color: 'var(--verified-700)',
-            fontSize: '20px',
-            fontWeight: 600,
-            margin: '0 0 var(--s-2)',
-          }}
-        >
+      <div className="lw-card lw-card--verified" data-banner="verify">
+        <p className="lw-banner-heading" data-floor="20">
           {VERIFY_HEADING}
         </p>
-        <p style={{ fontSize: '16px', margin: '0 0 var(--s-4)' }}>{REAL_PRICES_LINE}</p>
+        <p className="lw-body">{REAL_PRICES_LINE}</p>
 
-        {/* The button classes on the anchor itself — a `Button` inside a link would be two
-            nested interactive elements over one 44 px target (T-33 does the same on its
-            `Back to tasks` link). */}
-        <a
+        {/* A bare button with the `lw-button` classes — wrapping a `Button` would be two
+            nested interactive elements over one 44 px target. */}
+        <button
           className="lw-button lw-button--verified lw-button--full"
           data-cta="verify"
           data-hit="44"
-          href={verifyHref}
-          style={{ textDecoration: 'none' }}
+          onClick={openAuthModal}
+          type="button"
         >
           {VERIFY_CTA}
-        </a>
+        </button>
       </div>
 
       {tasks.length === 0 ? (
-        <p data-empty="tasks" style={{ fontSize: '16px', margin: 0 }}>
+        <p className="lw-body" data-empty="tasks">
           {NO_OPEN_TASKS}
         </p>
       ) : (
-        <ul style={{ display: 'grid', gap: 'var(--s-3)', listStyle: 'none', margin: 0, padding: 0 }}>
+        <ul className="lw-list">
           {tasks.map((task) => (
             <li className="lw-card" data-task={task.task_id} key={task.task_id}>
-              <p
-                style={{
-                  alignItems: 'center',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 'var(--s-2)',
-                  margin: '0 0 var(--s-2)',
-                }}
-              >
+              <p className="lw-chips lw-chips--stacked">
                 <MonoTag>{task.task_type}</MonoTag>
                 {task.seeded === true ? (
                   <Chip tone="seeded" floor={20}>
@@ -97,18 +79,10 @@ export function UnverifiedBanner({ tasks, verifyHref = '/' }: UnverifiedBannerPr
                 ) : null}
               </p>
 
-              <p style={{ fontSize: '16px', margin: '0 0 var(--s-3)' }}>{task.title}</p>
+              <p className="lw-task-line">{task.title}</p>
 
-              <p
-                data-price={task.task_id}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '24px',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  margin: '0 0 var(--s-3)',
-                }}
-              >
+              {/* One text node: the figure and its unit are read together on this screen. */}
+              <p className="lw-price__figure lw-price__figure--locked" data-price={task.task_id}>
                 {`${task.price_usdc.toFixed(2)} USDC`}
               </p>
 
@@ -118,7 +92,7 @@ export function UnverifiedBanner({ tasks, verifyHref = '/' }: UnverifiedBannerPr
                   T-33's `Segmented` and `Back to tasks` make. */}
               <button
                 aria-disabled="true"
-                className="lw-button lw-button--ghost"
+                className="lw-button lw-button--ghost lw-button--full"
                 data-hit="44"
                 disabled
                 type="button"

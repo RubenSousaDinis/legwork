@@ -1,5 +1,6 @@
 'use client';
 
+import { credentialLabel } from '@legwork/shared';
 import type { RpContext } from '@worldcoin/idkit-core';
 import { Chip } from '../../components/ui/Chip';
 import type { CredentialLevel } from '../../lib/env';
@@ -29,11 +30,15 @@ export function VerifyStep({
 }: VerifyStepProps) {
   return (
     <section className="lw-card" data-step="verifying">
-      <p className="lw-section-label">World ID</p>
-      <p data-floor="20">Verifying — finish the check in World App.</p>
-      <Chip tone="neutral" floor={20}>
-        {level === 'selfie' ? 'sandbox Selfie Check' : 'sandbox World ID'}
-      </Chip>
+      <p className="lw-list-label">World ID</p>
+      <p className="lw-body" data-floor="20">
+        Verifying — finish the check in World App.
+      </p>
+      <p className="lw-chips">
+        <Chip tone="neutral" floor={20}>
+          {credentialLabel(level)}
+        </Chip>
+      </p>
       {rpContext === null ? null : (
         <IdkitVerify
           level={level}

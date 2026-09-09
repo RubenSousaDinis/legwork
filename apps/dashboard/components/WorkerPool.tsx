@@ -1,3 +1,4 @@
+import { credentialLabel } from '@legwork/shared';
 import { poolString } from '../lib/format';
 import { Chip } from './Chip';
 import type { PoolData } from '../lib/data/types';
@@ -6,14 +7,14 @@ export interface WorkerPoolProps {
   pool: PoolData;
 }
 
-/** `orb` is an onchain World ID proof; `selfie` is the cloud Selfie Check. */
-export function credentialLabel(level: 'selfie' | 'orb'): string {
-  return level === 'orb' ? 'sandbox World ID' : 'sandbox Selfie Check';
-}
-
 /**
  * The one highlighted real worker. `minutesReal` is rendered only when a real
  * completion time exists — an absent one is left off, never filled with a guess.
+ *
+ * The row is a wrapping flex list, so each `·` opens the part that follows it and no
+ * part closes with one. It used to carry a separator on both sides of the credential
+ * chip, which put a `·` at the end of one line and another at the start of the next
+ * every time the row wrapped — which, at the present canvas's 24-px floor, is always.
  */
 export function HighlightedWorker({ pool }: { pool: PoolData }) {
   const w = pool.highlighted;
@@ -21,10 +22,10 @@ export function HighlightedWorker({ pool }: { pool: PoolData }) {
   return (
     <p className="pool-highlight" data-testid="highlighted-worker" data-floor="24">
       <span className="mono">{w.id}</span>
-      {' · verified human ✓ · '}
+      <span>· verified human ✓</span>
       <Chip tone="verified">{credentialLabel(w.level)}</Chip>
       {typeof w.minutesReal === 'number' ? (
-        <span className="mono"> · {w.minutesReal} min (real)</span>
+        <span className="mono">· {w.minutesReal} min (real)</span>
       ) : null}
     </p>
   );

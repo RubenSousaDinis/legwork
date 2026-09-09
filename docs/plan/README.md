@@ -66,13 +66,20 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 | T-47 | [PNG arm's-length check](T-47-png-check.md) | D | 8 | S / L | T-43 | planned |
 | T-48 | [Submission content + prize table](T-48-submission-content.md) | E | 9 | S / C | T-45 | planned |
 | T-49 | [Final README + POSTERS](T-49-final-readme.md) | lead | 10 | S / L | all | planned |
-| T-13b ⇢ | [Self-deploy ERC-8004 registries (S5 FAIL)](T-13b-self-deploy-erc8004.md) | A | 2 | S / L | T-04 | substitute |
-| T-16b ⇢ | [Direct funding gateway (S3 FAIL)](T-16b-direct-funding.md) | B | 6 | M / C | T-15 | substitute |
+| T-50 | [Mini-app design polish](T-50-miniapp-design-polish.md) | D | 5 | M / C | T-42 | planned |
+| T-51 | [Dashboard front door — landing, the two paths, the deck](T-51-dashboard-front-door.md) | D | 5 | L / C | T-26, T-43 | merged |
+| T-52 | [Worker sign-in + location legibility on the board](T-52-worker-location-legibility.md) | D | 5 | M / C | — | merged |
+| T-53 ★ | [The worker gets in — wallet address + list-first routing](T-53-worker-address-is-the-wallet.md) | D | 5 | M / C | T-52 | merged |
+| T-54 | [Selfie Check as the demo credential](T-54-selfie-check-as-the-demo-credential.md) | D | 5 | M / C | — | merged |
+| T-55 | [Navbar, login modal, real logout](T-55-navbar-login-modal-real-logout.md) | D | 6 | M / C | — | planned |
+| T-56 | [The board: all tasks, search, map, directions](T-56-board-search-map-directions.md) | D | 6 | L / C | T-55 | planned |
+| T-13b ⇢ | [Self-deploy ERC-8004 registries (S5 FAIL)](T-13b-self-deploy-erc8004.md) | A | 2 | S / L | T-04 | dropped — S5 PASS |
+| T-16b ⇢ | [Direct funding gateway (S3 FAIL)](T-16b-direct-funding.md) | B | 6 | M / C | T-15 | dropped — S3 PASS |
 
 ## Dispatch order (what to hand out when)
 
 - **Day 1, 16:45** (after T-00): T-02 (C), T-03 (L), T-04 (L). **After T-01b (~19:30)**: T-05, T-06, T-08 (C, evening); then overnight cloud burst: T-07, T-09, T-10, T-11, T-12, T-13.
 - **Day 2 am** (after reviewing the overnight PRs): T-15, T-20, T-21, T-22, T-24; lead runs T-14 at midday. **pm**: T-16, T-17 (1/2), T-18, T-19; lead runs T-23 in the evening.
 - **Day 3 am**: T-17 (2/2), T-27, T-30, T-25, T-31, T-32 (L); lead runs **T-29 at ~15:00**. **pm**: T-28, T-33, T-26.
-- **Day 4 eve**: T-34 (L), T-36 ○, T-37, round-2 fixes from the phone log. **Day 5 eve**: T-35 ○, T-38, T-39, T-40 ○, T-41. **Day 6 eve**: T-42 ○, T-43, hotfixes; T-16b if S3 pivoted. **Day 7 eve**: T-44, T-45. **Day 8 eve**: T-46 (L), T-47 (L). **Day 9** (freeze 12:00 UTC): T-48. **Day 10**: T-49.
+- **Day 4 eve**: T-34 (L), T-36 ○, T-37, round-2 fixes from the phone log. **Day 5 eve**: T-35 ○, T-38, T-39, T-40 ○, T-41. **Day 6 eve**: T-42 ○, T-43, hotfixes (T-16b was not needed — S3 passed). **Day 7 eve**: T-44, T-45. **Day 8 eve**: T-46 (L), T-47 (L). **Day 9** (freeze 12:00 UTC): T-48. **Day 10**: T-49.
 - Keep ≤ 8 PRs *ready for review* (drafts are claims, not review load); dispatch the next task in a lane only when its `depends_on` are merged (`claim.sh` re-checks this and refuses); check `scripts/claims.sh` for stale claims each evening; drop ○ tasks first when behind; never drop anything on the ★ path.

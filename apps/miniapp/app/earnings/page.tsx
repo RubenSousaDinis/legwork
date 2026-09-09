@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Waiting } from '../../components/ui/Waiting';
 import { Chip } from '../../components/ui/Chip';
 import { apiFetch } from '../../lib/api';
 import { requireVerified } from '../../lib/session';
 import { getPayoutAddress } from '../../lib/workerKey';
+import { WithdrawForm } from './WithdrawForm';
 
 /**
  * `/earnings` — what this account actually earned, and nothing else.
@@ -16,6 +18,12 @@ import { getPayoutAddress } from '../../lib/workerKey';
  *
  * The figure is testnet USDC on Base Sepolia and says so twice — the unit beside the numeral
  * and the chip beside that. Nobody should leave this screen thinking they can spend it.
+ *
+ * Below it, the one thing a worker can do with the figure: move it. `WithdrawForm` is the
+ * gasless withdrawal — the phone signs two EIP-3009 authorizations it builds itself, Legwork
+ * relays them and pays the gas, and keeps 2 % of what was moved for doing so. That 2 % is a
+ * separate charge from the 15 % a hiring agent pays on top of a task, and neither figure is
+ * ever described as the other.
  */
 
 const BASESCAN_ADDRESS = 'https://sepolia.basescan.org/address/';
@@ -61,69 +69,46 @@ export default function EarningsPage() {
   }, []);
 
   if (session.status !== 'verified') {
-    return <p className="lw-placeholder">Opening your earnings…</p>;
+    return <Waiting step="session">Opening your earnings…</Waiting>;
   }
 
   if (earnings === null) {
-    return <p className="lw-placeholder">Reading what you earned…</p>;
+    return <Waiting step="earnings">Reading what you earned…</Waiting>;
   }
 
   return (
     <div data-screen="earnings">
       <div className="lw-card">
-        <p className="lw-section-label" style={{ margin: '0 0 var(--s-2)' }}>
-          released to you
-        </p>
+        <p className="lw-list-label">released to you</p>
 
-        <p
-          data-earnings="released"
-          data-floor="20"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '56px',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            margin: 0,
-          }}
-        >
+        <p className="lw-stat lw-stat--xl" data-earnings="released" data-floor="20">
           {earnings.released_usdc.toFixed(2)}
         </p>
 
-        <p style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', margin: 'var(--s-2) 0 0' }}>
-          <span style={{ color: 'var(--ink-text-2)', fontFamily: 'var(--font-mono)' }}>
-            {TESTNET_USDC}
-          </span>
+        <p className="lw-meta lw-meta--top">
+          <span>{TESTNET_USDC}</span>
           <Chip tone="neutral" floor={20}>
             {NOT_SPENDABLE}
           </Chip>
         </p>
 
-        <p
-          data-earnings="tally"
-          style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', margin: 'var(--s-4) 0 0' }}
-        >
+        <p className="lw-meta lw-meta--top" data-earnings="tally">
           {tallyLine(earnings)}
         </p>
 
-        <p data-earnings="earned-only" style={{ color: 'var(--ink-text-2)', margin: 'var(--s-3) 0 0' }}>
+        <p className="lw-note lw-note--top" data-earnings="earned-only">
           {EARNED_ONLY}
         </p>
       </div>
 
-      <div className="lw-card" style={{ marginTop: 'var(--s-4)' }}>
-        <p className="lw-section-label" style={{ margin: '0 0 var(--s-2)' }}>
-          payout address
-        </p>
-        <p
-          data-payout="address"
-          style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', margin: 0, overflowWrap: 'anywhere' }}
-        >
+      <div className="lw-card lw-card--top">
+        <p className="lw-list-label">payout address</p>
+        <p className="lw-address" data-payout="address">
           {address ?? 'no payout key on this phone yet'}
         </p>
 
         {address === null ? null : (
-          <p style={{ margin: 'var(--s-3) 0 0' }}>
+          <p className="lw-chips">
             <Chip tone="neutral" floor={20}>
               <a data-hit="44" href={`${BASESCAN_ADDRESS}${address}`} rel="noreferrer" target="_blank">
                 Basescan ↗
@@ -133,12 +118,16 @@ export default function EarningsPage() {
         )}
 
         {/* The key screen is T-24's, on `/`. It is the only copy of the key that exists. */}
-        <p style={{ margin: 'var(--s-4) 0 0' }}>
-          <a data-hit="44" data-link="backup" href="/">
+        <p className="lw-chips lw-chips--stacked-top">
+          <a className="lw-quiet-link" data-hit="44" data-link="backup" href="/">
             {BACK_UP_KEY}
           </a>
         </p>
       </div>
+
+      {/* Moving it. The payout address has no ETH and never will, so the phone signs and
+          Legwork submits — see `WithdrawForm`, which builds every payload it signs. */}
+      {address === null ? null : <WithdrawForm />}
     </div>
   );
 }

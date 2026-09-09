@@ -1,6 +1,6 @@
 'use client';
 
-import { NOTE_MAX_CHARS, type TaskType } from '@legwork/shared';
+import { NOTE_MAX_CHARS, GEOFENCE_M, type TaskType } from '@legwork/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Countdown } from '../../components/Countdown';
 import { Button } from '../../components/ui/Button';
@@ -8,10 +8,12 @@ import { Chip } from '../../components/ui/Chip';
 import { MonoTag } from '../../components/ui/MonoTag';
 import { apiFetch } from '../../lib/api';
 import { getPosition, type GpsResult } from '../../lib/gps';
+import { formatDistance } from '../../components/TaskCard';
 import { clearActiveClaim, type ActiveClaim } from '../tasks/activeClaim';
 import {
   AnswerToggle,
   CharacterField,
+  clockTime,
   EMPTY_ANSWER,
   isAnswerComplete,
   type AnswerState,
@@ -20,6 +22,7 @@ import { LocationStep } from './Downgrade';
 import { reencodeImage } from './image';
 import { PaidState } from './PaidState';
 import { uploadProof, type ProofsResponse } from './upload';
+import { Waiting } from '../../components/ui/Waiting';
 
 /**
  * Capture → location → answer → SUBMIT → released. The beat the whole submission rests on.
@@ -47,7 +50,18 @@ export const PAID_FOR_THE_PROOF =
   "you are paid for the proof, not the answer — 'closed' pays the same as 'open'";
 export const NO_PEOPLE = "don't photograph people";
 
+/*
+ * Submitting is two round trips with a photo in the middle, on a phone connection, with the
+ * worker standing in the doorway they just photographed. It used to be silent: the button
+ * greyed out and nothing else on the screen changed until it was over or had failed. These
+ * are the two halves, and they are named separately because they fail separately —
+ * `UPLOAD_FAILED` and `SUBMIT_FAILED` are already two different sentences.
+ */
+export const SENDING_PHOTO = 'Sending the photo…';
+export const SUBMITTING_PROOF = 'Submitting the proof…';
+
 export const WAITING_LINE = 'Submitted · waiting for release';
+export const APPROVAL_CAPTION = "after approval · or auto-release when the task's window ends";
 export const REENCODE_FAILED =
   'That photo could not be prepared on this phone. Take it again.';
 export const UPLOAD_FAILED = 'The upload did not go through. Try again in a moment.';
@@ -80,7 +94,12 @@ type SubmitResponse = {
   status: 'submitted' | 'disputed';
   auto_dispute_reason?: string;
 };
-type WorkerTaskRow = { task_id: string; title: string };
+type WorkerTaskRow = {
+  task_id: string;
+  title: string;
+  distance_m?: number;
+  brief?: { place?: { name: string } };
+};
 
 type Photo = { blob: Blob; url: string };
 type Phase = 'capture' | 'submitting' | 'waiting' | 'settled';
@@ -104,6 +123,8 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   const [title, setTitle] = useState<string | null>(null);
 
   const [photo, setPhoto] = useState<Photo | null>(null);
+  /** The phone's clock when the shutter went, for the readout — never sent anywhere. */
+  const [photoAt, setPhotoAt] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'done'>('idle');
   const [gps, setGps] = useState<GpsResult | null>(null);
   const [confirmedAtPlace, setConfirmedAtPlace] = useState(false);
@@ -111,10 +132,13 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   const [note, setNote] = useState('');
 
   const [phase, setPhase] = useState<Phase>('capture');
+  /** Which half of `submitting` is running: the photo upload, or the submit itself. */
+  const [step, setStep] = useState<'upload' | 'submit' | null>(null);
   const [submission, setSubmission] = useState<SubmitResponse | null>(null);
   /** The server's timestamp for the photo — the phone's own clock never reaches the receipt. */
   const [capturedAt, setCapturedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fenceWarning, setFenceWarning] = useState<string | null>(null);
 
   // The object URL outlives every render until the photo is replaced, and is revoked when it
   // is: a retake on a long shift would otherwise keep every discarded photo in memory.
@@ -143,17 +167,36 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   }, [taskId]);
 
   // The title is the worker's own claimed row in `GET /tasks/list`; `GET /tasks/:id` is a
-  // public shape and carries no title.
+  // public shape and carries no title. The same read carries `distance_m` when a fix is
+  // sent, which is what the fence warning before the camera needs.
   useEffect(() => {
     let live = true;
-    void apiFetch<{ tasks: WorkerTaskRow[] }>('/tasks/list')
-      .then((data) => {
+    void (async () => {
+      const fix = await getPosition();
+      const path =
+        fix.ok
+          ? `/tasks/list?lat=${encodeURIComponent(String(fix.lat))}&lon=${encodeURIComponent(String(fix.lon))}`
+          : '/tasks/list';
+      try {
+        const data = await apiFetch<{ tasks: WorkerTaskRow[] }>(path);
         const row = data.tasks.find((candidate) => candidate.task_id === taskId);
-        if (live && row !== undefined) setTitle(row.title);
-      })
-      .catch(() => {
+        if (!live || row === undefined) return;
+        setTitle(row.title);
+        if (
+          fix.ok &&
+          row.distance_m !== undefined &&
+          Number.isFinite(row.distance_m) &&
+          row.distance_m >= GEOFENCE_M
+        ) {
+          const place = row.brief?.place?.name ?? row.title;
+          setFenceWarning(
+            `You are ${formatDistance(row.distance_m)} from ${place}. A proof taken here will be refused — the photo must be within 150 m.`,
+          );
+        }
+      } catch {
         // Same: the header shows the id on its own rather than blocking the capture.
-      });
+      }
+    })();
     return () => {
       live = false;
     };
@@ -181,6 +224,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
       const url = URL.createObjectURL(blob);
       photoUrl.current = url;
       setPhoto({ blob, url });
+      setPhotoAt(clockTime(new Date().toISOString()));
       // Step 2 starts on its own — the worker is standing at the door, not reading a menu.
       locate();
     },
@@ -191,6 +235,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     if (photoUrl.current !== null) URL.revokeObjectURL(photoUrl.current);
     photoUrl.current = null;
     setPhoto(null);
+    setPhotoAt(null);
     setGps(null);
     setGpsStatus('idle');
     setConfirmedAtPlace(false);
@@ -210,6 +255,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     if (!canSubmit || photo === null || taskType === null || answer.answer === null) return;
     setError(null);
     setPhase('submitting');
+    setStep('upload');
 
     const form = new FormData();
     form.append('file', photo.blob, 'proof.jpg');
@@ -230,10 +276,12 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     } catch {
       setError(UPLOAD_FAILED);
       setPhase('capture');
+      setStep(null);
       return;
     }
 
     setCapturedAt(uploaded.captured_at);
+    setStep('submit');
 
     const trimmedNote = note.trim();
     const body: Record<string, unknown> = {
@@ -258,6 +306,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     } catch {
       setError(SUBMIT_FAILED);
       setPhase('capture');
+      setStep(null);
       return;
     }
 
@@ -265,6 +314,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     // the worker can go and do again.
     clearActiveClaim();
     setSubmission(result);
+    setStep(null);
     setPhase(result.status === 'submitted' ? 'waiting' : 'settled');
   }, [answer, canSubmit, gps, note, photo, taskId, taskType]);
 
@@ -301,17 +351,19 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
 
   return (
     <div data-screen="proof">
-      <header style={{ marginBottom: 'var(--s-5)' }}>
-        <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', margin: '0 0 var(--s-2)' }}>
+      <header className="lw-proof-header">
+        <p className="lw-proof-head">
           <MonoTag>{taskType ?? 'task'}</MonoTag>
+          <span className="lw-proof-head__sep"> · </span>
+          <span className="lw-proof-head__title" data-proof="title">
+            {title ?? `Task ${taskId}`}
+          </span>
+          <span className="lw-proof-head__aside">proof</span>
         </p>
-        <h1 className="lw-h1" data-proof="title" style={{ marginBottom: 'var(--s-3)' }}>
-          {title ?? `Task ${taskId}`}
-        </h1>
         <Countdown label={SUBMIT_WITHIN} until={claim.submit_deadline} />
         {/* T-42's way out of a task that should not have been posted: release, then report. */}
-        <p style={{ margin: 'var(--s-3) 0 0' }}>
-          <a data-hit="44" data-link="report" href={`/report/${taskId}`} style={{ color: 'var(--ink-text-2)' }}>
+        <p className="lw-chips lw-chips--stacked">
+          <a className="lw-quiet-link" data-hit="44" data-link="report" href={`/report/${taskId}`}>
             {REPORT_TASK_LABEL}
           </a>
         </p>
@@ -330,19 +382,40 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
         <SettledWithoutRelease submission={submission} task={task} />
       ) : null}
 
-      {phase === 'waiting' ? <Waiting submission={submission} /> : null}
+      {phase === 'waiting' ? <WaitingForRelease submission={submission} /> : null}
 
       {phase === 'capture' || phase === 'submitting' ? (
         <div className="lw-card">
+          {fenceWarning === null ? null : (
+            <p className="lw-error-line" data-fence="outside" data-floor="20">
+              {fenceWarning}
+            </p>
+          )}
           <Capture onCapture={onCapture} onRetake={onRetake} photo={photo} />
 
-          <LocationStep
-            confirmed={confirmedAtPlace}
-            onConfirm={() => setConfirmedAtPlace(true)}
-            onRetry={locate}
-            result={gps}
-            status={gpsStatus}
-          />
+          {/* What will travel with the photo, as the two-column mono list of the design. */}
+          <dl className="lw-kv" data-readouts="proof">
+            <dt>GPS</dt>
+            <dd>
+              {gpsStatus === 'idle' ? (
+                '—'
+              ) : (
+                <LocationStep
+                  confirmed={confirmedAtPlace}
+                  onConfirm={() => setConfirmedAtPlace(true)}
+                  onRetry={locate}
+                  result={gps}
+                  status={gpsStatus}
+                />
+              )}
+            </dd>
+            <dt>timestamp</dt>
+            {/* The phone's own clock, for the worker. The instant that reaches the receipt is
+                the server's `captured_at` and is written by `POST /proofs`, not by this. */}
+            <dd data-proof-clock="local">{photoAt ?? '—'}</dd>
+          </dl>
+
+          <hr className="lw-rule" />
 
           {photo !== null && taskType !== null ? (
             <>
@@ -357,14 +430,29 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
             </>
           ) : null}
 
+          <p className="lw-note" data-copy="paid-for-the-proof">
+            {PAID_FOR_THE_PROOF}
+          </p>
+          <p className="lw-note" data-copy="no-people">
+            {NO_PEOPLE}
+          </p>
+
           <div data-floor="20">
             <Button disabled={!canSubmit} full onClick={() => void onSubmit()} size="lg" variant="primary">
               {SUBMIT_LABEL}
             </Button>
+
+            {/* The button keeps its name and stops taking taps; this says which of the two
+                round trips is running. */}
+            {phase === 'submitting' ? (
+              <Waiting step={step ?? 'upload'}>
+                {step === 'submit' ? SUBMITTING_PROOF : SENDING_PHOTO}
+              </Waiting>
+            ) : null}
           </div>
 
           {error === null ? null : (
-            <p data-error="proof" style={{ color: 'var(--ink-text)', margin: 'var(--s-3) 0 0' }}>
+            <p className="lw-error-line" data-error="proof">
               {error}
             </p>
           )}
@@ -388,54 +476,44 @@ function Capture({
   onRetake: () => void;
 }) {
   return (
-    <div style={{ marginBottom: 'var(--s-4)' }}>
+    <div className="lw-answer-group">
       {photo === null ? (
-        <label className="lw-file-label" data-floor="20" data-hit="44">
-          {CAPTURE_LABEL}
-          <input
-            accept="image/*"
-            capture="environment"
-            className="lw-file-input"
-            data-capture="photo"
-            data-hit="44"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file !== undefined) void onCapture(file);
-            }}
-            type="file"
-          />
-        </label>
+        <div className="lw-photo-slot">
+          <label className="lw-file-label" data-floor="20" data-hit="44">
+            {CAPTURE_LABEL}
+            <input
+              accept="image/*"
+              capture="environment"
+              className="lw-file-input"
+              data-capture="photo"
+              data-hit="44"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file !== undefined) void onCapture(file);
+              }}
+              type="file"
+            />
+          </label>
+        </div>
       ) : (
         <div>
-          {/* A plain `img`: an object URL for a blob this phone holds in memory. */}
+          {/* A plain `img`: an object URL for a blob this phone holds in memory, which
+              `next/image` cannot fetch, size or optimise. Its box is the one inline style
+              this screen keeps. */}
           <img
             alt="the photo you just took"
+            className="lw-thumb"
             data-thumbnail="proof"
             src={photo.url}
-            style={{
-              aspectRatio: '4 / 3',
-              borderRadius: 'var(--r-button)',
-              display: 'block',
-              maxHeight: '320px',
-              objectFit: 'cover',
-              width: '100%',
-            }}
+            style={{ aspectRatio: '4 / 3', maxHeight: '320px' }}
           />
-          <div style={{ marginTop: 'var(--s-3)' }}>
+          <div className="lw-chips lw-chips--stacked-top">
             <Button variant="ghost" onClick={onRetake}>
               {RETAKE_LABEL}
             </Button>
           </div>
         </div>
       )}
-
-      {/* Directly under the button, before submit, and never behind a step. */}
-      <p data-copy="paid-for-the-proof" style={{ fontSize: '16px', margin: 'var(--s-3) 0 0' }}>
-        {PAID_FOR_THE_PROOF}
-      </p>
-      <p data-copy="no-people" style={{ fontSize: '16px', margin: 'var(--s-2) 0 0' }}>
-        {NO_PEOPLE}
-      </p>
     </div>
   );
 }
@@ -450,12 +528,15 @@ function TxChip({ tx }: { tx: string }) {
   );
 }
 
-function Waiting({ submission }: { submission: SubmitResponse | null }) {
+function WaitingForRelease({ submission }: { submission: SubmitResponse | null }) {
   return (
     <div className="lw-card" data-state="waiting">
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-floor="20">
         {WAITING_LINE}
       </p>
+      <hr className="lw-rule" />
+      <p className="lw-waiting-caption">{APPROVAL_CAPTION}</p>
+      <hr className="lw-rule" />
       {submission === null ? null : <TxChip tx={submission.tx} />}
     </div>
   );
@@ -482,7 +563,7 @@ function SettledWithoutRelease({
 
   return (
     <div className="lw-card" data-state="settled">
-      <p data-floor="20" style={{ margin: '0 0 var(--s-3)' }}>
+      <p className="lw-body" data-floor="20">
         {line}
       </p>
       {submission === null ? null : <TxChip tx={submission.tx} />}

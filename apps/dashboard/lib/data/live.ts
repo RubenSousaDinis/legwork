@@ -7,6 +7,7 @@ import {
   type TaskType,
 } from '@legwork/shared';
 import { createSubgraphClient, type SubgraphClient } from '@legwork/subgraph-client';
+import { resolvedCredentialLevel } from '../../app/copy';
 import type {
   AgentData,
   DashboardData,
@@ -121,21 +122,16 @@ export interface WireFeed {
 }
 
 /**
- * One entry of `/public/refusals.recent`. Optional fields are read, never required.
- * `agent_id` is not in the frozen contract and is not expected to arrive; it is read
- * only so a `ScreeningLine` can carry one if it ever does. The agent card never reads
- * it — `marks` comes from the subgraph `Mark` entity.
+ * One entry of `/public/refusals.recent`. The frozen contract sends exactly these
+ * five keys — `at`, `task_type`, `class`, `rule_id`, `marked` — and no `reason`,
+ * so a refusal log cannot quote back the spec the gate refused to run.
  */
 export interface WireRefusalRecent {
   at: string;
   task_type?: TaskType;
   class?: AbuseClass;
-  reason?: string;
   rule_id?: string;
-  spec_hash?: string;
   marked?: boolean;
-  mark_tx?: string;
-  agent_id?: string | number;
 }
 
 export interface WireRefusals {
@@ -364,9 +360,12 @@ function refusalToFeedRow(entry: WireRefusalRecent, index: number): TaskRowData 
     priceUsdc: 0,
     agentPaysUsdc: 0,
     state: 'refused',
-    meta: `posted ${hhmm(entry.at)} · no money moved`,
+    meta: `posted ${hhmm(entry.at)}`,
     seeded: false,
-    refusal: { class: entry.class ?? null, reason: entry.reason ?? entry.class ?? 'refused' },
+    refusal: {
+      class: entry.class ?? null,
+      ...(entry.rule_id ? { ruleId: entry.rule_id } : {}),
+    },
   };
 }
 
@@ -437,8 +436,12 @@ export interface LiveDashboardOptions {
    * The credential level the server already resolved. `WORLD_CREDENTIAL_LEVEL` is a
    * server var, and this mapper also runs in the browser through `useLiveDashboard`,
    * where a non-`NEXT_PUBLIC_` var reads `undefined` — so the poll carries the
-   * server-rendered value forward instead of silently downgrading `orb` to `selfie`
-   * on the first tick.
+   * server-rendered value forward instead of re-deriving it on the first tick.
+   *
+   * With no level given the fall-back is `resolvedCredentialLevel()`, the same one every
+   * other surface in this app uses. It used to be an inline ternary that read the other
+   * way, which is why the Supply card chipped `World ID · Selfie Check` on a deployment
+   * whose landing page, `/about` and worker phone all said `World ID · Orb`.
    */
   level?: 'selfie' | 'orb';
 }
@@ -500,13 +503,10 @@ export async function getLiveDashboardData(
         outcome: 'refused',
         taskType: entry.task_type ?? 'free-text',
         class: entry.class ?? null,
-        reason: entry.reason ?? entry.class ?? 'refused',
-        specHash: entry.spec_hash ?? '',
+        specHash: '',
         marked: entry.marked === true,
       };
       if (entry.rule_id) line.ruleId = entry.rule_id;
-      if (entry.mark_tx) line.markTx = entry.mark_tx;
-      if (entry.agent_id !== undefined) line.agentId = String(entry.agent_id);
       return line;
     }),
     ...wireRows.map(
@@ -587,7 +587,7 @@ export async function getLiveDashboardData(
       .sort((a, b) => Number(b.releasedAt ?? 0) - Number(a.releasedAt ?? 0))[0];
     poolData.highlighted = {
       id: poolWorkerId(highlightedWorker.id),
-      level: opts.level ?? (process.env.WORLD_CREDENTIAL_LEVEL === 'orb' ? 'orb' : 'selfie'),
+      level: opts.level ?? resolvedCredentialLevel(),
     };
     if (newestReleased?.releasedAt) {
       poolData.highlighted.minutesReal = Math.round(

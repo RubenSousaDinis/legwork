@@ -60,6 +60,22 @@ function publish(next: Snapshot): void {
 }
 
 function getSnapshot(): Snapshot {
+  if (snapshot === SERVER_SNAPSHOT) {
+    const mirror = readMirror();
+    if (mirror !== null) {
+      snapshot = {
+        state: {
+          status: 'verified',
+          nullifier: mirror.nullifier,
+          level: mirror.level,
+          mode: mirror.mode,
+          worker: mirror.worker,
+          registered: mirror.registered,
+        },
+        ready: false,
+      };
+    }
+  }
   return snapshot;
 }
 
@@ -120,22 +136,56 @@ function clearMirror(): void {
 
 // ------------------------------------------------------------------ the API
 
-/** `GET /session/nonce` → `MiniKit.walletAuth` → `POST /session`. Inside World App only. */
-export async function createWalletAuthSession(): Promise<SessionResponse> {
-  const { nonce } = await apiFetch<{ nonce: string }>('/session/nonce');
+type WalletAuthPayload = { address: string; message: string; signature: string };
+type PendingWalletAuth = { address: string; payload: WalletAuthPayload; nonce: string };
 
+let pendingWalletAuth: PendingWalletAuth | null = null;
+
+function miniKitInstalled(): boolean {
+  try {
+    return MiniKit.isInstalled();
+  } catch {
+    return false;
+  }
+}
+
+async function requestWalletAuth(): Promise<PendingWalletAuth> {
+  if (pendingWalletAuth !== null) return pendingWalletAuth;
+  const { nonce } = await apiFetch<{ nonce: string }>('/session/nonce');
   const result = await MiniKit.walletAuth({
     nonce,
     statement: SIGN_IN_STATEMENT,
     expirationTime: new Date(Date.now() + WALLET_AUTH_TTL_MS),
   });
+  const payload = result.data as WalletAuthPayload;
+  pendingWalletAuth = { address: payload.address, payload, nonce };
+  return pendingWalletAuth;
+}
+
+/**
+ * The World App wallet address, before a session exists. MiniKit populates
+ * `user.walletAddress` on install — that is the same address `walletAuth` later signs as —
+ * so this does not add a signature. If install has not filled it yet, one `walletAuth` is
+ * held for `createWalletAuthSession`: one signature per sign-in.
+ */
+export async function walletAddress(): Promise<string | null> {
+  if (!miniKitInstalled()) return null;
+  const fromUser = MiniKit.user?.walletAddress;
+  if (typeof fromUser === 'string' && fromUser !== '') return fromUser;
+  return (await requestWalletAuth()).address;
+}
+
+/** `GET /session/nonce` → `MiniKit.walletAuth` → `POST /session`. Inside World App only. */
+export async function createWalletAuthSession(): Promise<SessionResponse> {
+  const auth = await requestWalletAuth();
+  pendingWalletAuth = null;
 
   // `payload` is the walletAuth result's `data` object — {address, message, signature} — and
   // the nonce goes back beside it so the API can check the SIWE message against the one it
   // issued. See the PR body: if the contract wants the whole result, `payload` becomes `result`.
   return apiFetch<SessionResponse>('/session', {
     method: 'POST',
-    body: JSON.stringify({ mode: 'walletAuth', payload: result.data, nonce }),
+    body: JSON.stringify({ mode: 'walletAuth', payload: auth.payload, nonce: auth.nonce }),
   });
 }
 
@@ -148,13 +198,18 @@ export function createIdkitSession(worker_address: string): Promise<SessionRespo
 }
 
 /**
- * The session probe. `GET /me/earnings` needs a worker-session cookie and nothing else, so a
- * 200 means the cookie survived and the worker is registered; a 401 means start over.
+ * The session probe. `GET /session` needs a worker-session cookie and nothing else, so a 200
+ * means the cookie survived and the worker is registered; a 401 means start over.
+ *
+ * It is a session route rather than `/me/earnings` for two reasons: asking the thing that owns
+ * sessions whether a session is alive is the honest question, and that route re-issues the
+ * cookie at the full TTL while it answers — so a worker who opens the app keeps their session,
+ * and one who does not is signed out when it lapses rather than in the middle of an errand.
  */
 export async function restoreSession(): Promise<SessionState> {
   const mirror = readMirror();
   try {
-    await apiFetch<unknown>('/me/earnings');
+    await apiFetch<unknown>('/session');
   } catch {
     clearMirror();
     publish({ state: UNVERIFIED, ready: true });
@@ -173,10 +228,17 @@ export async function restoreSession(): Promise<SessionState> {
   return state;
 }
 
-/** Drops the mirror and the in-memory state. The cookie expires on its own. */
-export function signOut(): void {
+/** Drops the cookie, the mirror and the in-memory state. A failed request still clears locally. */
+export async function signOut(): Promise<void> {
+  let failure: unknown;
+  try {
+    await apiFetch('/session/logout', { method: 'POST' });
+  } catch (err) {
+    failure = err;
+  }
   clearMirror();
   publish({ state: UNVERIFIED, ready: true });
+  if (failure !== undefined) throw failure;
 }
 
 // ----------------------------------------------------------------- the hooks
@@ -220,4 +282,5 @@ export function requireVerified(): SessionState {
 export function resetSessionForTests(): void {
   snapshot = SERVER_SNAPSHOT;
   restoring = null;
+  pendingWalletAuth = null;
 }

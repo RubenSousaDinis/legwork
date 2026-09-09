@@ -20,6 +20,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, 'geolocation', { configurable: true, value: undefined });
   cleanup();
 });
 
@@ -28,9 +30,7 @@ describe('the edges of the list', () => {
     setScenario({ tasks: 'empty' });
     render(<TaskList />);
 
-    expect(
-      await screen.findByText('No open tasks near you right now — the list refreshes every 3 s.'),
-    ).toBeTruthy();
+    expect(await screen.findByText('No open tasks right now. The list refreshes every 3 s.')).toBeTruthy();
   });
 
   it('countdownExpiresOnceAndDoesNotTurnAmber', () => {

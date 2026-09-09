@@ -44,14 +44,14 @@ Legwork = someone actually goes there. The recurring motif is a **route line**: 
 | `StatusBadge` | lifecycle badge, uppercase mono | `RELEASED` teal · `REFUSED` amber · `LOCKED` off-white · `SUBMITTED` filled · `OPEN` outline · `PASSED` teal; sizes `md` / `sm` |
 | `EscrowMeter` (`RouteMeter`) | the motif as a working meter: dot → dashed route → footprint; fills toward the footprint | states LOCKED / RELEASED / REFUNDED; **a refusal never moves it** |
 | `TaskRow` (`TaskCard`) | dashboard feed row: type tag + title, Archivo price numeral + "USDC", mono meta, status badge right | refused rows get the amber border; seeded rows carry the `seeded` chip |
-| `VerifiedChip` | the worker's verification state | full banner "Verified human ✓ · World ID · one account per person" + `sandbox` chip, or compact pill "Verified human ✓ · sandbox"; **always above the fold on the phone**; the sandbox disclosure is part of it |
+| `VerifiedChip` | the worker's verification state | full banner "Verified human ✓ · World ID · one account per person" + the credential chip, or compact pill "Verified human ✓ · World ID"; **always above the fold on the phone**; naming the credential is part of it |
 | `AgentCard` | `#8004-1207`, "Storefront checker", score, tasks paid on proof, mark counter (0 → 1 on the refusal beat), `ERC-8004 identity` chip | mark line in amber: `1 mark · task-refused:<class>` |
 | `WorkerPool` | "1 real · +20 seeded (demo data)"; one highlighted real row `verified human ✓`, seeded rows in gray with the `seeded` label | never "21 workers"; never imply a live pool |
 | `PreflightTrio` | "4 active · 1 verified · 3 seeded" + median labelled `seeded` (or `n=1 (real)`) + score floor | the three numbers ≥ 32 px at design size |
 | `ScreeningLog` | `REFUSED` / `PASSED` rows: time · type · class + reason · spec hash · `mark → #8004-1207` · tx chip | never the raw spec text; never a requester identity |
 
 ## Honesty chips (brand elements, visible, never fine print)
-`sandbox World ID` · `operator-attested` · `relayed claim · gas paid by Legwork` · `testnet USDC — not spendable` · `GPS unavailable in webview — disclosed` · `1 real · +20 seeded (demo data)` · `seeded` (on every seeded worker **and** task row) · `DEMO DATA` (whenever `DATA_MODE=demo`).
+`World ID · Orb` (`World ID · Selfie Check` at that level) · `operator-attested` · `relayed claim · gas paid by Legwork` · `testnet USDC — not spendable` · `GPS unavailable in webview — disclosed` · `1 real · +20 seeded (demo data)` · `seeded` (on every seeded worker **and** task row) · `DEMO DATA` (whenever `DATA_MODE=demo`).
 
 ## The ten hard rules (from the design prompt; fail the review)
 1. The three locked copy blocks (tagline, claim, trust model) are reproduced exactly.

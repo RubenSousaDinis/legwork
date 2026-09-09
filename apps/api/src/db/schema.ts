@@ -103,6 +103,31 @@ export const idempotency = pgTable('idempotency', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Gasless-withdrawal replay protection: one payout authorization nonce, one withdrawal.
+ *
+ * The same shape `idempotency` uses above, for the same reason — the key is the EIP-3009
+ * nonce the phone generated, never the worker and never the amount, so a pair sent twice is
+ * answered from the row instead of broadcast twice. `payout_tx IS NULL` is the reservation:
+ * a second request that finds one is mid-flight, not done.
+ *
+ * `fee_pending` is the state the two-transaction design creates and does not hide: the payout
+ * landed, the fee leg did not, and Legwork is out 2 % on a withdrawal the worker already has.
+ */
+export const withdrawals = pgTable('withdrawals', {
+  payoutNonce: text('payout_nonce').primaryKey(),
+  feeNonce: text('fee_nonce').notNull(),
+  worker: text('worker').notNull(),
+  destination: text('destination').notNull(),
+  amountUnits: bigint('amount_units', { mode: 'bigint' }).notNull(),
+  payoutUnits: bigint('payout_units', { mode: 'bigint' }).notNull(),
+  feeUnits: bigint('fee_units', { mode: 'bigint' }).notNull(),
+  payoutTx: text('payout_tx'),
+  feeTx: text('fee_tx'),
+  feePending: boolean('fee_pending').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Never the raw spec. */
 export const screeningLog = pgTable('screening_log', {
   id: text('id').primaryKey(),
@@ -169,7 +194,9 @@ export const adminAudit = pgTable('admin_audit', {
 /** TxQueue's per-role nonce row; the advisory lock key is derived from key_role. */
 export const nonces = pgTable('nonces', {
   keyRole: text('key_role').primaryKey(),
-  nextNonce: bigint('next_nonce', { mode: 'bigint' }).notNull(),
+  // Nullable on purpose: `PgNonceLock` creates the row with NULL and `TxQueue` resyncs from
+  // `getTransactionCount(pending)` whenever the store answers null (T-29 found the NOT NULL).
+  nextNonce: bigint('next_nonce', { mode: 'bigint' }),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
 });
 

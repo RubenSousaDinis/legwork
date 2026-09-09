@@ -52,6 +52,8 @@ export interface PublicTaskView {
   released_at?: string;
   answer?: string;
   proof?: PublicProofView;
+  /** Task place through `round100m`. Absent when the private row has no coordinate. */
+  coordinate_rounded?: { lat: number; lon: number };
   tx: TxSet;
   links: TxSet;
   dashboard_url: string;
@@ -93,6 +95,8 @@ export async function publicTaskView(
     };
   }
 
+  const hasTaskGps = row.exactLat !== null && row.exactLon !== null;
+
   return {
     task_id: row.taskId.toString(),
     state: statusOf(row),
@@ -109,6 +113,9 @@ export async function publicTaskView(
     // read, wrapped as untrusted data; it is never on a public surface.
     ...(answerOf(row) ? { answer: answerOf(row)?.answer } : {}),
     ...(proof ? { proof } : {}),
+    ...(hasTaskGps
+      ? { coordinate_rounded: round100m(Number(row.exactLat), Number(row.exactLon)) }
+      : {}),
     tx,
     links: linksOf(tx),
     dashboard_url: `${getConfig().DASHBOARD_URL ?? 'http://localhost:3000'}/task/${row.taskId.toString()}`,

@@ -56,16 +56,9 @@ export function Countdown({ until, label, onExpire, now = Date.now }: CountdownP
   }, [seconds]);
 
   return (
-    <span
-      className="lw-countdown"
-      data-countdown={label}
-      style={{ display: 'inline-flex', alignItems: 'baseline', gap: 'var(--s-2)' }}
-    >
-      <span className="lw-section-label">{label}</span>
-      <span
-        data-floor="20"
-        style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', lineHeight: 1.2 }}
-      >
+    <span className="lw-countdown" data-countdown={label}>
+      <span className="lw-countdown__label">{label}</span>
+      <span className="lw-countdown__clock" data-floor="20">
         {mmss(seconds)}
       </span>
     </span>

@@ -18,6 +18,35 @@ export function priceWithFee(amountUnits: bigint): bigint {
   return amountUnits + feeOn(amountUnits);
 }
 
+/**
+ * The withdrawal fee: 2 % of what a worker moves off their payout address, and all Legwork
+ * earns for paying the gas on a payout address that has never held any ETH.
+ *
+ * It is a separate charge from `FEE_BPS` and is never described as part of it. The task fee
+ * is 15 % ON TOP of the posted rate and is paid by the agent — 3.45 paid, 3.00 to the worker,
+ * 0.45 to the treasury. This one is taken out of an amount the worker chooses to move, on the
+ * day they choose to move it, and only then.
+ */
+export const WITHDRAW_FEE_BPS = 200n;
+
+/**
+ * The worker absorbs no rounding dust. Integer division truncates, so the remainder of
+ * `amountUnits × 200 / 10 000` is left on the payout side: `payout = amountUnits − fee` is
+ * always the larger half of a unit that will not divide. `payout + fee === amountUnits` for
+ * every input, and the direction the truncation falls is towards the worker, never towards
+ * Legwork.
+ */
+export function withdrawFeeOn(amountUnits: bigint): bigint {
+  return (amountUnits * WITHDRAW_FEE_BPS) / 10_000n;
+}
+
+/**
+ * Below this, 2 % does not cover what the same transfer would cost on mainnet, so the
+ * withdrawal is refused with the number said out loud rather than quietly paying to move
+ * dust. A worker under it keeps their balance where it is and loses nothing.
+ */
+export const MIN_WITHDRAW_USDC = 1.0;
+
 export function toUsdcUnits(n: number): bigint {
   return BigInt(Math.round(n * 10 ** USDC_DECIMALS));
 }
@@ -51,6 +80,12 @@ export const NEED_BY_MIN_LEAD_S = 1200;
 
 /** A submitted proof must be within this many metres of the task's place. */
 export const GEOFENCE_M = 150;
+/**
+ * A claim may start this far from the place. Wider than `GEOFENCE_M` on purpose: the worker
+ * has `DEFAULT_CLAIM_TTL_S` (30 minutes) to walk there after claiming, and the proof photo
+ * still has to be taken inside the 150 m fence. The two numbers are different on purpose.
+ */
+export const CLAIM_RADIUS_M = 2000;
 /** Public surfaces round coordinates to 3 decimals (about 100 m). Exact ones stay private. */
 export const PUBLIC_COORD_DECIMALS = 3;
 
@@ -62,3 +97,63 @@ export const CLASSIFIER_TIMEOUT_LABEL = 'keyword class — classifier timeout';
 /** Told to the agent on every refusal, so a rejected task is not simply rephrased and retried. */
 export const NO_RETRY_SENTENCE =
   'do not rephrase and retry; report this refusal to your principal';
+
+/** Which World ID credential a worker presented. `WORLD_CREDENTIAL_LEVEL` picks it. */
+export type CredentialLevel = 'selfie' | 'orb';
+
+/**
+ * What the verification chip says — on the phone and on the dashboard, one string for both.
+ *
+ * It names the credential, never an environment. There is no sandbox World ID to name: IDKit
+ * 4.x verifies against the single production endpoint `developer.world.org/api/v4/verify/{rp_id}`
+ * with a production app id, and the Orb proof the demo runs on is a real one, obtained at a real
+ * Orb. `WORLD_ENV` is a label `GET /config/world` echoes and the verify path never reads.
+ *
+ * The other honesty chips are untouched by this: the money is still testnet USDC, the claim is
+ * still relayed and the pool is still mostly seeded, and each of those says so on its own chip.
+ */
+export const CREDENTIAL_LABEL = {
+  orb: 'World ID · Orb',
+  selfie: 'World ID · Selfie Check',
+} as const satisfies Record<CredentialLevel, string>;
+
+export function credentialLabel(level: CredentialLevel): string {
+  return CREDENTIAL_LABEL[level];
+}
+
+/**
+ * World's own credential page: Selfie Check (Beta) is "a medium-assurance biometric
+ * credential using the device camera for liveness and facial similarity" and explicitly
+ * does not guarantee "strict one-person-one-account uniqueness like Orb verification".
+ * Every sentence below follows the credential. Orb may claim uniqueness; selfie may not.
+ */
+export function uniquenessClause(level: CredentialLevel): string {
+  return level === 'orb' ? 'one account per person' : 'a live person, camera-checked';
+}
+
+export function verifiedBannerSub(level: CredentialLevel): string {
+  return `· World ID · ${uniquenessClause(level)}`;
+}
+
+export function claimSentence(level: CredentialLevel): string {
+  const fourth =
+    level === 'orb'
+      ? 'every worker is one verified human'
+      : 'every worker is a camera-checked live human';
+  return (
+    'Marketplaces already let agents hire humans. Legwork is the first where ' +
+    fourth +
+    ', every payment is escrowed onchain and released on proof, every hiring agent is accountable, and the documented abuse classes are refused at the API.'
+  );
+}
+
+export function trustModelSentence(level: CredentialLevel): string {
+  const opening =
+    level === 'orb'
+      ? 'Verification proves a worker is a live, unique person'
+      : 'Verification proves a worker is a live person';
+  return (
+    opening +
+    " — not that they are honest or competent. Escrow bounds the agent's loss to one task, and a per-agent daily cap bounds it to one day. Screening is a cost floor, not a cure. Legwork's guarantee is bounded, attributable work: an agent never pays for nothing, a worker never works for nothing, and every task leaves a record both sides can read."
+  );
+}

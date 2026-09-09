@@ -78,7 +78,10 @@ import {
   selectGateway,
   type IdempotencyStore,
   type PaymentGateway,
-} from '@legwork/payments';
+  FakeFacilitator,
+  type FacilitatorClient,
+  type X402Network,
+} from '@legwork/payments'
 import {
   KeywordFallbackClassifier,
   createLiveClassifier,
@@ -262,11 +265,16 @@ export async function screenEnvelope(
     };
   }
   if (!verdict.ok) {
+    const placeId = placeIdFromBody(body);
+    const unresolvable =
+      verdict.field === 'spec.place.place_id' &&
+      placeId !== undefined &&
+      deps.places.resolve(placeId) === undefined;
     return {
       kind: 'invalid',
       spec_hash: hash,
       field: verdict.field,
-      reason: verdict.reason,
+      reason: unresolvable ? `unresolvable place_id ${placeId}` : verdict.reason,
       ...(verdict.allowed_task_types ? { allowed_task_types: verdict.allowed_task_types } : {}),
       ...(verdict.suggested_task_type ? { suggested_task_type: verdict.suggested_task_type } : {}),
     };
@@ -285,7 +293,17 @@ export async function screenEnvelope(
     };
   }
 
-  return { kind: 'accepted', envelope: parsed.data, spec_hash: hash, place: placeOf(parsed.data, deps.places) };
+  const place = placeOf(parsed.data, deps.places);
+  if (parsed.data.task_type !== 'compare-two' && place === null) {
+    return {
+      kind: 'invalid',
+      spec_hash: hash,
+      field: 'spec.place.place_id',
+      reason: `unresolvable place_id ${parsed.data.spec.place.place_id}`,
+    };
+  }
+
+  return { kind: 'accepted', envelope: parsed.data, spec_hash: hash, place };
 }
 
 /** `compare-two` has no place; the other three resolved one a moment ago in the gate. */
@@ -294,6 +312,12 @@ function placeOf(envelope: Envelope, places: PlaceIndex): ResolvedPlace | null {
   const place = envelope.spec.place;
   const coordinate = places.coordinateOf(place.place_id);
   return coordinate ? { ...coordinate, name: place.name } : null;
+}
+
+function placeIdFromBody(body: unknown): string | undefined {
+  const spec = asRecord(asRecord(body)['spec']);
+  const place = asRecord(spec['place']);
+  return typeof place['place_id'] === 'string' ? place['place_id'] : undefined;
 }
 
 // ---------------------------------------------------------------- the handler
@@ -406,6 +430,33 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
   }
 
   const { envelope, place } = verdict;
+
+  // A place the extract cannot locate would null `exact_lat/lon` and silently disable the
+  // geofence, the claim radius and `distance_m`. Refuse it here even if a mocked screen
+  // handed back `accepted` without a coordinate.
+  if (envelope.task_type !== 'compare-two' && place === null) {
+    const placeId = envelope.spec.place.place_id;
+    await deps.idem.release(nonce);
+    await logScreening(
+      {
+        task_type: taskType,
+        class: null,
+        reason: `unresolvable place_id ${placeId}`,
+        rule_id: 'schema.spec.place.place_id',
+        spec_hash: verdict.spec_hash,
+        marked: false,
+        mark_tx: null,
+        agent_id: null,
+        payer,
+      },
+      serviceDeps(deps),
+    );
+    logDecision({ ...common, decision: 'invalid_request', rule_id: 'schema.spec.place.place_id' });
+    throw ApiError.of('invalid_request', {
+      field: 'spec.place.place_id',
+      reason: `unresolvable place_id ${placeId}`,
+    });
+  }
 
   // 5. The caps. Over either one is a 429 that never marks, never posts and never settles.
   const capped = await deps.caps.check(payer, quote.price_units);
@@ -630,33 +681,49 @@ export function screener(): (body: unknown) => Promise<ScreenOutcome> {
   return (body) => screenEnvelope(body, { places: getPlaceIndex(), classifier: classifier() });
 }
 
-/** The one network this seller accepts, and the one the frozen `PaymentContext` names. */
-const X402_NETWORK = 'eip155:84532' as const;
+/** The network this seller accepts follows `CHAIN_ID`: Base Sepolia, or anvil for the harness. */
+function sellerNetwork(chainId: 84532 | 31337): X402Network {
+  return chainId === 31337 ? 'eip155:31337' : 'eip155:84532';
+}
 
 /**
  * The seller half, from config. A missing facilitator or asset is a boot-time
  * misconfiguration and says so — not a 500 on the first agent that tries to pay.
+ *
+ * `X402_FACILITATOR_MODE=fake` swaps the HTTP facilitator for the in-process `FakeFacilitator`
+ * (T-15's test double: arithmetic, no network) — the e2e harness on anvil, never production.
  */
 export function buildGateway(): PaymentGateway {
   const config = getConfig();
   if (config.PAYMENT_MODE === 'direct') return selectGateway('direct');
 
-  const url = config.X402_FACILITATOR_URL;
-  if (!url) throw new Error('PAYMENT_MODE=x402 needs X402_FACILITATOR_URL');
   const asset = config.USDC_ADDRESS;
   if (!asset) throw new Error('PAYMENT_MODE=x402 needs USDC_ADDRESS');
-  if (config.X402_NETWORK && config.X402_NETWORK !== X402_NETWORK) {
-    throw new Error(`X402_NETWORK must be ${X402_NETWORK}`);
+  const network = sellerNetwork(config.CHAIN_ID);
+  if (config.X402_NETWORK && config.X402_NETWORK !== network) {
+    throw new Error(`X402_NETWORK must be ${network} for CHAIN_ID ${config.CHAIN_ID}`);
+  }
+
+  let facilitator: FacilitatorClient;
+  if (config.X402_FACILITATOR_MODE === 'fake') {
+    facilitator = new FakeFacilitator({ networks: [network] });
+  } else {
+    const url = config.X402_FACILITATOR_URL;
+    if (!url) throw new Error('PAYMENT_MODE=x402 needs X402_FACILITATOR_URL');
+    // The handler calls the resource server, never this client directly, so the server's
+    // payment-flow rules apply to both verify and settle.
+    facilitator = new HTTPFacilitatorClient({ url });
   }
 
   return selectGateway('x402', {
     x402: {
-      // The handler calls the resource server, never this client directly, so the server's
-      // payment-flow rules apply to both verify and settle.
-      facilitator: new HTTPFacilitatorClient({ url }),
+      facilitator,
       payTo: config.relayerAddress,
       asset: asset as Hex,
-      network: X402_NETWORK,
+      network,
+      // Anvil's mock USDC is not in the library's default-asset table, so its domain is stated;
+      // the fake facilitator never checks a signature against it.
+      ...(config.CHAIN_ID === 31337 ? { assetDomain: { name: 'USD Coin', version: '2' } } : {}),
     },
   });
 }

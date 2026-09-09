@@ -23,7 +23,8 @@ const optional = <T extends z.ZodType>(inner: T) =>
 export const ConfigEnv = z.object({
   // -- chain --
   BASE_SEPOLIA_RPC_URL: z.string().min(1, 'expected an RPC URL'),
-  CHAIN_ID: z.coerce.number().int().pipe(z.literal(84532)).default(84532),
+  // 84532 is the product; 31337 is anvil, for the e2e harness (T-36). Nothing else.
+  CHAIN_ID: z.coerce.number().int().pipe(z.union([z.literal(84532), z.literal(31337)])).default(84532),
 
   // -- keys (never logged, never sent to a client) --
   RELAYER_PRIVATE_KEY: privateKey,
@@ -60,6 +61,8 @@ export const ConfigEnv = z.object({
   PAYMENT_MODE: z.enum(['x402', 'direct']).default('x402'),
   X402_FACILITATOR_URL: optional(z.string()),
   X402_NETWORK: optional(z.string()),
+  // `fake` runs the in-process FakeFacilitator (arithmetic, no network) — the e2e harness on anvil.
+  X402_FACILITATOR_MODE: z.enum(['http', 'fake']).default('http'),
 
   // -- Supabase --
   DATABASE_URL: z.string().min(1, 'expected a Postgres connection string'),

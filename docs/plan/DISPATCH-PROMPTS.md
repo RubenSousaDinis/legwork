@@ -406,6 +406,66 @@ cd ../legwork-wt/t-34 && pnpm install --frozen-lockfile && claude
 
 ---
 
+### T-50 — Mini-app design polish — the paper screens as the design spec draws them
+
+`T-50-miniapp-design-polish.md` · lane D · size M · class C · depends on T-42 · added Sept 8, after the first phone run
+
+> Implement the brief in issue **T-50** (`docs/plan/T-50-miniapp-design-polish.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-50` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+---
+
+### T-51 — Dashboard front door — landing, the two paths, the deck, and the refusal card
+
+`T-51-dashboard-front-door.md` · lane D · size L · class C · depends on T-26, T-43 · added Sept 8, from the operator's first pass over the deployed UIs · **three PRs**
+
+> Implement the brief in issue **T-51** (`docs/plan/T-51-dashboard-front-door.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-51` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. This brief ships as three PRs on the one branch, in the order §7 gives them — the refusal card first, then the front door, then `/deck` — so run the verification commands in §9 and open a PR after each, rather than saving everything for the end. `/?present=1` is the filmed video canvas and the CI legibility gate navigates to it: if that branch of `app/page.tsx` changes behaviour, you have broken the demo. Nothing from the pre-kickoff `pitch/` or `design-system/` directories may enter the repository. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, paste the §9 output into each draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+
+---
+
+### T-52 — The worker can get back in, and the board says where they are
+
+`T-52-worker-location-legibility.md` · lane D · size M · class C · no dependencies · added Sept 8, from the operator's first phone run on the deployed mini-app · **two PRs**
+
+> Implement the brief in issue **T-52** (`docs/plan/T-52-worker-location-legibility.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-52` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter; **T-51 is in flight and owns `apps/dashboard/**` and `apps/miniapp/app/about/page.tsx`, so do not touch either.** This brief ships as two PRs on the one branch: the sign-in lockout first, then the board's location legibility. Both PRs need the **`interface-change`** label, because `packages/shared/src/constants.ts` gains `CLAIM_RADIUS_M`. Write the failing test before the fix in PR 1 and watch it go red — three bugs in this repo shipped because a mock answered with a canned success whatever it was asked, and §14 says how to avoid a fourth. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+
+---
+
+### T-53 — The worker gets in
+
+`T-53-worker-address-is-the-wallet.md` · lane D · size M · class C · depends on T-52 · added Sept 8, routing swap folded in the same evening · **★ the demo cannot be filmed without it**
+
+> Implement the brief in issue **T-53** (`docs/plan/T-53-worker-address-is-the-wallet.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-53` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. **Do step 2 of §7 before anything else: change the mock so walletAuth signs as an address that is not the payout key, and watch `bothSessionModes` go red with `403 not_registered`.** That red is the bug, and a green suite that was never red is exactly how this survived the last task. Then fix it. The API and the registry are out of scope — they are already correct. The task has a second half (§2 items 6–9): `/` becomes the task list and the auth flow moves to `/verify`. Do it last, as its own commits — the move first, then the swap — and change nothing about what `UnverifiedTasks` and `UnverifiedBanner` render; they were already right and only their address changes. If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+
+---
+
+### T-54 — Selfie Check as the demo credential
+
+`T-54-selfie-check-as-the-demo-credential.md` · lane D · size M · class C · no dependencies · added Sept 8, the evening World granted Sandbox access
+
+> Implement the brief in issue **T-54** (`docs/plan/T-54-selfie-check-as-the-demo-credential.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-54` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter; **T-51 is in flight on `apps/dashboard/**` and PR #174 is open against it**, so touch only `app/copy.ts`, `app/about/page.tsx`, `app/deck/page.tsx` and `test/**` there. This changes **no verification code** — `pickPreset` already sends `selfieCheckLegacy`; what changes is what the product is allowed to claim, because Selfie Check does not support one-person-one-account and six surfaces currently say it does. Write `orbCopyIsByteIdenticalToToday` first and keep it green: at `orb` every string must stay byte-identical, because that is how the demo goes back to Orb afterwards. The PR needs the **`interface-change`** label (`packages/shared/src/constants.ts`). If anything in the brief cannot be done as written, comment `BLOCKED: <what you need>` and stop rather than working around it. When done, run the verification commands in §9, paste their output into the draft PR that `claim.sh` opened, fill every section of its body, then run `gh pr ready` and stop.
+
+
+---
+
+### T-55 — A navbar, a login modal, and a logout that works
+
+`T-55-navbar-login-modal-real-logout.md` · lane D · size M · class C · no dependencies · added Sept 9 from the operator's phone testing
+
+> Implement the brief in issue **T-55** (`docs/plan/T-55-navbar-login-modal-real-logout.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-55` before writing anything — if it exits 1 the task is already taken, so stop and tell me. Work only inside the `owned_paths` in its front matter. **Do §7 step 2 before anything else: write `logoutSurvivesAReload` against today's `signOut()` and watch it fail** — logout currently clears a localStorage mirror while the cookie survives, so the next probe logs the worker straight back in. That red is the bug. Raise the `INTERFACE REQUEST:` for `POST /session/logout` in the PR body immediately (§7 step 3) so the lead can answer while you work. This task unfreezes `app/layout.tsx`, `app/globals.css` and `components/ui/*` for itself only, and the verified chip must stay above the fold. If anything cannot be done as written, comment `BLOCKED: <what you need>` and stop. When done, run §9, paste the output into the draft PR that `claim.sh` opened, fill every section, then `gh pr ready` and stop.
+
+---
+
+### T-56 — The board: all tasks, search, map, directions
+
+`T-56-board-search-map-directions.md` · lane D · size L · class C · depends on T-55 · added Sept 9
+
+> Implement the brief in issue **T-56** (`docs/plan/T-56-board-search-map-directions.md`) exactly. Read `AGENTS.md` first, then run `scripts/claim.sh T-56` before writing anything — if it exits 1 the task is taken or T-55 is not merged, so stop and tell me. Work only inside the `owned_paths` in its front matter. **Do the API commit first and land it green before any UI** (§7 step 2): the rounded coordinate, the widened country schema, and — the part that matters most — refusing a `place_id` the place index cannot resolve, because without it a task can be posted with no coordinate and the geofence and claim radius silently stop working. The PR needs the **`interface-change`** label (`packages/shared`). No new dependency: the map is OpenStreetMap tiles as `<img>` with the ODbL attribution rendered, and search is `normalize()` plus `includes`. The exact coordinate never leaves the private record — only `round100m` output. If anything cannot be done as written, comment `BLOCKED: <what you need>` and stop. When done, run §9, paste the output into the draft PR, fill every section, then `gh pr ready` and stop.
+
+---
+
 ## Day 6 · Wed Sept 9 · evening — after GO/NO-GO
 
 Only dispatch these once the gate is GREEN and the insurance footage is filmed.

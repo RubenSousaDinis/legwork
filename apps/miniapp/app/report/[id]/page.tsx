@@ -8,6 +8,7 @@ import { CREDENTIAL_LEVEL } from '../../../lib/env';
 import { requireVerified } from '../../../lib/session';
 import { readActiveClaim, type ActiveClaim } from '../../tasks/activeClaim';
 import { REPORT_HEADING, ReportForm } from './ReportForm';
+import { Waiting } from '../../../components/ui/Waiting';
 
 /**
  * `/report/<task_id>` — the way out of a task that should not have been posted.
@@ -60,26 +61,24 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   }, [id]);
 
   if (session.status !== 'verified' || claim === undefined) {
-    return <p className="lw-placeholder">{OPENING_LINE}</p>;
+    return <Waiting step="opening">{OPENING_LINE}</Waiting>;
   }
 
   if (claim === null || claim.task_id !== id) {
-    return <p className="lw-placeholder">{WRONG_TASK_LINE}</p>;
+    return <Waiting step="wrong-task">{WRONG_TASK_LINE}</Waiting>;
   }
 
   const level = session.level === 'selfie' ? 'selfie' : CREDENTIAL_LEVEL;
 
   return (
     <div data-screen="report-page">
-      <header style={{ marginBottom: 'var(--s-5)' }}>
+      <header className="lw-proof-header">
         {/* The verified chip stays in the header here too: above the fold, always. */}
-        <p style={{ margin: '0 0 var(--s-3)' }}>
+        <p className="lw-chips lw-chips--stacked">
           <VerifiedChip compact level={level} state={session} />
         </p>
-        <h1 className="lw-h1" style={{ marginBottom: 'var(--s-2)' }}>
-          {REPORT_HEADING}
-        </h1>
-        <p className="lw-placeholder" data-report="title" style={{ margin: 0 }}>
+        <p className="lw-list-label">{REPORT_HEADING}</p>
+        <p className="lw-meta lw-meta--flush" data-report="title">
           {title ?? `Task ${id}`}
         </p>
       </header>

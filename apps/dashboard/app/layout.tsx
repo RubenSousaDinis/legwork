@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
+import { dashboardUrl } from '../lib/urls';
 import './globals.css';
 
 /**
  * OG and Twitter cards point at the `/opengraph-image` route so every link unfurls
- * with the escrow meter. `metadataBase` is the deployment origin, falling back to
- * localhost in development; no origin is hard-coded for production.
+ * with the escrow meter. `metadataBase` is the stable dashboard origin on Vercel,
+ * localhost in development — never the per-deployment `VERCEL_URL`.
  */
-const ORIGIN = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
+const ORIGIN = process.env.VERCEL ? dashboardUrl() : 'http://localhost:3000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(ORIGIN),

@@ -4,9 +4,11 @@
  * This service is the relying party. `WORLD_RP_SIGNING_KEY` is read here and nowhere else,
  * never returned, never logged, never put in a cookie and never in `/config/world`.
  *
- * Registration runs against **sandbox World ID** — World's staging environment,
- * `WORLD_ENV=staging` — and the chip that says so on the worker's card is describing this
- * file. Binding the human to an address is **operator-attested**: see `attestation.ts`.
+ * Registration runs against **production World ID**: the endpoint below is the only verify
+ * endpoint there is, and `WORLD_APP_ID` is a production app, so the chip on the worker's card
+ * names the credential that was presented — `World ID · Orb` — rather than an environment.
+ * `WORLD_ENV` is a label `GET /config/world` echoes and nothing in this file reads. Binding the
+ * human to an address is **operator-attested**: see `attestation.ts`.
  *
  * ## The routes this service backs
  *

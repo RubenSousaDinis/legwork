@@ -31,7 +31,28 @@ The shape you are verifying (**T-01 §2, `packages/shared/src/mcp-contract.ts`**
 ## 2. Exact scope
 - Call `preflight_workers` for the demo task type and area (the values in `demo-data.json`) against the **live Studio subgraph**, through the deployed MCP server — not the fixture, not the client directly. Capture the raw JSON result.
 - Verify the 7-day "active" window against the seeded lifecycle timestamps: query `{ workers(where:{seeded:true}){ id lastCompletedAt } }` and check every `lastCompletedAt` the tool counted is `>= now − 604800`. If any of the three counted seeded workers has aged out, run `POST /admin/seed-demo` (admin key, one lifecycle) and re-run the tool. **Never change the window constant, the `sinceTs` argument, or a fixture to make the number appear.**
-- Confirm the split reads **"4 active · 1 verified · 3 seeded"** — `active: 4`, `verified: 1`, `seeded: 3`. `verified` is the one real World ID worker (the demo phone); the other three are seeded demo workers.
+- **Amended by the lead, Sept 9, after the first real errand — read this before §2's other bullets.**
+  The split the earlier text asked you to confirm (`active: 4, verified: 1, seeded: 3`) is not
+  produced by any area, and `demo-data.json`'s `preflight` block still carries it. Measured
+  against the deployed `GET /public/preflight` on Sept 9 at 13:5x UTC:
+
+  | area | active | verified | seeded | n_real | median_source |
+  |---|---|---|---|---|---|
+  | `ez1dp` | 3 | 0 | 3 | 0 | `seeded` |
+  | `ez1dn` | 3 | 0 | 3 | 1 | `real` |
+  | `ez19y` | 1 | 1 | 0 | 0 | `n/a` |
+
+  **Capture `ez1dn`.** That is where the real errand was completed on Sept 9 — a World ID human
+  walked to Pão Doce on Rua do Cruzeiro and was paid 3.00 — and it is the only area whose median
+  comes from a real completion. `median_source: "real"` with `n_real: 1` is the claim worth
+  making; it is strictly harder than `verified`, which only counts who registered where.
+
+  **`verified: 0` in `ez1dn` is a finding, not a number to fix.** The phone registered in `ez19y`
+  and worked in `ez1dn`. `verified` counts a worker's registration cell and `n_real` counts where
+  the completion happened, so a worker who registers in one cell and works in another is real in
+  the median and invisible in the split. Record that in `RESULTS.md` in one plain sentence. Do
+  **not** re-register the phone, change an area, or edit `demo-data.json` to close the gap — say
+  what the tool returned and why the two numbers disagree.
 - Confirm the median label: while no real completion exists, `n_real: 0` and `median_source: "seeded"`, and the card reads the median as `seeded`. After the demo phone completes a task, re-run and confirm it flips to `n_real: 1`, `median_source: "real"` and the card reads `n=1 (real)`. Record **which of the two was true at capture time**.
 - Screenshot the preflight card as rendered on the dashboard, at the moment the tool returned those numbers, and save it as `docs/media/preflight-card.png`. This is the Graph sponsor still.
 - Write the `#Preflight` entry in `docs/spikes/RESULTS.md`: the raw tool JSON, the timestamps checked against the window, whether a re-seed was needed, the median label at capture, and the one-line reading of the card in plain words.
@@ -84,8 +105,15 @@ docs/media/preflight-card.png
 
 ## 9. Verification commands
 ```bash
-# 1. the tool, against the live subgraph (demo task type + area from demo-data.json)
-npx @legwork/mcp call preflight_workers --task_type verify-open --area "$DEMO_AREA" | tee /tmp/preflight.json
+# 1. the tool, against the live subgraph, through the deployed MCP mount.
+#    NOT `npx @legwork/mcp`: it is a private workspace package whose `bin` points at
+#    `dist/bin/legwork-mcp.js`, and no package here emits `dist` — `build` is `tsc --noEmit`
+#    everywhere, so that command cannot run. A JSON-RPC `tools/call` is what §2 asks for.
+#    The area is ez1dn — where the real errand was completed; see the amendment at the top of §2.
+curl -s -X POST "$API_BASE_URL/mcp" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"preflight_workers","arguments":{"task_type":"verify-open","area":"ez1dn"}}}' \
+  | tee /tmp/preflight-raw.json
 
 # 2. the 7-day window, straight from Studio
 curl -s -H "Authorization: Bearer $GRAPH_API_KEY" -H 'content-type: application/json' \
@@ -101,7 +129,12 @@ curl -s -X POST -H "X-Admin-Key: $ADMIN_API_KEY" "$API_BASE_URL/admin/seed-demo"
 diff <(jq -S . /tmp/preflight.json) <(jq -S . packages/subgraph-client/fixtures/preflight.json) >/dev/null \
   && echo "FAIL: served from the fixture" || echo "OK: live"
 ```
-Expected: `4 / 1 / 3`; every counted timestamp `IN`; step 4 prints `OK: live`.
+Expected, measured on Sept 9 — reproduce it rather than trust it, and if yours differs, yours is
+the truth and the difference goes in `RESULTS.md`: `active: 3, verified: 0, seeded: 3, n_real: 1,
+median_source: "real"` for `ez1dn`. Every counted timestamp `IN`; step 4 prints `OK: live`.
+
+The old expectation here read `4 / 1 / 3`. No area produces that, which is what the first run of
+this task discovered and reported correctly; §2's amendment carries the reasoning.
 
 ## 10. Hard rules
 - Banned words anywhere in code, comments, docs or UI copy: `trustless`, `reused`, `violation`, `Brooklyn`, `24h`, `2.55`, `21 workers`.
@@ -144,3 +177,11 @@ Open the tool JSON and the screenshot side by side first: every visible number m
 
 ## 15. Round 2+
 —
+
+
+**Facts as of Sept 8 (lead), before this task is re-run.**
+
+- **The filmed errand is in `ez1dn`, not `ez1dp`.** Pão Doce sits there, and `scripts/seed-area.sh ez1dn 21 23` seeded three workers into it, each with one released `verify-open` task. `GET /public/preflight?task_type=verify-open&area=ez1dn` reads `active 3 · verified 0 · seeded 3` and `median_source: seeded`; `ez1dp` reads the same numbers from the original pool. Verify both cells, and treat `ez1dn` as the one the demo quotes.
+- **The verified count moves when the operator registers.** That happens once, at Pão Doce, on the deployed origin, so the registry records `ez1dn`. After it, `ez1dn` should read `active 4 · verified 1 · seeded 3` — the line the design pack asks for — and `n_real` becomes 1 once that worker completes a task.
+- **Task 27 is open at Pão Doce**, posted by the demo agent with `agent_id: 9196`, waiting for that worker to claim it.
+- **The credential is Orb**, so a verified worker's `level` reads `orb`, not `selfie`.

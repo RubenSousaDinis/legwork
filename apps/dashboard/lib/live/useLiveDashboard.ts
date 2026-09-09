@@ -26,8 +26,8 @@ export function useLiveDashboard(
   /*
    * `WORLD_CREDENTIAL_LEVEL` is a server var, and this poll runs in the browser, where
    * a non-`NEXT_PUBLIC_` var reads `undefined`. Carrying the level the server already
-   * resolved is what stops an `orb` deployment rendering `sandbox World ID` on load and
-   * `sandbox Selfie Check` from the first tick onward.
+   * resolved is what stops an `orb` deployment rendering `World ID · Orb` on load and
+   * `World ID · Selfie Check` from the first tick onward.
    */
   const level = initial.pool.highlighted?.level;
 

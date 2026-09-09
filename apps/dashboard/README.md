@@ -1,25 +1,32 @@
 # `@legwork/dashboard`
 
 Public, read-only mission control — and the canvas the demo video is filmed on. Ink
-ground, one accent, no red anywhere.
+ground, one accent. Status-quo red appears only on `/deck` board 2.
 
 ## Routes
 
-| Route | What it is |
-|---|---|
-| `/` | Mission control: feed left, escrow + agent centre, pool / screening / preflight / posters right. Min-width 1280, single column below. |
-| `/?present=1` | The sparse present canvas on the same route, for filming. |
-| `/present` | The same canvas with no query to remember on set. |
-| `/opengraph-image` | 1200x630 card so every link unfurls with the escrow meter. |
-| `/task/[id]` | The receipt an external builder's agent is handed through `dashboard_url`: state, the full proof hash and whether it re-hashes, the coordinate rounded to about 100 m, the tx links, and a thumbnail only a buyer can see. |
-| `/task/[id]/opengraph-image` | 1200x630 card for the receipt — state and amounts only. Never the thumbnail, the coordinate or the answer. |
-| `/refusals` | The six abuse-class counts and hand-picked examples. **Never a raw live feed**, never a requester identity. |
-| `/admin` | Operator controls, behind `NEXT_PUBLIC_ADMIN_UI=1`. 404 otherwise, and `robots: { index: false }`. |
+| Route | What it is | Public |
+|---|---|---|
+| `/` | Landing: tagline, two paths (human / agent), trust model. Static — no live data load. | yes |
+| `/?present=1` | The sparse present canvas on the same route, for filming. The CI gate navigates here. | yes |
+| `/present` | The same canvas with no query to remember on set. | yes |
+| `/live` | Mission control: feed left, escrow + agent centre, pool / screening / preflight / posters right. Min-width 1280, single column below. | yes |
+| `/agents` | How to hire a human: hosted and local install lines, six tools, four task types, prices, refusals. | yes |
+| `/about` | The claim, the trust model, what is live and what is seeded. | yes |
+| `/support` | Four questions for someone who arrived from a task receipt. | yes |
+| `/deck` | Thirteen-board pitch, scroll-snap, no slide runner. | yes |
+| `/opengraph-image` | 1200x630 card so every link unfurls with the escrow meter. | yes |
+| `/task/[id]` | The receipt an external builder's agent is handed through `dashboard_url`: state, the full proof hash and whether it re-hashes, the coordinate rounded to about 100 m, the tx links, and a thumbnail only a buyer can see. | yes |
+| `/task/[id]/opengraph-image` | 1200x630 card for the receipt — state and amounts only. Never the thumbnail, the coordinate or the answer. | yes |
+| `/refusals` | The six abuse-class counts and hand-picked examples. **Never a raw live feed**, never a requester identity. | yes |
+| `/admin` | Operator controls, behind `NEXT_PUBLIC_ADMIN_UI=1`. 404 otherwise, and `robots: { index: false }`. | no |
 
-Both `/` and `/present` accept `?state=locked\|submitted\|released\|refunded` to preview a
+`/` is the landing. `/?present=1` is still the filmed canvas.
+
+`/live` and `/present` accept `?state=locked\|submitted\|released\|refunded` to preview a
 meter beat without touching the chain.
 
-`?task=<id>` pins one task as the featured row, on `/` and through the live poll, so the
+`?task=<id>` pins one task as the featured row, on `/live` and through the live poll, so the
 filmed errand stays on the escrow meter while newer rows arrive.
 
 ### The receipt token
@@ -51,10 +58,13 @@ Read on the server only, never from a `NEXT_PUBLIC_*` var and never in a client 
 | Env | Where it is read | What it does |
 |---|---|---|
 | `DATA_MODE=live\|demo` | server only | picks the adapter |
-| `NEXT_PUBLIC_API_BASE_URL` | server, and `next.config.ts` | the API origin; defaults to `http://localhost:3001` |
+| `NEXT_PUBLIC_API_BASE_URL` | server, `next.config.ts` | live fetches and the `/api` rewrite. Loopback here is a rewrite target, not a public host. |
 | `NEXT_PUBLIC_SUBGRAPH_QUERY_URL` | server and browser | the publishable subgraph query URL |
-| `WORLD_CREDENTIAL_LEVEL` | server only | `orb` renders `sandbox World ID`, anything else `sandbox Selfie Check` |
+| `WORLD_CREDENTIAL_LEVEL` | server only | `selfie` renders `World ID · Selfie Check`; unset or unknown stays `orb`, matching `resolvedCredentialLevel()` and the worker app |
 | `NEXT_PUBLIC_ADMIN_UI` | build time | `1` mounts `/admin`; anything else, unset included, 404s |
+| `NEXT_PUBLIC_MINIAPP_URL` | landing + support + header | worker-app origin printed on `/`. Loopback or unset → `https://legwork-miniapp.vercel.app`. |
+
+Printed install lines on `/agents` and `/deck` use `apiUrl()` / `dashboardUrl()` in `lib/urls.ts`. Those skip loopback and print `https://legwork-api.vercel.app` and `https://legwork-dashboard.vercel.app`. `live.ts` still talks to `localhost:3001` locally.
 
 `apiBase()` is isomorphic: the API's own origin on the server, and the same-origin `/api`
 prefix in the browser, which `next.config.ts` rewrites. So the browser never needs a CORS
@@ -79,8 +89,14 @@ never attributed to an agent by guesswork.
 `WORLD_CREDENTIAL_LEVEL` is a server var and this mapper also runs in the browser, so
 `useLiveDashboard` passes `initial.pool.highlighted?.level` into
 `getLiveDashboardData({ level })`; the env is read only when no level is given. Without
-that an `orb` deployment would render `sandbox World ID` on load and `sandbox Selfie Check`
-from the first tick.
+that an `orb` deployment would render `World ID · Orb` on load and `World ID · Selfie
+Check` from the first tick.
+
+When no level is given, `live.ts` falls back to `resolvedCredentialLevel()` from
+`app/copy.ts` — one resolver for the whole app. It used to hold its own ternary that read
+the opposite way, so an unset env put `World ID · Selfie Check` on the Supply card while
+the landing page, `/about` and the worker's phone all read `World ID · Orb` from the same
+missing variable.
 
 `lib/live/` polls it every 3 s. The poller never overlaps requests, does nothing at all
 when the response says `changed: false`, calls `onChange` only when the mapped result

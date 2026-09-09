@@ -540,3 +540,531 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------ landing, agents, deck */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--sp-6);
+  border-bottom: 1px solid var(--hairline-1);
+  background: var(--ink-900);
+}
+
+.site-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-decoration: none;
+}
+
+.site-header-brand .wordmark {
+  font-size: var(--text-body-sm);
+}
+
+.site-header-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.logo-mark {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.site-header-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+
+.site-header-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--fg-3);
+  text-decoration: none;
+  text-transform: lowercase;
+}
+
+.site-header-link[data-current='true'] {
+  color: var(--fg-1);
+}
+
+.landing-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--verified-500);
+  text-decoration: none;
+}
+
+.landing-link:focus-visible,
+.site-header-link:focus-visible,
+.site-header-brand:focus-visible {
+  outline: 2px solid var(--verified-500);
+  outline-offset: 2px;
+}
+
+.landing {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.landing-brand-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-wordmark {
+  font-size: var(--text-stat-sm);
+}
+
+.landing-tagline,
+.landing-page-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-h2);
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-tight);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+.landing-prose {
+  font-size: var(--text-body-md);
+  color: var(--fg-2);
+  margin: 0;
+}
+
+.landing-closer {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--fg-3);
+  margin: 0;
+}
+
+.landing-claim {
+  color: var(--fg-1);
+}
+
+.landing-section-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin: 0 0 var(--sp-3);
+}
+
+.landing-route {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 48px;
+}
+
+.landing-route-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 34px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.landing-route-mark .meter-footprint {
+  display: block;
+  width: 24px;
+  height: 34px;
+  overflow: visible;
+}
+
+.landing-route-path {
+  flex: 1 1 auto;
+  height: 0;
+  border-top: 2px dashed var(--hairline-1);
+}
+
+.landing-paths {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+}
+
+.landing-path-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-h2);
+  letter-spacing: var(--track-display);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+.landing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.landing-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
+
+.landing-facts {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  color: var(--fg-2);
+  font-size: var(--text-body-md);
+}
+
+.agents-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.agents-mode-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin: 0;
+}
+
+.agents-code {
+  margin: 0;
+  padding: var(--sp-4);
+  background: var(--ink-800);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-card);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--fg-1);
+}
+
+.agents-code code {
+  font-family: inherit;
+  user-select: all;
+}
+
+.agents-tools,
+.agents-types,
+.agents-classes,
+.agents-more {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--text-body-md);
+  color: var(--fg-2);
+}
+
+.agents-type {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.agents-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body-sm);
+}
+
+.agents-table th,
+.agents-table td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--hairline-2);
+}
+
+.agents-table th {
+  font-family: var(--font-mono);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+
+.deck {
+  background: var(--ink-900);
+  height: 100svh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+}
+
+.deck > .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.deck-boards {
+  /* boards snap inside .deck */
+}
+
+.deck-board {
+  --status-quo-red: #e5484d;
+  position: relative;
+  min-height: 100svh;
+  scroll-snap-align: start;
+  padding: var(--sp-8) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-5);
+  box-sizing: border-box;
+}
+
+.deck-board .deck-status-quo {
+  color: var(--status-quo-red);
+}
+
+.deck-counter {
+  position: absolute;
+  right: var(--sp-6);
+  bottom: var(--sp-6);
+  color: var(--fg-4);
+  font-size: var(--text-body-sm);
+  margin: 0;
+}
+
+.deck-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin: 0;
+}
+
+.deck-headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-stat-sm);
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-tight);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+.deck-headline-long {
+  font-size: var(--text-h2);
+}
+
+.deck-list {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  font-size: var(--text-body-md);
+  color: var(--fg-2);
+}
+
+.deck-not {
+  gap: var(--sp-6);
+}
+
+.deck-matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+
+.deck-matrix-cell {
+  background: var(--ink-800);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.deck-matrix-cell.is-ours {
+  border-color: var(--verified-border);
+  background: var(--verified-tint);
+}
+
+.deck-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+  align-items: center;
+}
+
+.deck-split-left {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  color: var(--fg-3);
+  margin: 0;
+}
+
+.deck-split-right {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  color: var(--verified-500);
+  margin: 0;
+}
+
+.deck-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.deck-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body-sm);
+}
+
+.deck-table th,
+.deck-table td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--hairline-2);
+  vertical-align: top;
+  max-width: 16rem;
+}
+
+.deck-table th {
+  font-family: var(--font-mono);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+
+.deck-table tr.is-ours td {
+  color: var(--fg-1);
+  background: var(--verified-tint);
+}
+
+.deck-huge {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-stat-sm);
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-tight);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .landing-paths,
+  .deck-matrix,
+  .deck-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ waiting */
+
+/*
+ * DESIGN-SPEC "The idea": the route line — a dot, a dashed path, a footprint at the end —
+ * "appears as dividers, progress bars and the escrow meter". This is the progress bar, and
+ * it is the only waiting affordance either surface has. It does not spin: it walks, toward
+ * an end it has not reached, which is why there is no footprint on it.
+ *
+ * The worker phone draws the same thing in `apps/miniapp/app/globals.css` on paper.
+ */
+.route-wait {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin: 0;
+}
+
+.route-wait-line {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--fg-3);
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.route-wait-track {
+  flex: 1 1 auto;
+  min-width: var(--sp-6);
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--hairline-1) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 12px 100%;
+  animation: route-travel 900ms linear infinite;
+}
+
+@keyframes route-travel {
+  to {
+    background-position-x: 12px;
+  }
+}
+
+/*
+ * A route that walked in place would be worse than one that stands still. This file has no
+ * blanket reduced-motion reset — it disables named animations — so the track is named here.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .route-wait-track {
+    animation: none;
+  }
+}
+
+/*
+ * The shell every dynamic route paints while the API and the subgraph are read. Its job is
+ * that the ink ground and the wordmark are on screen in the first frame instead of a white
+ * document: with a `loading.tsx` in the segment, Next streams this immediately and fills the
+ * page in behind it. Nothing on it is a number.
+ */
+.route-loading {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: var(--sp-10) var(--sp-8);
+  background: var(--ink-900);
+}
+
+.route-loading .wordmark {
+  font-size: var(--text-h2);
+}

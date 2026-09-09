@@ -1,0 +1,14 @@
+{
+  "from": "principal",
+  "received_at": "2026-09-08T09:10:00Z",
+  "subject": "pastry shop in Parceiros",
+  "body": "I'm driving through Parceiros this afternoon and I want to stop for pastries on the way. Pão Doce on Rua do Cruzeiro is the one I know. Every hours listing I can find for it disagrees with the next one, so please don't just read me a website — find out whether it is open right now and tell me what it costs to find out.",
+  "place": {
+    "place_id": "node/13464213795",
+    "name": "Pão Doce",
+    "street_address": "Rua do Cruzeiro",
+    "locality": "Leiria",
+    "country": "PT"
+  },
+  "area": "ez1dn"
+}

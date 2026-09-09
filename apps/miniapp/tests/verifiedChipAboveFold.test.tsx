@@ -5,9 +5,15 @@ vi.mock('@worldcoin/idkit', () => ({ IDKitRequestWidget: () => null }));
 vi.mock('@worldcoin/minikit-js', () => ({
   MiniKit: { install: vi.fn(), isInstalled: vi.fn(() => false), walletAuth: vi.fn() },
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/',
+}));
 
-const BANNER = 'Verified human ✓ · World ID · one account per person';
+const BANNER = {
+  orb: 'Verified human ✓ · World ID · one account per person',
+  selfie: 'Verified human ✓ · World ID · a live person, camera-checked',
+} as const;
 
 const VERIFIED = {
   status: 'verified' as const,
@@ -17,25 +23,27 @@ const VERIFIED = {
   registered: true,
 };
 
+const { VerifiedState } = await import('../components/VerifiedState');
+const { SiteNav } = await import('../components/SiteNav');
+const { resetSessionForTests, setSessionState } = await import('../lib/session');
+const AuthPage = (await import('../app/(auth)/verify/page')).default;
+
 /**
  * The header is `app/layout.tsx`'s, reproduced here because a layout is not renderable on its
- * own: a sticky `<header>` before `<main>`, so the verification state is above the fold on
- * every route and on every phone.
+ * own: brand, nav, verified state, then `<main>`, so the verification state is above the fold
+ * on every route and on every phone.
  */
-async function renderHeaderAndPage(level: 'selfie' | 'orb') {
-  vi.resetModules();
-  vi.stubEnv('NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL', level);
-
-  const { VerifiedState } = await import('../components/VerifiedState');
-  const { setSessionState } = await import('../lib/session');
-  const AuthPage = (await import('../app/(auth)/page')).default;
-
+function renderHeaderAndPage(level: 'selfie' | 'orb') {
+  resetSessionForTests();
   setSessionState({ ...VERIFIED, level });
 
   return render(
     <>
       <header className="lw-header">
-        <span className="lw-wordmark">LEGWORK</span>
+        <span className="lw-header__brand">
+          <span className="lw-wordmark">LEGWORK</span>
+        </span>
+        <SiteNav />
         <VerifiedState />
       </header>
       <main className="lw-main">
@@ -47,16 +55,16 @@ async function renderHeaderAndPage(level: 'selfie' | 'orb') {
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllEnvs();
+  resetSessionForTests();
 });
 
 describe('layout', () => {
-  it('verifiedChipAboveFold', async () => {
+  it('verifiedChipAboveFold', () => {
     for (const [level, chip] of [
-      ['selfie', 'sandbox Selfie Check'],
-      ['orb', 'sandbox World ID'],
+      ['selfie', 'World ID · Selfie Check'],
+      ['orb', 'World ID · Orb'],
     ] as const) {
-      const { container } = await renderHeaderAndPage(level);
+      const { container } = renderHeaderAndPage(level);
 
       // The sticky header, not merely somewhere on the page: `main` scrolls, the header does not.
       const header = container.querySelector('header');
@@ -68,8 +76,17 @@ describe('layout', () => {
         `the sticky header renders no verified banner at level ${level} — it holds ` +
           `"${header?.textContent ?? ''}"`,
       ).not.toBeNull();
-      expect(line?.textContent).toContain(BANNER);
+      expect(line?.textContent).toBe(BANNER[level]);
       expect(line?.getAttribute('data-floor')).toBe('20');
+      if (level === 'orb') {
+        expect(line?.textContent).toContain('one account per person');
+      } else {
+        expect(line?.textContent).not.toContain('one account per person');
+      }
+
+      const sub = line?.querySelector('.lw-verified-line__sub');
+      expect(sub?.childNodes).toHaveLength(1);
+      expect(sub?.firstChild?.nodeType).toBe(Node.TEXT_NODE);
 
       // Above the fold means before `main` in DOM order.
       const main = container.querySelector('main');

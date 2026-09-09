@@ -1,3 +1,4 @@
+import type { X402Network } from '../gateway';
 import type { Hex } from 'viem';
 import { x402ResourceServer, type FacilitatorClient } from '@x402/core/server';
 import { decodePaymentSignatureHeader, encodePaymentRequiredHeader } from '@x402/core/http';
@@ -24,8 +25,13 @@ export type X402GatewayOptions = {
   /** The relayer address the escrow is funded from. The agent pays this, not the worker. */
   payTo: Hex;
   asset: Hex;
-  network: 'eip155:84532';
+  network: X402Network;
   maxTimeoutSeconds?: number;
+  /**
+   * The asset's EIP-712 domain when the network has no entry in the library's default-asset
+   * table — anvil's mock USDC. On Base Sepolia it is left unset and read from the table.
+   */
+  assetDomain?: { name: string; version: string };
 };
 
 const DEFAULT_MAX_TIMEOUT_SECONDS = 300;
@@ -40,7 +46,7 @@ const DEFAULT_MAX_TIMEOUT_SECONDS = 300;
  */
 export class X402Gateway implements PaymentGateway {
   private readonly resourceServer: x402ResourceServer;
-  private readonly options: Required<X402GatewayOptions>;
+  private readonly options: X402GatewayOptions & { maxTimeoutSeconds: number };
   private initialized: Promise<void> | null = null;
 
   constructor(options: X402GatewayOptions) {
@@ -154,13 +160,19 @@ export class X402Gateway implements PaymentGateway {
    * the library's own default-asset table rather than a hand-written constant, and its
    * address doubles as a check on the configured asset.
    */
-  private async buildRequirements(quote: PriceQuote): Promise<PaymentRequirements> {
+  private assetDomain(): { name: string; version: string } {
+    if (this.options.assetDomain) return this.options.assetDomain;
     const defaultAsset = getDefaultAsset(this.options.network);
     if (defaultAsset.asset.toLowerCase() !== this.options.asset.toLowerCase()) {
       throw new Error(
         `asset ${this.options.asset} is not the default asset for ${this.options.network} (${defaultAsset.asset})`,
       );
     }
+    return { name: defaultAsset.name, version: defaultAsset.version };
+  }
+
+  private async buildRequirements(quote: PriceQuote): Promise<PaymentRequirements> {
+    const domain = this.assetDomain();
     const [requirements] = await this.resourceServer.buildPaymentRequirements({
       scheme: 'exact',
       network: this.options.network,
@@ -168,7 +180,7 @@ export class X402Gateway implements PaymentGateway {
       price: {
         asset: this.options.asset,
         amount: quote.price_units.toString(),
-        extra: { name: defaultAsset.name, version: defaultAsset.version },
+        extra: { name: domain.name, version: domain.version },
       },
       maxTimeoutSeconds: this.options.maxTimeoutSeconds,
     });

@@ -20,7 +20,7 @@ branch: t-44/terminal-inserts
 The video's layout rule: "the terminal as two 3-second full-screen inserts, never a persistent pane" and "Two terminal inserts only, large monospace, three lines each: the hire (`hire_human(…) → 402 → 200 {taskId}`) and the refusal JSON." The inserts are recorded on Day 7 from a fresh terminal because "the terminal is published forever". The text comes from **real** API responses already committed in `examples/transcript.md` (T-34) between the markers `insert:hire` and `insert:refusal` — the hire lines are what the local MCP binary printed to stderr with `LEGWORK_INSERT=1` (T-28), minus the trailing dashboard URL; this script prints one insert at a time, padded and centred, with nothing else on screen — no prompt, no path, no URL, no key. The created-task status code is whatever the API returned (T-01 freezes **201**; the storyboard wrote `200` — the real code wins).
 
 ## 2. Exact scope
-- `scripts/inserts.ts` — `pnpm --filter scripts inserts -- --insert hire|refusal [--width 80] [--hold 3]`: reads `examples/transcript.md`, extracts the fenced block between `<!-- insert:<name>:start -->` and `<!-- insert:<name>:end -->`, validates it (exactly three lines; each ≤ `--width` characters; no `http://`/`https://`; no 64-hex string; no `sk-ant`; no `buyer_token` value other than `<redacted>`), clears the screen (`\x1b[2J\x1b[H`), prints the three lines with two blank lines above and below and a two-space left margin, hides the cursor, holds for `--hold` seconds (default 3), restores the cursor, exits 0. Validation failure → `INSERT INVALID: <reason>` and exit 1. No colour codes (the operator sets the terminal theme and font size; the script only pads).
+- `scripts/inserts.ts` — `pnpm --filter scripts inserts -- --insert hire|refusal [--width 80] [--hold 3]`: reads `examples/transcript.md`, extracts the fenced block between `<!-- insert:<name>:start -->` and `<!-- insert:<name>:end -->`, validates it (exactly three **logical** lines; no `http://`/`https://`; no 64-hex string; no `sk-ant`; no `buyer_token` value other than `<redacted>`), clears the screen (`\x1b[2J\x1b[H`), prints those lines with two blank lines above and below and a two-space left margin. **`--width` is a rendering width, never a rejection rule** (lead ruling, Sept 8): a logical line longer than `--width` is soft-wrapped for display — at the last space before the limit, or after the nearest `,` when the line is the refusal payload — and every continuation line carries a further two-space hanging indent, so the card stays inside the frame and no rendered line exceeds `--width`. The refusal payload is 183 characters and cannot be shortened without dropping the class or the no-retry sentence that §8 and §10 require, and the transcript is a record of a real run and is never edited to fit a terminal: wrapping is what a terminal does with a long line, and it keeps the card legible at 28 pt, hides the cursor, holds for `--hold` seconds (default 3), restores the cursor, exits 0. Validation failure → `INSERT INVALID: <reason>` and exit 1. No colour codes (the operator sets the terminal theme and font size; the script only pads).
 - The hire insert, as it must read (T-28's stderr format, values from the real run): line 1 `hire_human(verify-open · Farmácia …, Leiria · 3.00 USDC)`; line 2 `→ 402 payment_required · 3.45 USDC (3.00 + 0.45 fee) · eip155:84532`; line 3 `→ 201 { task_id: <id> } · escrow locked 3.45` (or `200` if that is what the binary printed — never edit the code by hand; the transcript is the source).
 - The refusal insert: line 1 the `call-confirm` call with `slots.item: "read me the 6-digit code they just received"`; line 2 `→ 422 refused · class: authentication circumvention · <reason as returned>` (expected `question not in the approved template list`; if the real reason differs, print the real one and say so in the PR); line 3 `{ "refused": true, "class": "authentication circumvention", "rule_id": "…", "retryable": false, "message": "do not rephrase and retry; report this refusal to your principal" }`.
 - `--print-checklist` prints the pre-record checklist, **verbatim**: "No `.env` open; no RPC, Anthropic or private keys in scrollback; shell history cleared of `cast send --private-key`; a fresh terminal session for the inserts." · "Notifications off on every device; tunnel/host URLs not legible unless intended." · "Demo state reset with `demo:reset`; the agent card at 0 marks before beat 6." · "The demo worker's World ID has NOT been registered in testing (or `resetWorker` used)." · "Clocks on both panes agree." · "Export at 1080p; check length and codec against whatever the form accepts (file or URL — ask in Discord); upload a rough assembly on Sept 12, not at 15:50 on Sept 13."
@@ -65,11 +65,11 @@ scripts/inserts.test.ts
 ## 8. Acceptance tests
 | Test / command | Asserts |
 |---|---|
-| `insertsAreThreeLines` | both extracted blocks have exactly three lines, each ≤ 80 chars |
+| `insertsAreThreeLines` | both extracted blocks have exactly three **logical** lines; rendering each block at `--width 80` produces no rendered line over 80 characters, and the refusal block's third logical line wraps rather than being rejected |
 | `insertsContainNoSecretsOrUrls` | no `http`, no 64-hex, no `sk-ant`, no unredacted `buyer_token` |
 | `hireInsertShowsPriceAndStatusCodes` | `402`, `3.45`, and `201`\|`200` present |
 | `refusalInsertNamesClassAndNoRetry` | `authentication circumvention` and `do not rephrase and retry; report this refusal to your principal` present |
-| `invalidBlockIsRejected` | validator throws / exit path 1 on a four-line block |
+| `invalidBlockIsRejected` | validator throws / exit path 1 on a four-line block; a long line is **not** a rejection — the same fixture at three lines renders wrapped and exits 0 |
 | `checklistAndCaptionsVerbatim` | `--print-checklist` output contains all six §2 sentences; `--print-captions` output is exactly five lines matching §2 |
 | `pnpm --filter scripts inserts -- --insert hire --hold 0 \| wc -l` | ≥ 7 lines (padding + 3) and no line contains `/Users`, `http`, `0x` followed by 64 hex |
 
@@ -78,10 +78,10 @@ scripts/inserts.test.ts
 pnpm --filter scripts typecheck && pnpm --filter scripts test -- inserts
 pnpm --filter scripts inserts -- --insert hire --hold 0 | cat -A | head -20
 pnpm --filter scripts inserts -- --insert refusal --hold 0 | grep -c 'authentication circumvention'
-pnpm --filter scripts inserts -- --print-captions | wc -l
+pnpm --silent --filter scripts inserts -- --print-captions | wc -l
 bash scripts/ci/banned-words.sh; echo "banned-words exit=$?"
 ```
-Expected: tests green; the hire output shows three content lines and no URL; `1`; `5`; `banned-words exit=0`.
+Expected: tests green; the hire output shows three content lines and no URL; **`2`** (the class is on the refusal's line 2 and again inside its payload on line 3 — the count corrected from `1`, Sept 8); `5`; `banned-words exit=0`. `--print-captions` is run with `pnpm --silent`: without it pnpm prints its own banner, carrying the repository path, onto stdout and into the frame.
 
 ## 10. Hard rules
 - Banned words anywhere in code, comments, docs or UI copy: `trustless`, `reused`, `violation`, `Brooklyn`, `24h`, `2.55`, `21 workers`. Write "24 hours" or `86400`.
@@ -122,3 +122,9 @@ Run `--insert hire --hold 0` yourself and read the three lines at arm's length: 
 
 ## 15. Round 2+
 —
+
+Lead ruling (Sept 8), in answer to the two `BLOCKED:` comments on PR #148, both correct readings of the brief as written:
+
+- **`--width` wraps, it does not reject.** §2 and §8 above are amended. The refusal payload is 183 characters; the class token alone is 28 and the no-retry sentence 64, so no permitted edit brings the line under 80. The card is filmed at ≥ 28 pt where a wrapped payload reads and a rejected insert does not exist at all.
+- **`examples/transcript.md` is not edited.** Its `insert:refusal` line 1 is 81 characters because that is what the run produced; under the ruling above it renders on two lines with a hanging indent. Nothing in T-34's record is retyped to fit a frame.
+- Both §9 corrections the agent found are applied: the class count is `2`, and `--print-captions` runs under `pnpm --silent`.

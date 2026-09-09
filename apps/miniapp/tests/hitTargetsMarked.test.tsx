@@ -30,7 +30,7 @@ describe('primitives', () => {
         <Button variant="verified" disabled>
           Released
         </Button>
-        <Chip tone="verified">sandbox World ID</Chip>
+        <Chip tone="verified">World ID · Orb</Chip>
         <Chip tone="seeded" floor={20}>
           seeded
         </Chip>

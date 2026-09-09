@@ -44,7 +44,7 @@ export interface TaskRowData {
   state: TaskRowState;
   meta: string;
   seeded: boolean;
-  refusal?: { class: AbuseClass | null; reason: string };
+  refusal?: { class: AbuseClass | null; reason?: string; ruleId?: string };
   tx?: string;
 }
 
@@ -71,7 +71,7 @@ export interface PoolData {
   highlighted?: {
     id: string;
     minutesReal?: number;
-    /** `orb` renders `sandbox World ID`, `selfie` renders `sandbox Selfie Check`. */
+    /** `orb` renders `World ID · Orb`, `selfie` renders `World ID · Selfie Check`. */
     level: 'selfie' | 'orb';
   };
   rows: PoolRow[];
@@ -83,7 +83,7 @@ export interface ScreeningLine {
   outcome: 'refused' | 'passed';
   taskType: TaskType | 'free-text';
   class?: AbuseClass | null;
-  reason: string;
+  reason?: string;
   ruleId?: string;
   specHash: string;
   marked: boolean;

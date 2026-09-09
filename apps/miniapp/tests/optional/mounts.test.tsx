@@ -72,10 +72,11 @@ describe('the two mount points', () => {
     // The banner first — the heading carries the floor, the locked rows repeat its words.
     const headings = await screen.findAllByText(VERIFY_HEADING);
     expect(headings.some((el) => el.getAttribute('data-floor') === '20')).toBe(true);
-    // The open row at the worker's rate, titled by type and area; the released one never shows.
-    await screen.findByText('compare-two · ez1dp');
+    // The open row at the worker's rate, titled as the errand; the released one never shows.
+    await screen.findByText('Pick A or B against the criterion shown after you claim');
     expect(screen.getByText('1.00 USDC')).toBeTruthy();
-    expect(screen.queryByText('verify-open · ez1dp')).toBeNull();
+    expect(screen.queryByText('Is it open right now?')).toBeNull();
+    expect(screen.queryByText('compare-two · ez1dp')).toBeNull();
     expect(screen.getByText('seeded')).toBeTruthy();
     for (const button of document.querySelectorAll('li button')) {
       expect((button as HTMLButtonElement).disabled).toBe(true);

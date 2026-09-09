@@ -158,7 +158,7 @@ Post a task and fund its escrow. Hosted mode cannot pay and returns payment_requ
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -241,7 +241,7 @@ Post a task and fund its escrow. Hosted mode cannot pay and returns payment_requ
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -323,7 +323,7 @@ Post a task and fund its escrow. Hosted mode cannot pay and returns payment_requ
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -581,8 +581,16 @@ Post a task and fund its escrow. Hosted mode cannot pay and returns payment_requ
           "type": "number"
         },
         "network": {
-          "type": "string",
-          "const": "eip155:84532"
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "eip155:84532"
+            },
+            {
+              "type": "string",
+              "const": "eip155:31337"
+            }
+          ]
         },
         "asset": {
           "type": "string",
