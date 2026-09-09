@@ -1,5 +1,6 @@
 'use client';
 
+import { Waiting } from '../../components/ui/Waiting';
 import { useSession, useSessionReady } from '../../lib/session';
 import { TaskList } from './TaskList';
 import { UnverifiedTasks } from './UnverifiedTasks';
@@ -17,7 +18,7 @@ export default function TasksPage() {
   const ready = useSessionReady();
 
   if (!ready || session.status === 'verifying') {
-    return <p className="lw-placeholder">Opening your task list…</p>;
+    return <Waiting step="task-list">Opening your task list…</Waiting>;
   }
 
   if (session.status !== 'verified') {

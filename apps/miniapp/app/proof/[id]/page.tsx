@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
+import { Waiting } from '../../../components/ui/Waiting';
 import { requireVerified } from '../../../lib/session';
 import { readActiveClaim, type ActiveClaim } from '../../tasks/activeClaim';
 import { ProofFlow } from '../ProofFlow';
@@ -31,11 +32,15 @@ export default function ProofPage({ params }: { params: Promise<{ id: string }> 
   }, [id, router]);
 
   if (session.status !== 'verified' || claim === undefined) {
-    return <p className="lw-placeholder">Opening your proof screen…</p>;
+    return <Waiting step="proof-screen">Opening your proof screen…</Waiting>;
   }
 
   if (claim === null || claim.task_id !== id) {
-    return <p className="lw-placeholder">That task is not the one you are holding — back to the list…</p>;
+    return (
+      <Waiting step="wrong-task">
+        That task is not the one you are holding — back to the list…
+      </Waiting>
+    );
   }
 
   return <ProofFlow claim={claim} taskId={id} />;

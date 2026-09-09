@@ -527,6 +527,27 @@
   color: var(--refusal-500);
 }
 
+/* ---------------------------------------------------------------- the wait */
+
+/*
+ * `present/loading.tsx` draws the stage before the data arrives, so its one waiting line
+ * is scaled against `--u` like everything else inside `.stage` — a bare px here would be
+ * the only length on the canvas that is not.
+ */
+.stage .present-wait {
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(12 * var(--u));
+  margin-top: calc(8 * var(--u));
+}
+.stage .present-wait .route-wait-line {
+  font-size: calc(24 * var(--u));
+}
+.stage .present-wait .route-wait-track {
+  height: calc(2 * var(--u));
+  min-width: calc(24 * var(--u));
+}
+
 /* ------------------------------------------------------------- crop guide */
 
 /*

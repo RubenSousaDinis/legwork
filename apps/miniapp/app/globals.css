@@ -459,11 +459,62 @@ body {
   color: var(--ink-text);
 }
 
+/* A readout with nothing in it yet — the probe's `not run` rows. Not a wait: see below. */
 .lw-placeholder {
   color: var(--ink-text-3);
   font-family: var(--font-mono);
   font-size: 15px;
   margin: var(--s-3) 0 0;
+}
+
+/*
+ * The waiting state. DESIGN-SPEC "The idea": the route line "appears as dividers, progress
+ * bars and the escrow meter" — this is the progress bar, and the one the phone uses for
+ * every wait. The sentence sits at the 20 px floor because a worker reads it standing up,
+ * in the street, on a phone.
+ */
+.lw-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+  margin: var(--s-4) 0 0;
+}
+
+/*
+ * The sentence gets the whole width and the route runs under it. Side by side, a wait whose
+ * copy needed two lines squeezed the route into a stub beside the first one, which read as
+ * a rendering fault rather than as progress.
+ */
+.lw-waiting__line {
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-text-2);
+  min-width: 0;
+}
+
+/*
+ * The route, still being walked: the dash travels toward an end it has not reached. The
+ * receipt's route line ends in a footprint and this one does not, which is the whole
+ * difference between on the way and arrived.
+ */
+.lw-waiting__route {
+  width: 100%;
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--paper-border-2) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 12px 100%;
+  animation: lw-route-travel 900ms linear infinite;
+}
+
+@keyframes lw-route-travel {
+  to {
+    background-position-x: 12px;
+  }
 }
 
 .lw-error {

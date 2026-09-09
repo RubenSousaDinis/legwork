@@ -8,6 +8,7 @@ import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
 import { Countdown } from './Countdown';
 import { MonoTag } from './ui/MonoTag';
+import { Waiting } from './ui/Waiting';
 
 /**
  * One row of `GET /tasks`, in its three states: collapsed, expanded, and claimed.
@@ -65,6 +66,8 @@ export type TaskCardProps = {
   expanded: boolean;
   onToggle: () => void;
   onClaim: () => void;
+  /** This row's claim is in flight: the relay has the transaction and has not answered. */
+  claiming?: boolean;
   claim?: TaskCardClaim;
   onRelease: () => void;
   error?: string;
@@ -75,6 +78,13 @@ const BASESCAN_TX = 'https://sepolia.basescan.org/tx/';
 export const RELAYED_CHIP = 'relayed claim · gas paid by Legwork';
 export const PAID_FOR_THE_PROOF = 'you are paid for the proof, not the answer';
 export const CLAIM_EXPIRED = 'claim expired — it returned to the pool';
+
+/**
+ * A claim is a relayed transaction, so there are seconds between the tap and the answer.
+ * The button keeps its name and stops accepting taps — a second tap used to send a second
+ * claim — and the line under it says what those seconds are.
+ */
+export const CLAIMING_LINE = 'Claiming this task…';
 
 /**
  * The claim window closing does not hand the task back: `TaskEscrow.expire` is what moves the
@@ -165,6 +175,7 @@ export function TaskCard({
   expanded,
   onToggle,
   onClaim,
+  claiming = false,
   claim,
   onRelease,
   error,
@@ -274,7 +285,7 @@ export function TaskCard({
               />
             </div>
           ) : (
-            <ClaimButton onClaim={onClaim} row={row} />
+            <ClaimButton claiming={claiming} onClaim={onClaim} row={row} />
           )}
 
           <p className="lw-chips lw-chips--centred" data-row="relayed">
@@ -307,7 +318,15 @@ export function TaskCard({
   );
 }
 
-function ClaimButton({ row, onClaim }: { row: TaskRow; onClaim: () => void }) {
+function ClaimButton({
+  row,
+  onClaim,
+  claiming,
+}: {
+  row: TaskRow;
+  onClaim: () => void;
+  claiming: boolean;
+}) {
   const tooFar =
     row.distance_m !== undefined &&
     Number.isFinite(row.distance_m) &&
@@ -324,9 +343,12 @@ function ClaimButton({ row, onClaim }: { row: TaskRow; onClaim: () => void }) {
           {claimConfirmation(row)}
         </p>
       )}
-      <Button disabled={tooFar} full onClick={onClaim} size="lg" variant="primary">
+      {/* The label does not change: an action keeps its name through the whole flow, and
+          the waiting line under it is what says the flow is running. */}
+      <Button disabled={tooFar || claiming} full onClick={onClaim} size="lg" variant="primary">
         CLAIM
       </Button>
+      {claiming ? <Waiting step="claim">{CLAIMING_LINE}</Waiting> : null}
     </div>
   );
 }
