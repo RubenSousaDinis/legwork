@@ -47,7 +47,7 @@ const { MiniKit } = await import('@worldcoin/minikit-js');
 const { NONCE, registerRequests, sessionRequests } = await import('../mocks/handlers');
 const { setScenario } = await import('../mocks/scenarios');
 const { resetSessionForTests } = await import('../lib/session');
-const { getPayoutAddress } = await import('../lib/workerKey');
+const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
 const AuthPage = (await import('../app/(auth)/verify/page')).default;
 
 const CTA = 'Verify with World ID';
@@ -166,7 +166,7 @@ describe('auth flow', () => {
 
     fireEvent.click(await screen.findByText('Register as a worker'));
 
-    const address = getPayoutAddress();
+    const address = loadOrCreatePayoutKey().address;
     expect(address).not.toBeNull();
     await waitFor(() =>
       expect(sessionRequests().at(-1)).toEqual({ mode: 'idkit', worker_address: address }),
@@ -184,7 +184,7 @@ describe('auth flow', () => {
 
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
     expect(registerRequests()[0]).toEqual({
-      worker_address: getPayoutAddress(),
+      worker_address: loadOrCreatePayoutKey().address,
       area: 'ez1dp',
       task_types: ['verify-open', 'photo-of', 'call-confirm', 'compare-two'],
     });
@@ -229,7 +229,6 @@ describe('auth flow', () => {
 
   it('nullifierConflictSignsInWithTheHeldKey', async () => {
     const { bindRegisteredWorker, NULLIFIER } = await import('../mocks/handlers');
-    const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
 
     // --- outside World App: a 409 never issued the idkit cookie, so there is no sign-in.
     const held = loadOrCreatePayoutKey();
@@ -320,7 +319,6 @@ describe('auth flow', () => {
   });
 
   it('walletAuthAddressIsTheRegisteredAddress', async () => {
-    const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
     vi.mocked(MiniKit.isInstalled).mockReturnValue(true);
     mockWalletAuth();
 
@@ -344,7 +342,7 @@ describe('auth flow', () => {
 
     fireEvent.click(await screen.findByText('Register as a worker'));
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
-    expect(registerRequests()[0]).toMatchObject({ worker_address: getPayoutAddress() });
+    expect(registerRequests()[0]).toMatchObject({ worker_address: loadOrCreatePayoutKey().address });
   });
 
   it('worldAppShowsNoPayoutKeyToLose', async () => {

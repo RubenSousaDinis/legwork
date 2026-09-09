@@ -150,7 +150,7 @@ async function requestWalletAuth(): Promise<PendingWalletAuth> {
  * The World App wallet address, before a session exists. MiniKit populates
  * `user.walletAddress` on install — that is the same address `walletAuth` later signs as —
  * so this does not add a signature. If install has not filled it yet, one `walletAuth` is
- * stored and reused by `createWalletAuthSession`: one signature per sign-in.
+ * held for `createWalletAuthSession`: one signature per sign-in.
  */
 export async function walletAddress(): Promise<string | null> {
   if (!miniKitInstalled()) return null;
