@@ -147,7 +147,15 @@ Today I am on both sides of this: my agent, my phone, my key resolves disputes. 
 
 ## Prize qualification
 
-_filled by T-48 on Day 9_
+Tick only tracks whose bullets are literally met.
+
+| Partner · track | Qualification bullet (verbatim) | Evidence (file / address / commit / timestamp) | Met? |
+| --- | --- | --- | --- |
+| World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Compatible flow, not Selfie Check.** `apps/miniapp/lib/worldid.ts` `pickPreset` / `IDKitRequestWidget`; `WORLD_CREDENTIAL_LEVEL=orb` (`docs/spikes/RESULTS.md` `## S2`); real worker `0xaed0c1102e45b7f528224eacb9309a0925015810` (`## Preflight`; `WorkerRegistered` tx TODO(operator)). `WorkerRegistry` one nullifier = one account, only verified workers claim; `test_Register_DuplicateNullifierReverts` in `contracts/test/WorkerRegistry.t.sol`. Sandbox: RESULTS `## S2` (Orb 200, Selfie Check `verification_disabled`) and `FEEDBACK-WORLD.md` E5, E6, E8, E9. Feedback: `FEEDBACK-WORLD.md`, nine dated entries. Working app: https://legwork-miniapp.vercel.app; video timestamp TODO(operator). | yes |
+| The Graph — Best AI Tooling or AI Use Case (From Scratch) | Use The Graph as a load-bearing part. Consume live data from a Graph provider. net-new work started during the hackathon. open source with README or SKILL.md. | `preflight_workers` in `packages/mcp` (`src/tools/preflight.ts`); hosted mount `apps/api/app/mcp/route.ts` passes `createSubgraphClient` from `packages/subgraph-client`. `examples/transcript.md` shows the agent quoting `n_real` / `median_source`; `examples/prompt.md` requires it; Day-9 live capture `n_real: 1`, `median_source: "real"` (`RESULTS.md` `## Preflight`). Studio query URL https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4; Discord "does testnet Studio count as a Graph provider": unanswered as of 2026-09-09 (`RESULTS.md` `## Graph`). First commit `be479b42a7e4111cd0386b6ec832ea43f5876c5c` at 2026-09-04T17:18:30Z. `SKILL.md`; README states MIT (no root `LICENSE` file in the tree). | yes |
+| The Graph — Best Use of Composable or Standardized Graph Products | not selected — Discord unanswered (Studio-as-provider and Subgraph MCP both unanswered as of 2026-09-09); The Graph's Subgraph MCP tool was not shipped | RESULTS `## Graph`; this repo's MCP is Legwork's, not The Graph's Subgraph MCP product | no — do not select |
+| Bazantic — Agentify a New API | not selected — no gateway by freeze | No T-48 issue comment with gateway URL, recipe name, recording or username by Day 9 12:00 UTC | no — do not select |
+| Bazantic — Best Recipe Using Sponsor APIs | not selected — no gateway by freeze | Second recipe does not exist | no — do not select |
 
 ## External posters
 
