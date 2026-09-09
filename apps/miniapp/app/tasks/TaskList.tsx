@@ -88,11 +88,12 @@ function errorCode(thrown: unknown): string | null {
  */
 export function recoverClaim(rows: TaskRow[], now: number = Date.now()): ActiveClaim | null {
   if (readActiveClaim() !== null) return null;
-  const mine = rows.find(
-    (row) => row.state === 'claimed' && (row.claim_expires_in_s ?? 0) > 0,
-  );
+  // Not gated on time left: a claim past its window is still `activeClaimOf` on the contract
+  // until `expire` or `releaseClaim` runs, and recovering only live claims left the worker
+  // holding a task with no card and so no way to hand it back.
+  const mine = rows.find((row) => row.state === 'claimed');
   if (mine === undefined) return null;
-  const expiresAt = new Date(now + (mine.claim_expires_in_s as number) * 1000).toISOString();
+  const expiresAt = new Date(now + (mine.claim_expires_in_s ?? 0) * 1000).toISOString();
   return {
     task_id: mine.task_id,
     claim_expires_at: expiresAt,

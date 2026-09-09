@@ -51,7 +51,12 @@ describe('recoverClaim', () => {
     expect(recoverClaim([OPEN], NOW)).toBeNull();
   });
 
-  it('ignores a claim whose window has already run out', () => {
-    expect(recoverClaim([{ ...MINE, claim_expires_in_s: 0 }], NOW)).toBeNull();
+  // The window closing is not the task going back: `expire` needs `claimedAt + submitTTL` and
+  // nothing fires it on its own, so `activeClaimOf` still names the task and the worker is
+  // pinned to it. Recovering it is what puts `release this claim` back on the card.
+  it('recovers a claim whose window has run out but which is still ours', () => {
+    const claim = recoverClaim([{ ...MINE, claim_expires_in_s: 0 }], NOW);
+    expect(claim?.task_id).toBe('31');
+    expect(claim?.claim_expires_at).toBe('2026-09-09T12:10:00.000Z');
   });
 });
