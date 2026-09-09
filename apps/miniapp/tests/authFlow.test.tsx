@@ -53,11 +53,16 @@ const WALLET_AUTH_DATA = {
   signature: `0x${'ab'.repeat(64)}1b`,
 };
 
-/** The mock signs as the held payout key so `/session` looks up the same address `/register` bound. */
+/**
+ * The mock signs as a wallet address that is **not** the generated payout key. Production
+ * never satisfies that equality: World App's wallet is a smart-contract account, and
+ * `loadOrCreatePayoutKey()` is `generatePrivateKey()` in localStorage. Signing as the payout
+ * key is how this bug survived T-52.
+ */
 function mockWalletAuth() {
   vi.mocked(MiniKit.walletAuth).mockImplementation(async () => ({
     executedWith: 'minikit',
-    data: { ...WALLET_AUTH_DATA, address: getPayoutAddress() ?? WALLET_AUTH_DATA.address },
+    data: { ...WALLET_AUTH_DATA },
   } as never));
 }
 
