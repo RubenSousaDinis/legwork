@@ -417,13 +417,17 @@ function ClaimedActions({ claim, onRelease, router, taskId }: ClaimedActionsProp
     <div className="lw-actions">
       <Countdown label="claim expires in" onExpire={onExpire} until={claim.claim_expires_at} />
 
-      <p className="lw-chips">
-        <Chip tone="neutral" floor={20}>
-          <a data-hit="44" href={`${BASESCAN_TX}${claim.tx}`} rel="noreferrer" target="_blank">
-            {`tx ${shortTx(claim.tx)} ↗`}
-          </a>
-        </Chip>
-      </p>
+      {/* A claim recovered from the board carries no receipt — the row does not have one to
+          give. Better no chip than a Basescan link to nothing. */}
+      {claim.tx === '' ? null : (
+        <p className="lw-chips">
+          <Chip tone="neutral" floor={20}>
+            <a data-hit="44" href={`${BASESCAN_TX}${claim.tx}`} rel="noreferrer" target="_blank">
+              {`tx ${shortTx(claim.tx)} ↗`}
+            </a>
+          </Chip>
+        </p>
+      )}
 
       <Button variant="primary" size="lg" full onClick={() => router.push(`/proof/${taskId}`)}>
         Go to proof

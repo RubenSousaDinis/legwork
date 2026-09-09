@@ -71,6 +71,36 @@ function errorCode(thrown: unknown): string | null {
   return typeof body?.error === 'string' ? body.error : null;
 }
 
+/**
+ * The claim the API says is ours, when the phone has forgotten it.
+ *
+ * `activeClaim.ts` calls itself "a non-secret copy" of what the API already answered, and the
+ * API is explicit: `GET /tasks/list` marks a row `claimed` only for the caller's own live
+ * claim (`route.ts:77` — `sameAddress(row.worker, caller)`; anyone else's claim comes back
+ * `open`). But the card read `claimed` from the mirror alone, so a worker whose localStorage
+ * went — a webview reload, a new session, cleared storage — saw a CLAIM button on a task they
+ * were already holding. Tapping it returned `AlreadyClaimed`, and there was no way to reach
+ * `Go to proof` or `release this claim`: the task was theirs and unreachable until the TTL ran
+ * out. An operator hit exactly this, on the street, holding task 31.
+ *
+ * `tx` is not on the row and is not invented — the claim receipt chip is dropped for a
+ * recovered claim, and the countdown and both actions come back.
+ */
+export function recoverClaim(rows: TaskRow[], now: number = Date.now()): ActiveClaim | null {
+  if (readActiveClaim() !== null) return null;
+  const mine = rows.find(
+    (row) => row.state === 'claimed' && (row.claim_expires_in_s ?? 0) > 0,
+  );
+  if (mine === undefined) return null;
+  const expiresAt = new Date(now + (mine.claim_expires_in_s as number) * 1000).toISOString();
+  return {
+    task_id: mine.task_id,
+    claim_expires_at: expiresAt,
+    submit_deadline: expiresAt,
+    tx: '',
+  };
+}
+
 function claimErrorMessage(thrown: unknown): string {
   const code = errorCode(thrown);
   if (code === 'AlreadyClaimed' && thrown instanceof ApiError) {
@@ -142,6 +172,11 @@ export function TaskList() {
       // `TaskCard` clears the stored claim when its countdown hits `00:00`; this is where the
       // pinned card goes away and the worker is back on the list.
       setClaim((current) => (current !== null && readActiveClaim() === null ? null : current));
+      const recovered = recoverClaim(data.tasks);
+      if (recovered !== null) {
+        writeActiveClaim(recovered);
+        setClaim(recovered);
+      }
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.status === 401) routerRef.current.replace('/');
     }
