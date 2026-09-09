@@ -84,7 +84,7 @@ Tick only tracks whose bullets are literally met.
 
 | Partner · track | Qualification bullet (verbatim) | Evidence (file / address / commit / timestamp) | Met? |
 | --- | --- | --- | --- |
-| World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Compatible flow, not Selfie Check.** `apps/miniapp/lib/worldid.ts` `pickPreset` / `IDKitRequestWidget`; `WORLD_CREDENTIAL_LEVEL=orb` (`docs/spikes/RESULTS.md` `## S2`); real worker `0xaed0c1102e45b7f528224eacb9309a0925015810` (`## Preflight`; `WorkerRegistered` tx TODO(operator)). `WorkerRegistry` one nullifier = one account, only verified workers claim; `test_Register_DuplicateNullifierReverts` in `contracts/test/WorkerRegistry.t.sol`. Sandbox: RESULTS `## S2` (Orb 200, Selfie Check `verification_disabled`) and `FEEDBACK-WORLD.md` E5, E6, E8, E9. Feedback: `FEEDBACK-WORLD.md`, nine dated entries. Working app: https://legwork-miniapp.vercel.app; video timestamp TODO(operator). | yes |
+| World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Compatible flow, not Selfie Check.** `apps/miniapp/lib/worldid.ts` `pickPreset` / `IDKitRequestWidget`; `WORLD_CREDENTIAL_LEVEL=orb` (`docs/spikes/RESULTS.md` `## S2`); real worker `0xaed0c1102e45b7f528224eacb9309a0925015810` (`## Preflight`; `WorkerRegistered` tx `0x9e607b28b640f71f01ea2500688545f23a32ecda1dcb015831c3011c25b80935`, block 46592571, area `ez19y`). `WorkerRegistry` one nullifier = one account, only verified workers claim; `test_Register_DuplicateNullifierReverts` in `contracts/test/WorkerRegistry.t.sol`. Sandbox: RESULTS `## S2` (Orb 200, Selfie Check `verification_disabled`) and `FEEDBACK-WORLD.md` E5, E6, E8, E9. Feedback: `FEEDBACK-WORLD.md`, nine dated entries. Working app: https://legwork-miniapp.vercel.app. | yes |
 | The Graph — Best AI Tooling or AI Use Case (From Scratch) | Use The Graph as a load-bearing part. Consume live data from a Graph provider. net-new work started during the hackathon. open source with README or SKILL.md. | `preflight_workers` in `packages/mcp` (`src/tools/preflight.ts`); hosted mount `apps/api/app/mcp/route.ts` passes `createSubgraphClient` from `packages/subgraph-client`. `examples/transcript.md` shows the agent quoting `n_real` / `median_source`; `examples/prompt.md` requires it; Day-9 live capture `n_real: 1`, `median_source: "real"` (`RESULTS.md` `## Preflight`). Studio query URL https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4; Discord "does testnet Studio count as a Graph provider": unanswered as of 2026-09-09 (`RESULTS.md` `## Graph`). First commit `be479b42a7e4111cd0386b6ec832ea43f5876c5c` at 2026-09-04T17:18:30Z. `SKILL.md`; README states MIT (no root `LICENSE` file in the tree). | yes |
 | The Graph — Best Use of Composable or Standardized Graph Products | not selected — Discord unanswered (Studio-as-provider and Subgraph MCP both unanswered as of 2026-09-09); The Graph's Subgraph MCP tool was not shipped | RESULTS `## Graph`; this repo's MCP is Legwork's, not The Graph's Subgraph MCP product | no — do not select |
 | Bazantic — Agentify a New API | not selected — no gateway by freeze | No T-48 issue comment with gateway URL, recipe name, recording or username by Day 9 12:00 UTC | no — do not select |
@@ -97,7 +97,7 @@ Select 3 partners and every track each one qualifies for.
 - **Title** — Legwork — real-world verification for AI agents
 - **Short description** — paste the ≤300 form variant (300 characters). If the form allows more, paste the Full variant.
 - **Long description** — paste `## Long description` from the tagline through the Start Fresh sentence.
-- **Video URL** — TODO(operator)
+- **Video URL and beat timestamps (1, 6, 7)** — TODO(operator)
 - **Live URL** — https://legwork-dashboard.vercel.app
 - **Repo** — https://github.com/RubenSousaDinis/legwork
 - **Addresses** — WorkerRegistry `0xc33d229046507f4C2E664cbf974542c92eEAbAf4` · TaskEscrow `0x641B56dfA3A033D84a75588c18579347A0DE3c6B` · Reputation `0x2f731B56D02080190fa2ef7813887B2743551E43` · AbuseMark `0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608` · subgraph https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4
@@ -106,8 +106,7 @@ Select 3 partners and every track each one qualifies for.
 
 ## TODO(operator)
 
-- Video URL and the timestamps for beats 1, 6 and 7.
-- `WorkerRegistered` transaction hash for the real registration (worker `0xaed0c1102e45b7f528224eacb9309a0925015810` on WorkerRegistry `0xc33d229046507f4C2E664cbf974542c92eEAbAf4`).
+- Video URL and the timestamps for beats 1, 6 and 7 (form field, not World-track evidence).
 - Worker online hours (README still has `<hours>`).
 - Confirm or omit the €20 "the worker was paid for real, separately" line — not confirmed on the T-48 issue, so it is omitted here.
 - A root `LICENSE` file if the form asks for one; the README already states MIT.
