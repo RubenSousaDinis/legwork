@@ -28,6 +28,7 @@ describe('deck', () => {
     expect(boards).toHaveLength(13);
     expect(boards.map((b) => b.id)).toEqual(Array.from({ length: 13 }, (_, i) => `board-${i + 1}`));
     const board4 = container.querySelector('#board-4')!;
+    // at orb (unset WORLD_CREDENTIAL_LEVEL) board 4 matches copy.ts's current constants
     expect(board4.textContent).toContain(CLAIM);
     expect(board4.textContent).toContain(TRUST_MODEL);
   });

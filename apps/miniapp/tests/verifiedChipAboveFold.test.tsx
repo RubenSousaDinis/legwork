@@ -7,7 +7,10 @@ vi.mock('@worldcoin/minikit-js', () => ({
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 
-const BANNER = 'Verified human ✓ · World ID · one account per person';
+const BANNER = {
+  orb: 'Verified human ✓ · World ID · one account per person',
+  selfie: 'Verified human ✓ · World ID · a live person, camera-checked',
+} as const;
 
 const VERIFIED = {
   status: 'verified' as const,
@@ -68,8 +71,17 @@ describe('layout', () => {
         `the sticky header renders no verified banner at level ${level} — it holds ` +
           `"${header?.textContent ?? ''}"`,
       ).not.toBeNull();
-      expect(line?.textContent).toContain(BANNER);
+      expect(line?.textContent).toBe(BANNER[level]);
       expect(line?.getAttribute('data-floor')).toBe('20');
+      if (level === 'orb') {
+        expect(line?.textContent).toContain('one account per person');
+      } else {
+        expect(line?.textContent).not.toContain('one account per person');
+      }
+
+      const sub = line?.querySelector('.lw-verified-line__sub');
+      expect(sub?.childNodes).toHaveLength(1);
+      expect(sub?.firstChild?.nodeType).toBe(Node.TEXT_NODE);
 
       // Above the fold means before `main` in DOM order.
       const main = container.querySelector('main');

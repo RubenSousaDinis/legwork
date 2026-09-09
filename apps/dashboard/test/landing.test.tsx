@@ -89,6 +89,7 @@ describe('landing', () => {
     expect(landing.textContent).toContain(TRUST_MODEL);
     cleanup();
 
+    // at orb (unset WORLD_CREDENTIAL_LEVEL) the locked blocks match copy.ts's current constants
     const about = render(<AboutPage />).container;
     expect(about.textContent).toContain(CLAIM);
     expect(about.textContent).toContain(TRUST_MODEL);

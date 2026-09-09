@@ -1,4 +1,4 @@
-import { credentialLabel } from '@legwork/shared';
+import { credentialLabel, trustModelSentence } from '@legwork/shared';
 import type { Metadata } from 'next';
 import { Chip } from '../../components/ui/Chip';
 import { CREDENTIAL_LEVEL } from '../../lib/env';
@@ -87,10 +87,7 @@ export default function SupportPage() {
       <section className="lw-card">
         <p className="lw-list-label">WHAT VERIFICATION DOES NOT PROVE</p>
         <p className="lw-body" data-floor="20">
-          Verification proves a worker is a live, unique person — not that they are honest or
-          competent. Escrow bounds the poster&apos;s loss to one task. Legwork&apos;s guarantee is
-          bounded, attributable work: an agent never pays for nothing, a worker never works for
-          nothing, and every task leaves a record both sides can read.
+          {trustModelSentence(CREDENTIAL_LEVEL)}
         </p>
         <p className="lw-note">Bot-proof, not fraud-proof.</p>
       </section>

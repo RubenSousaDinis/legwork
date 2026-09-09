@@ -3,8 +3,7 @@ import type { Metadata } from 'next';
 import { Chip } from '../../components/Chip';
 import { SiteHeader } from '../../components/SiteHeader';
 import { Wordmark } from '../../components/Wordmark';
-import { CLAIM, TAGLINE } from '../copy';
-import { TrustModel } from '../TrustModel';
+import { TAGLINE, TRUST_MODEL_CLOSER, claimSentence, resolvedCredentialLevel, trustModelSentence } from '../copy';
 import { apiUrl, dashboardUrl } from '../../lib/urls';
 
 export const metadata: Metadata = {
@@ -130,6 +129,8 @@ function Board({ n, children }: { n: number; children: ReactNode }) {
 }
 
 export default function DeckPage() {
+  const level = resolvedCredentialLevel();
+  const [trustBefore, trustAfter] = trustModelSentence(level).split('bounded, attributable work');
   const origin = dashboardUrl();
   const hosted = `claude mcp add --transport http legwork ${apiUrl()}/mcp`;
 
@@ -205,10 +206,17 @@ export default function DeckPage() {
 
         <Board n={4}>
           <p className="landing-prose landing-claim" data-floor="24">
-            {CLAIM}
+            {claimSentence(level)}
           </p>
           <p className="deck-kicker">And the trust model, stated as a bound, not a promise:</p>
-          <TrustModel />
+          <p className="landing-prose" data-floor="24">
+            {trustBefore}
+            <strong>bounded, attributable work</strong>
+            {trustAfter}
+          </p>
+          <p className="landing-closer" data-floor="24">
+            {TRUST_MODEL_CLOSER}
+          </p>
         </Board>
 
         <Board n={5}>
