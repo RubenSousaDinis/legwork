@@ -105,8 +105,15 @@ docs/media/preflight-card.png
 
 ## 9. Verification commands
 ```bash
-# 1. the tool, against the live subgraph (demo task type + area from demo-data.json)
-npx @legwork/mcp call preflight_workers --task_type verify-open --area "$DEMO_AREA" | tee /tmp/preflight.json
+# 1. the tool, against the live subgraph, through the deployed MCP mount.
+#    NOT `npx @legwork/mcp`: it is a private workspace package whose `bin` points at
+#    `dist/bin/legwork-mcp.js`, and no package here emits `dist` — `build` is `tsc --noEmit`
+#    everywhere, so that command cannot run. A JSON-RPC `tools/call` is what §2 asks for.
+#    The area is ez1dn — where the real errand was completed; see the amendment at the top of §2.
+curl -s -X POST "$API_BASE_URL/mcp" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"preflight_workers","arguments":{"task_type":"verify-open","area":"ez1dn"}}}' \
+  | tee /tmp/preflight-raw.json
 
 # 2. the 7-day window, straight from Studio
 curl -s -H "Authorization: Bearer $GRAPH_API_KEY" -H 'content-type: application/json' \
@@ -122,7 +129,12 @@ curl -s -X POST -H "X-Admin-Key: $ADMIN_API_KEY" "$API_BASE_URL/admin/seed-demo"
 diff <(jq -S . /tmp/preflight.json) <(jq -S . packages/subgraph-client/fixtures/preflight.json) >/dev/null \
   && echo "FAIL: served from the fixture" || echo "OK: live"
 ```
-Expected: `4 / 1 / 3`; every counted timestamp `IN`; step 4 prints `OK: live`.
+Expected, measured on Sept 9 — reproduce it rather than trust it, and if yours differs, yours is
+the truth and the difference goes in `RESULTS.md`: `active: 3, verified: 0, seeded: 3, n_real: 1,
+median_source: "real"` for `ez1dn`. Every counted timestamp `IN`; step 4 prints `OK: live`.
+
+The old expectation here read `4 / 1 / 3`. No area produces that, which is what the first run of
+this task discovered and reported correctly; §2's amendment carries the reasoning.
 
 ## 10. Hard rules
 - Banned words anywhere in code, comments, docs or UI copy: `trustless`, `reused`, `violation`, `Brooklyn`, `24h`, `2.55`, `21 workers`.
