@@ -3,3 +3,10 @@
 # "erc8004Reputation" (a mixed-case literal) and `generic-api-key` matched the pair.
 # The local was renamed in 78a20eb; the old patch stays in history, so it is ignored here.
 ab0a241dcde0f8642b3b84c4050792bb1535d78a:contracts/script/Deploy.s.sol:generic-api-key:189
+
+# T-57's first commit used anvil's published dev account #0 key as a test signer. It is in
+# every anvil README and grants nothing here; `generic-api-key` matched the 64-hex literal.
+# The tests generate throwaway keys from bdc4efd onward, but gitleaks reads each commit's
+# patch, so the superseded one stays visible and is ignored here.
+de4eced36bf20b8d0e1d42bb855df3da055f86ef:apps/miniapp/tests/withdraw/earningsWithdraw.test.tsx:generic-api-key:28
+de4eced36bf20b8d0e1d42bb855df3da055f86ef:apps/miniapp/tests/withdraw/signWithdrawal.test.ts:generic-api-key:27
