@@ -31,7 +31,28 @@ The shape you are verifying (**T-01 §2, `packages/shared/src/mcp-contract.ts`**
 ## 2. Exact scope
 - Call `preflight_workers` for the demo task type and area (the values in `demo-data.json`) against the **live Studio subgraph**, through the deployed MCP server — not the fixture, not the client directly. Capture the raw JSON result.
 - Verify the 7-day "active" window against the seeded lifecycle timestamps: query `{ workers(where:{seeded:true}){ id lastCompletedAt } }` and check every `lastCompletedAt` the tool counted is `>= now − 604800`. If any of the three counted seeded workers has aged out, run `POST /admin/seed-demo` (admin key, one lifecycle) and re-run the tool. **Never change the window constant, the `sinceTs` argument, or a fixture to make the number appear.**
-- Confirm the split reads **"4 active · 1 verified · 3 seeded"** — `active: 4`, `verified: 1`, `seeded: 3`. `verified` is the one real World ID worker (the demo phone); the other three are seeded demo workers.
+- **Amended by the lead, Sept 9, after the first real errand — read this before §2's other bullets.**
+  The split the earlier text asked you to confirm (`active: 4, verified: 1, seeded: 3`) is not
+  produced by any area, and `demo-data.json`'s `preflight` block still carries it. Measured
+  against the deployed `GET /public/preflight` on Sept 9 at 13:5x UTC:
+
+  | area | active | verified | seeded | n_real | median_source |
+  |---|---|---|---|---|---|
+  | `ez1dp` | 3 | 0 | 3 | 0 | `seeded` |
+  | `ez1dn` | 3 | 0 | 3 | 1 | `real` |
+  | `ez19y` | 1 | 1 | 0 | 0 | `n/a` |
+
+  **Capture `ez1dn`.** That is where the real errand was completed on Sept 9 — a World ID human
+  walked to Pão Doce on Rua do Cruzeiro and was paid 3.00 — and it is the only area whose median
+  comes from a real completion. `median_source: "real"` with `n_real: 1` is the claim worth
+  making; it is strictly harder than `verified`, which only counts who registered where.
+
+  **`verified: 0` in `ez1dn` is a finding, not a number to fix.** The phone registered in `ez19y`
+  and worked in `ez1dn`. `verified` counts a worker's registration cell and `n_real` counts where
+  the completion happened, so a worker who registers in one cell and works in another is real in
+  the median and invisible in the split. Record that in `RESULTS.md` in one plain sentence. Do
+  **not** re-register the phone, change an area, or edit `demo-data.json` to close the gap — say
+  what the tool returned and why the two numbers disagree.
 - Confirm the median label: while no real completion exists, `n_real: 0` and `median_source: "seeded"`, and the card reads the median as `seeded`. After the demo phone completes a task, re-run and confirm it flips to `n_real: 1`, `median_source: "real"` and the card reads `n=1 (real)`. Record **which of the two was true at capture time**.
 - Screenshot the preflight card as rendered on the dashboard, at the moment the tool returned those numbers, and save it as `docs/media/preflight-card.png`. This is the Graph sponsor still.
 - Write the `#Preflight` entry in `docs/spikes/RESULTS.md`: the raw tool JSON, the timestamps checked against the window, whether a re-seed was needed, the median label at capture, and the one-line reading of the card in plain words.
