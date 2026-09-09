@@ -54,7 +54,7 @@ describe('unverified state', () => {
     }
 
     const cta = screen.getByText('Verify with World ID');
-    expect(cta.getAttribute('href')).toBe('/');
+    expect(cta.getAttribute('href')).toBe('/verify');
     expect(cta.getAttribute('data-hit')).toBe('44');
 
     // Rule (9): the seeded row says so, and the real one does not.
@@ -67,7 +67,7 @@ describe('unverified state', () => {
   });
 
   it('unverifiedShowsPrices — zero tasks', () => {
-    render(<UnverifiedBanner tasks={[]} verifyHref="/" />);
+    render(<UnverifiedBanner tasks={[]} verifyHref="/verify" />);
     expect(screen.getByText('no open tasks right now')).not.toBeNull();
     expect(screen.queryAllByRole('button', { name: 'Verify to claim' }).length).toBe(0);
   });

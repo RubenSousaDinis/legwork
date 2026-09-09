@@ -31,7 +31,7 @@ async function renderHeaderAndPage(level: 'selfie' | 'orb') {
 
   const { VerifiedState } = await import('../components/VerifiedState');
   const { setSessionState } = await import('../lib/session');
-  const AuthPage = (await import('../app/(auth)/page')).default;
+  const AuthPage = (await import('../app/(auth)/verify/page')).default;
 
   setSessionState({ ...VERIFIED, level });
 

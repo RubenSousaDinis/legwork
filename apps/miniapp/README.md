@@ -11,12 +11,14 @@ proof and earnings (T-33) and the rest build on top of it.
 
 | Route | What it is |
 |---|---|
+| `/` | The open task list. A visitor with no session sees the public feed behind `Verify to claim`; a verified worker sees their own board. |
+| `/verify` | The auth flow: World ID, payout address, register. |
+| `/tasks` | The same list as `/` — kept so existing links and post-register redirects still resolve. |
 | `/probe` | The S2' spike page: four readouts (IDKit, camera, geolocation, `walletAuth`), an environment readout and a copyable JSON dump. |
 | `POST /api/idkit/request` | **Temporary (T-05).** RP-signed `rp_context` for IDKit v4. Deleted by T-24 once the API's `/idkit/*` routes exist. |
 | `POST /api/idkit/verify` | **Temporary (T-05).** Forwards the IDKit result, unchanged, to World's v4 verify endpoint. Deleted by T-24. |
 
-There is deliberately **no `/`**. The root route belongs to T-24 (`app/(auth)/page.tsx`); a
-second `page.tsx` for `/` would collide with it.
+The list is the front page: verification is the action, not the gate. `/verify` is where `Verify with World ID` goes.
 
 Everything else under `/api/*` is rewritten to the API (`next.config.ts`, `afterFiles`), so
 the mini-app is a single origin inside the World App webview. A route handler that exists
@@ -73,13 +75,19 @@ pnpm --filter @legwork/miniapp build
 
 ## Sign-in, area, and the two radii
 
+Inside World App the worker's address **is** the MiniKit wallet. That is what
+`POST /register` binds, what the escrow pays, and what every `walletAuth` session
+presents. The browser-generated payout key in `localStorage` is the web path only,
+where there is no wallet to speak for the worker — generating a second key that
+World App users can permanently lose was never a service to them.
+
 A World ID that already has a worker account answers `409 nullifier_already_registered` and
 does not issue an idkit-session cookie. Inside World App the conflict screen offers **Sign in
-with this key** — `POST /session` in `walletAuth` mode; the MiniKit signature is the proof, and
-it never calls `POST /register`. Outside World App that button is not offered: there is no
-idkit cookie after a 409, so the screen says to open World App or paste the exported key.
-If the held address is not the one bound to that World ID, the screen says so and the import
-field stays open; Legwork cannot recover a key that left the phone.
+with your World App wallet** — `POST /session` in `walletAuth` mode; the MiniKit signature is
+the proof, and it never calls `POST /register`. Outside World App that button is not offered:
+there is no idkit cookie after a 409, so the screen says to open World App or paste the
+exported key. If the held address is not the one bound to that World ID, the screen says so;
+Legwork cannot recover a key that left the phone.
 
 Registration binds a geohash-5 cell. The payout-key step shows `You will be registered in
 <area>` plus either `from this phone's location` or `default — this phone gave no location

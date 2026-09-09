@@ -120,22 +120,56 @@ function clearMirror(): void {
 
 // ------------------------------------------------------------------ the API
 
-/** `GET /session/nonce` → `MiniKit.walletAuth` → `POST /session`. Inside World App only. */
-export async function createWalletAuthSession(): Promise<SessionResponse> {
-  const { nonce } = await apiFetch<{ nonce: string }>('/session/nonce');
+type WalletAuthPayload = { address: string; message: string; signature: string };
+type PendingWalletAuth = { address: string; payload: WalletAuthPayload; nonce: string };
 
+let pendingWalletAuth: PendingWalletAuth | null = null;
+
+function miniKitInstalled(): boolean {
+  try {
+    return MiniKit.isInstalled();
+  } catch {
+    return false;
+  }
+}
+
+async function requestWalletAuth(): Promise<PendingWalletAuth> {
+  if (pendingWalletAuth !== null) return pendingWalletAuth;
+  const { nonce } = await apiFetch<{ nonce: string }>('/session/nonce');
   const result = await MiniKit.walletAuth({
     nonce,
     statement: SIGN_IN_STATEMENT,
     expirationTime: new Date(Date.now() + WALLET_AUTH_TTL_MS),
   });
+  const payload = result.data as WalletAuthPayload;
+  pendingWalletAuth = { address: payload.address, payload, nonce };
+  return pendingWalletAuth;
+}
+
+/**
+ * The World App wallet address, before a session exists. MiniKit populates
+ * `user.walletAddress` on install — that is the same address `walletAuth` later signs as —
+ * so this does not add a signature. If install has not filled it yet, one `walletAuth` is
+ * held for `createWalletAuthSession`: one signature per sign-in.
+ */
+export async function walletAddress(): Promise<string | null> {
+  if (!miniKitInstalled()) return null;
+  const fromUser = MiniKit.user?.walletAddress;
+  if (typeof fromUser === 'string' && fromUser !== '') return fromUser;
+  return (await requestWalletAuth()).address;
+}
+
+/** `GET /session/nonce` → `MiniKit.walletAuth` → `POST /session`. Inside World App only. */
+export async function createWalletAuthSession(): Promise<SessionResponse> {
+  const auth = await requestWalletAuth();
+  pendingWalletAuth = null;
 
   // `payload` is the walletAuth result's `data` object — {address, message, signature} — and
   // the nonce goes back beside it so the API can check the SIWE message against the one it
   // issued. See the PR body: if the contract wants the whole result, `payload` becomes `result`.
   return apiFetch<SessionResponse>('/session', {
     method: 'POST',
-    body: JSON.stringify({ mode: 'walletAuth', payload: result.data, nonce }),
+    body: JSON.stringify({ mode: 'walletAuth', payload: auth.payload, nonce: auth.nonce }),
   });
 }
 
@@ -220,4 +254,5 @@ export function requireVerified(): SessionState {
 export function resetSessionForTests(): void {
   snapshot = SERVER_SNAPSHOT;
   restoring = null;
+  pendingWalletAuth = null;
 }

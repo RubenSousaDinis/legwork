@@ -1,14 +1,14 @@
 # Auth flow + session modes
 
-`/` is the worker's first minute. One state machine (`page.tsx`) walks five steps and then
-hands over to `/tasks`:
+`/` is the open list. `/verify` is the worker's first minute of auth. One state machine
+(`verify/page.tsx`) walks five steps and then hands over to `/tasks`:
 
 ```
 unverified landing → verifying (IDKit) → sign-in (walletAuth | idkit) → payout key → register → /tasks
 ```
 
 A worker who already has a session never sees any of it: `useSession()` restores on load and
-`page.tsx` redirects when the restored session is `registered`.
+`verify/page.tsx` redirects when the restored session is `registered`.
 
 ## The two session modes
 
@@ -43,15 +43,16 @@ the authority; the cookie is.
 ## The payout key
 
 `lib/workerKey.ts` generates it with viem on the phone and stores it under
-`localStorage['legwork.payoutKey.v1']`. The private key is never sent, never logged, and
-never in React state for longer than the reveal box is open. Legwork only ever learns the
-address, which is what `POST /register` writes onchain. Losing site data loses access to
-unpaid earnings — the screen says exactly that, and offers `Import an existing payout key`
-as the way back in.
+`localStorage['legwork.payoutKey.v1']`. That key **is** the registered address on the
+plain-web path, and is never the registered address inside World App — there the wallet
+is. The private key is never sent, never logged, and never in React state for longer than
+the reveal box is open. Losing site data loses access to unpaid earnings on the web path —
+the screen says exactly that, and offers `Import an existing payout key` as the way back
+in. Inside World App those controls are not shown: there is no key to lose.
 
 A 409 `nullifier_already_registered` from `POST /idkit/verify` is not an error state: one
-person gets one worker account, so the flow jumps straight to the payout-key screen with the
-import field already open.
+person gets one worker account. Inside World App the flow offers **Sign in with your World
+App wallet**; outside it, the payout-key screen opens with the import field already open.
 
 ## Area
 

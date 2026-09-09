@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: 
 const { VerifiedState } = await import('../../components/VerifiedState');
 const { resetSessionForTests, setSessionState } = await import('../../lib/session');
 const { LANDING_FACTS, VERIFY_BUTTON, VERIFY_CAPTION } = await import('../../app/(auth)/Landing');
-const AuthPage = (await import('../../app/(auth)/page')).default;
+const AuthPage = (await import('../../app/(auth)/verify/page')).default;
 
 /**
  * The landing screen the first live run showed: a black button carrying a whole sentence in

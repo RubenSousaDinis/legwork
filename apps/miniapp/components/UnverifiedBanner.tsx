@@ -33,11 +33,11 @@ export type UnverifiedTask = {
 
 export type UnverifiedBannerProps = {
   tasks: UnverifiedTask[];
-  /** Where `Verify with World ID` goes; `/` is the auth screen. */
+  /** Where `Verify with World ID` goes; `/verify` is the auth screen. */
   verifyHref?: string;
 };
 
-export function UnverifiedBanner({ tasks, verifyHref = '/' }: UnverifiedBannerProps) {
+export function UnverifiedBanner({ tasks, verifyHref = '/verify' }: UnverifiedBannerProps) {
   return (
     <div data-screen="unverified">
       <div className="lw-card lw-card--verified" data-banner="verify">
