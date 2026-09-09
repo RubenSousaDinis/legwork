@@ -31,7 +31,7 @@ describe('the list is the front page', () => {
 
     expect(await screen.findByText(VERIFY_CTA)).toBeTruthy();
     expect(document.querySelector('[data-screen="tasks-unverified"]')).not.toBeNull();
-    expect(await screen.findByText('verify-open · ez1dn')).toBeTruthy();
+    expect(await screen.findByText('Is it open right now?')).toBeTruthy();
 
     const cta = screen.getByRole('link', { name: VERIFY_CTA });
     expect(cta.getAttribute('href')).toBe('/verify');
@@ -73,5 +73,15 @@ describe('the list is the front page', () => {
     await waitFor(() =>
       expect(verifiedTasks.container.querySelector('[data-screen="tasks"]')).not.toBeNull(),
     );
+  });
+
+  it('previewRowNamesTheErrandOnce', async () => {
+    render(<RootPage />);
+
+    const row = (await screen.findByText('Is it open right now?')).closest('[data-task]') as HTMLElement;
+    expect(row.getAttribute('data-task')).toBe('1024');
+    expect(row.querySelector('.lw-monotag')?.textContent).toBe('verify-open');
+    expect(row.textContent?.split('verify-open').length).toBe(2);
+    expect(row.textContent).not.toContain('ez1dn');
   });
 });

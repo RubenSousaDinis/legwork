@@ -2,6 +2,7 @@
 
 import type { TaskType } from '@legwork/shared';
 import { useEffect, useState } from 'react';
+import { QUESTION } from '../../components/TaskCard';
 import { UnverifiedBanner, type UnverifiedTask } from '../../components/UnverifiedBanner';
 import { apiFetch } from '../../lib/api';
 
@@ -11,7 +12,7 @@ import { apiFetch } from '../../lib/api';
  * row's button is disabled until the visitor verifies.
  *
  * `GET /public/feed` carries `price_usdc` (the worker's rate, 3.00) and no title, so the
- * row is titled `<type> · <area>` — bounded words, never spec text.
+ * row is titled from `QUESTION[task_type]` — the errand in words, never a geohash cell.
  */
 
 /** `PublicTaskView` in `api-contract.ts`, narrowed to what a locked row shows. */
@@ -31,7 +32,7 @@ export function toUnverifiedTask(row: PublicFeedRow): UnverifiedTask {
   return {
     task_id: row.task_id,
     task_type: row.task_type,
-    title: row.title ?? `${row.task_type} · ${row.area}`,
+    title: QUESTION[row.task_type],
     price_usdc: row.price_usdc,
     seeded: row.seeded,
   };

@@ -77,7 +77,7 @@ export const CLAIM_EXPIRED = 'claim expired — it returned to the pool';
 /** The claim window as a sentence. 1800 s is 30 min; never written as a bare `30m`. */
 export const TTL_LINE = `claim within ${Math.round(DEFAULT_CLAIM_TTL_S / 60)} min`;
 
-const QUESTION: Record<TaskType, string> = {
+export const QUESTION: Record<TaskType, string> = {
   'verify-open': 'Is it open right now?',
   'photo-of': 'Photograph the subject named in the title',
   'call-confirm': 'Call and ask the template question shown after you claim',
