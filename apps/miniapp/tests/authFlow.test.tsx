@@ -74,6 +74,13 @@ function mockWalletAuth() {
 }
 
 type FetchCall = { url: string; init: RequestInit | undefined };
+
+/**
+ * `GET /api/session` is the restore probe every mount makes; only `POST` mints a session. The
+ * path alone stopped meaning "a session was created" when the probe moved onto it.
+ */
+const mintsASession = (call: FetchCall): boolean =>
+  call.url.endsWith('/api/session') && (call.init?.method ?? 'GET').toUpperCase() === 'POST';
 let calls: FetchCall[] = [];
 let originalFetch: typeof globalThis.fetch;
 
@@ -124,8 +131,9 @@ describe('auth flow', () => {
     await verifyAndSignIn();
     await screen.findByText('Your World App wallet is your payout address');
 
-    // Nothing has been asked of `/session` yet, and nothing signed.
-    expect(calls.some((call) => call.url.endsWith('/api/session'))).toBe(false);
+    // No session has been minted yet, and nothing signed. The method matters now: `GET
+    // /api/session` is the restore probe every mount makes, and only `POST` mints one.
+    expect(calls.some(mintsASession)).toBe(false);
     expect(vi.mocked(MiniKit.walletAuth)).not.toHaveBeenCalled();
 
     fireEvent.click(await screen.findByText('Register as a worker'));
@@ -133,7 +141,7 @@ describe('auth flow', () => {
 
     const registerCall = calls.findIndex((call) => call.url.endsWith('/api/register'));
     const nonceCall = calls.findIndex((call) => call.url.endsWith('/api/session/nonce'));
-    const sessionCall = calls.findIndex((call) => call.url.endsWith('/api/session'));
+    const sessionCall = calls.findIndex(mintsASession);
     expect(registerCall).toBeGreaterThanOrEqual(0);
     expect(nonceCall).toBeGreaterThan(registerCall);
     expect(sessionCall).toBeGreaterThan(nonceCall);
@@ -163,7 +171,7 @@ describe('auth flow', () => {
 
     await verifyAndSignIn();
     await screen.findByText('Your payout address');
-    expect(calls.some((call) => call.url.endsWith('/api/session'))).toBe(false);
+    expect(calls.some(mintsASession)).toBe(false);
 
     fireEvent.click(await screen.findByText('Register as a worker'));
 

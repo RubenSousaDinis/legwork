@@ -21,6 +21,8 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | GET | `/config/world` | public | Which World app, action, RP id, credential level and environment the client asks for — five keys and nothing else; max-age=60 | 200 |
 | GET | `/session/nonce` | public | SIWE nonce | 200 |
 | POST | `/session` | public | walletAuth (verifySiweMessage over a single-use nonce + the stored nullifier binding; no cookie needed) or idkit mode (requires the idkit-session cookie) → worker-session cookie + the same JWT as `token`; isWorker checked onchain in both modes; dev path for seeded workers only | 200, 401, 403 |
+| GET | `/session` | worker-session | Is this session alive, and keep it alive: re-issues the worker cookie at the full TTL so an active worker is never signed out mid-errand. The mini-app probes this on every load — no body, no token, the cookie is the session | 200, 401 |
+| POST | `/session/logout` | worker-session | Clears the worker-session cookie and deletes the sessions row. A logout that leaves a usable cookie is not a logout | 204, 401 |
 | POST | `/register` | idkit-session | EIP-712 attestation (deadline now+600) then relayed registerFor | 200, 400, 401, 409, 500, 503 |
 | GET | `/tasks/list` | worker-session | Open + lazily-expirable tasks (as open) plus the caller's own live claim; a seeded worker sees allowlisted payers only; nearest first when lat/lon are given | 200 |
 | POST | `/tasks/:id/claim` | worker-session | Relayed claimFor | 200, 403, 409 |
@@ -6834,6 +6836,709 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 ```
 
 **403**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
+
+### `sessionRefresh` — GET `/session`
+
+**200**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "worker": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "nullifier": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "walletAuth",
+        "idkit",
+        "dev"
+      ]
+    }
+  },
+  "required": [
+    "worker",
+    "nullifier",
+    "mode"
+  ]
+}
+```
+
+**401**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
+
+### `sessionLogout` — POST `/session/logout`
+
+**204**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {}
+}
+```
+
+**401**
 
 ```json
 {

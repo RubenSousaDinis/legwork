@@ -184,6 +184,12 @@ export const API_ROUTES = {
       z.object({ mode: z.literal('idkit'), worker_address: EvmAddress }),
     ]),
     responses: { 200: z.object({ worker: EvmAddress, nullifier: z.string(), mode: z.enum(['walletAuth', 'idkit', 'dev']), token: z.string() }), 401: GenericError, 403: GenericError } },
+  sessionRefresh: { method: 'GET', path: '/session', auth: 'worker-session', summary: 'Is this session alive, and keep it alive: re-issues the worker cookie at the full TTL so an active worker is never signed out mid-errand. The mini-app probes this on every load — no body, no token, the cookie is the session',
+    responses: { 200: z.object({ worker: EvmAddress, nullifier: z.string(), mode: z.enum(['walletAuth', 'idkit', 'dev']) }), 401: GenericError } },
+  // A 204 carries no body at all; the empty object is how it reaches JSON Schema, because
+  // `z.undefined()` cannot be represented and `src/openapi.test.ts` says so.
+  sessionLogout: { method: 'POST', path: '/session/logout', auth: 'worker-session', summary: 'Clears the worker-session cookie and deletes the sessions row. A logout that leaves a usable cookie is not a logout',
+    responses: { 204: z.object({}), 401: GenericError } },
   register: { method: 'POST', path: '/register', auth: 'idkit-session', summary: 'EIP-712 attestation (deadline now+600) then relayed registerFor',
     request: z.object({ worker_address: EvmAddress, area: Geohash5, task_types: z.array(TaskTypeSchema).min(1) }),
     responses: { 200: z.object({ tx: TxHash, worker: EvmAddress }), 400: InvalidRequest, 401: GenericError, 409: GenericError, 500: GenericError, 503: GenericError } },
