@@ -459,11 +459,62 @@ body {
   color: var(--ink-text);
 }
 
+/* A readout with nothing in it yet — the probe's `not run` rows. Not a wait: see below. */
 .lw-placeholder {
   color: var(--ink-text-3);
   font-family: var(--font-mono);
   font-size: 15px;
   margin: var(--s-3) 0 0;
+}
+
+/*
+ * The waiting state. DESIGN-SPEC "The idea": the route line "appears as dividers, progress
+ * bars and the escrow meter" — this is the progress bar, and the one the phone uses for
+ * every wait. The sentence sits at the 20 px floor because a worker reads it standing up,
+ * in the street, on a phone.
+ */
+.lw-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+  margin: var(--s-4) 0 0;
+}
+
+/*
+ * The sentence gets the whole width and the route runs under it. Side by side, a wait whose
+ * copy needed two lines squeezed the route into a stub beside the first one, which read as
+ * a rendering fault rather than as progress.
+ */
+.lw-waiting__line {
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-text-2);
+  min-width: 0;
+}
+
+/*
+ * The route, still being walked: the dash travels toward an end it has not reached. The
+ * receipt's route line ends in a footprint and this one does not, which is the whole
+ * difference between on the way and arrived.
+ */
+.lw-waiting__route {
+  width: 100%;
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--paper-border-2) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 12px 100%;
+  animation: lw-route-travel 900ms linear infinite;
+}
+
+@keyframes lw-route-travel {
+  to {
+    background-position-x: 12px;
+  }
 }
 
 .lw-error {
@@ -833,26 +884,128 @@ body {
   height: 84px;
 }
 
-/* The released receipt — DESIGN-SPEC "Semantic palette": the one accent, flat, no glow. */
+/*
+ * The released receipt.
+ *
+ * White card, teal hairline, and the mint tint held back for one field: the money. The
+ * header's verified banner is already a mint block, and when the receipt was a second one
+ * the screen made two equal claims and the payout was neither of them. Hierarchy here is
+ * ground, scale and space — DESIGN-SPEC: flat, no glow, no elevation games.
+ */
 .lw-paid {
-  background: var(--verified-tint-light);
+  background: var(--paper-0);
   border: 1px solid var(--verified-border-light);
   border-radius: var(--r-card);
+  box-shadow: var(--card-shadow);
   padding: var(--s-4);
 }
 
-/* The word, the figure and the unit share one baseline inside the pinned string. */
-.lw-paid__amount {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+/*
+ * DESIGN-SPEC "The idea": the route line as a divider — the photo's timestamp at the start,
+ * the dashed path, the footprint at the end, and the money directly under the footprint. It
+ * is one row rather than a caption and a rule, because the caption is the origin.
+ */
+.lw-route {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 var(--s-4);
 }
 
+.lw-route__stamp {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-text-3);
+  flex: 0 0 auto;
+}
+
+.lw-route__line {
+  flex: 1 1 auto;
+  min-width: var(--s-6);
+  height: 0;
+  border-top: 1px dashed var(--paper-border-2);
+}
+
+/*
+ * The money, and the only mint field on the screen. Its padding is what gives the figure
+ * the air that makes it the beat — the type scale alone was not doing it.
+ */
+.lw-paid__money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin: 0;
+  padding: var(--s-4) var(--s-3);
+  border-radius: var(--r-tile);
+  background: var(--verified-tint-light);
+}
+
+/*
+ * `Released · 3.00 USDC` is one line and one string. Inline, never flex: a flex container
+ * strips the spaces around the `·` and before `USDC`, which is what collapsed the line to
+ * `Released·3.00USDC`. `nowrap` is what stops it becoming a four-line stack when the phone
+ * is narrow — the parts scale, the line does not break.
+ */
+.lw-paid__amount {
+  display: block;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+/* `Released` and the separator: Inter 700 at the phone's 20 px narrated floor. */
 .lw-paid__word {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--verified-700);
+}
+
+/* DESIGN-SPEC "Type": numerals are Archivo 800, tracked −0.03 em. The one on this screen. */
+.lw-paid__figure {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--verified-700);
+}
+
+.lw-paid__unit {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--verified-700);
+}
+
+/* Inside the mint field, under the figure: the money is testnet and says so where it is. */
+.lw-paid__caveat {
+  display: block;
+}
+
+.lw-paid__tx {
+  margin: var(--s-4) 0 0;
+}
+
+/* `+1 completed · you kept the full posted rate` — one sentence with a row to itself, so
+   it can no longer collide with the transaction chip it used to sit beside. Muted: it is
+   the reassurance under the receipt, not a second figure. */
+.lw-paid__completed {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-text-3);
+  margin: var(--s-3) 0 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The way out. In flow on a wide screen, where the nav is in the header and nothing is
+ * fixed to the bottom; docked above the tab bar on a phone — see the phone shell block.
+ */
+.lw-paid__dock {
+  margin: var(--s-5) 0 0;
 }
 
 /* DESIGN-SPEC "Type": numerals are Archivo, tracked −0.03 em. */
@@ -868,9 +1021,6 @@ body {
   font-size: 56px;
 }
 
-.lw-stat--lg {
-  font-size: 38px;
-}
 
 .lw-stat--md {
   font-size: 40px;
@@ -880,13 +1030,6 @@ body {
   color: var(--verified-700);
 }
 
-.lw-stat__unit {
-  font-family: var(--font-mono);
-  font-size: 16px;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--verified-700);
-}
 
 /*
  * A failure that is not a refusal: a claim someone else won, an upload that did not go
@@ -1014,21 +1157,6 @@ body {
 .lw-chips--centred {
   justify-content: center;
   margin-top: var(--s-3);
-}
-
-/* Left, then right, on one baseline. */
-.lw-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  margin: 0;
-}
-
-.lw-row--top {
-  align-items: baseline;
-  margin: var(--s-4) 0 0;
 }
 
 /* Body copy that is a note rather than an instruction. */
@@ -1312,6 +1440,17 @@ body {
 
 .lw-thumb--tag {
   border-radius: var(--r-tag);
+}
+
+/*
+ * The receipt's plate. Capped rather than sized: a portrait phone photo is cropped to this
+ * window and a landscape one is shown at its own height. The cap is what puts the figure,
+ * the chips and the block action on the same screen as the photo — the released beat is
+ * one screenful, so the tab bar never covers half of the button at the bottom of it.
+ */
+.lw-thumb--proof {
+  max-height: 220px;
+  border-radius: var(--r-tile);
 }
 
 /* The abuse-class picker: six 44 px rows separated by hairlines. */
@@ -1648,5 +1787,45 @@ body.lw-modal-open {
 
   .lw-verified-banner {
     padding: var(--s-3);
+  }
+
+  /*
+   * The released screen's one action, docked above `.lw-nav__tabs` and the safe area, so
+   * the whole button is on screen at every scroll position rather than half of it behind
+   * the tabs. Same construction as the earnings bar: fixed strip, paper ground, hairline.
+   */
+  .lw-paid__dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--lw-tabbar) + env(safe-area-inset-bottom));
+    z-index: 9;
+    margin: 0;
+    background: var(--paper-50);
+    border-top: 1px solid var(--paper-border);
+    padding: var(--s-3) 0;
+    padding-left: max(var(--s-4), env(safe-area-inset-left));
+    padding-right: max(var(--s-4), env(safe-area-inset-right));
+  }
+
+  /* The dock is out of flow; this is the room it would have taken. It is margin rather
+     than padding so the card still ends where its last line does. */
+  .lw-paid {
+    margin-bottom: 84px;
+  }
+}
+
+/*
+ * A 320 px phone. `Released · 3.00 USDC` never wraps, so on the narrowest screen still in
+ * use the figure steps down instead — one line at the 20 px floor either way.
+ */
+@media (max-width: 359px) {
+  .lw-paid__figure {
+    font-size: 36px;
+  }
+
+  .lw-paid__money {
+    padding-left: var(--s-2);
+    padding-right: var(--s-2);
   }
 }

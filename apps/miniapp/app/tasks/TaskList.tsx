@@ -11,6 +11,7 @@ import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
 import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
+import { Waiting } from '../../components/ui/Waiting';
 
 /**
  * The worker's task list. It polls `GET /tasks/list` every 3 seconds because a claim is a race —
@@ -34,6 +35,16 @@ export const NEAR_ME_NEEDS_FIX = 'Needs a GPS fix — distance is unknown withou
 export function emptyBoardCopy(): string {
   return 'No open tasks right now. The list refreshes every 3 s.';
 }
+
+/** Before the first answer. The board says it is asking, never that there is nothing. */
+export const LOOKING_FOR_TASKS = 'Looking for open tasks near you…';
+
+/**
+ * The first read did not come back. `emptyBoardCopy()` would be a claim this screen cannot
+ * make — "no open tasks" and "I could not ask" are different facts — so it says which one
+ * this is, and that it is still trying.
+ */
+export const BOARD_UNREACHABLE = 'The task list did not load. Retrying every 3 s.';
 
 export function emptySearchCopy(): string {
   return 'No tasks match this search.';
@@ -138,9 +149,17 @@ export function TaskList() {
   const router = useRouter();
 
   const [rows, setRows] = useState<TaskRow[]>([]);
+  /*
+   * `rows` starts empty, so until the first read answers, "no open tasks" is a sentence
+   * this screen has no grounds for. `board` is what it does know: it is asking, it has an
+   * answer, or it could not get one.
+   */
+  const [board, setBoard] = useState<'asking' | 'answered' | 'unreachable'>('asking');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [claim, setClaim] = useState<ActiveClaim | null>(null);
   const [error, setError] = useState<{ task_id: string; message: string } | null>(null);
+  /** The row whose relayed claim is in flight, so its button cannot be tapped twice. */
+  const [claiming, setClaiming] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<number | null>(null);
   const [located, setLocated] = useState(false);
   const [hasFix, setHasFix] = useState(false);
@@ -170,6 +189,7 @@ export function TaskList() {
     try {
       const data = await apiFetch<TasksResponse>(tasksPath());
       setRows(data.tasks);
+      setBoard('answered');
       // `TaskCard` clears the stored claim when its countdown hits `00:00`; this is where the
       // pinned card goes away and the worker is back on the list.
       setClaim((current) => (current !== null && readActiveClaim() === null ? null : current));
@@ -180,6 +200,9 @@ export function TaskList() {
       }
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.status === 401) routerRef.current.replace('/');
+      // A later poll failing does not un-answer the list already on screen; only a board
+      // that never got one goes to `unreachable`.
+      else setBoard((current) => (current === 'asking' ? 'unreachable' : current));
     }
   }, []);
 
@@ -240,6 +263,7 @@ export function TaskList() {
   const onClaim = useCallback(
     async (row: TaskRow) => {
       setError(null);
+      setClaiming(row.task_id);
       try {
         const position = lastKnownPosition();
         const response = await apiFetch<ClaimResponse>(`/tasks/${row.task_id}/claim`, {
@@ -263,6 +287,8 @@ export function TaskList() {
         setError({ task_id: row.task_id, message: claimErrorMessage(thrown) });
         // Someone was faster: the list is already wrong, so ask again rather than wait 3 s.
         if (code === 'AlreadyClaimed') void poll();
+      } finally {
+        setClaiming(null);
       }
     },
     [poll],
@@ -301,7 +327,7 @@ export function TaskList() {
         claimedRow.current);
   const rest = claim === null ? filtered : filtered.filter((row) => row.task_id !== claim.task_id);
   const searching = query.trim().length > 0 || nearMe;
-  const emptyBoard = rest.length === 0 && claim === null && rows.length === 0;
+  const emptyBoard = rest.length === 0 && claim === null && rows.length === 0 && board === 'answered';
   const emptySearch = rest.length === 0 && claim === null && rows.length > 0 && searching;
 
   return (
@@ -373,6 +399,7 @@ export function TaskList() {
             claim={claim}
             error={error?.task_id === pinned.task_id ? error.message : undefined}
             expanded
+            claiming={claiming === pinned.task_id}
             onClaim={() => void onClaim(pinned)}
             onRelease={() => void onRelease(pinned.task_id)}
             onToggle={() => setExpandedId(null)}
@@ -380,6 +407,16 @@ export function TaskList() {
           />
         </ul>
       )}
+
+      {board === 'asking' && rows.length === 0 && claim === null ? (
+        <Waiting step="tasks">{LOOKING_FOR_TASKS}</Waiting>
+      ) : null}
+
+      {board === 'unreachable' && rows.length === 0 && claim === null ? (
+        <p className="lw-body" data-board="unreachable" data-floor="20">
+          {BOARD_UNREACHABLE}
+        </p>
+      ) : null}
 
       {emptyBoard ? (
         <div data-empty="tasks">
@@ -403,6 +440,7 @@ export function TaskList() {
             error={error?.task_id === row.task_id ? error.message : undefined}
             expanded={expandedId === row.task_id}
             key={row.task_id}
+            claiming={claiming === row.task_id}
             onClaim={() => void onClaim(row)}
             onRelease={() => void onRelease(row.task_id)}
             onToggle={() => setExpandedId((current) => (current === row.task_id ? null : row.task_id))}
