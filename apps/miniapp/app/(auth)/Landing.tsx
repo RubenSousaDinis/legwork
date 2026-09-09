@@ -12,7 +12,7 @@ export type LandingProps = {
 
 export const LANDING_LABEL = 'WORLD ID';
 export const LANDING_TITLE = 'Verify once. Claim tasks nearby.';
-export const VERIFY_BUTTON = 'Verify with World ID';
+export const VERIFY_BUTTON = 'Login with World ID';
 export function verifyCaption(level: CredentialLevel): string {
   return `about 30 seconds · ${uniquenessClause(level)}`;
 }

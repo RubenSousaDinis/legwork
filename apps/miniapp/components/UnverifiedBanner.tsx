@@ -1,4 +1,7 @@
+'use client';
+
 import type { TaskType } from '@legwork/shared';
+import { openAuthModal } from './AuthModal';
 import { Chip } from './ui/Chip';
 import { MonoTag } from './ui/MonoTag';
 
@@ -18,7 +21,7 @@ import { MonoTag } from './ui/MonoTag';
 
 export const VERIFY_HEADING = 'Verify to claim';
 export const REAL_PRICES_LINE = 'real tasks, real prices — verification takes about a minute';
-export const VERIFY_CTA = 'Verify with World ID';
+export const VERIFY_CTA = 'Login with World ID';
 export const NO_OPEN_TASKS = 'no open tasks right now';
 
 /** One open row of `GET /public/feed`, narrowed to what a locked list can honestly show. */
@@ -33,11 +36,11 @@ export type UnverifiedTask = {
 
 export type UnverifiedBannerProps = {
   tasks: UnverifiedTask[];
-  /** Where `Verify with World ID` goes; `/verify` is the auth screen. */
+  /** Kept so existing callers still typecheck; the CTA opens the login modal. */
   verifyHref?: string;
 };
 
-export function UnverifiedBanner({ tasks, verifyHref = '/verify' }: UnverifiedBannerProps) {
+export function UnverifiedBanner({ tasks }: UnverifiedBannerProps) {
   return (
     <div data-screen="unverified">
       <div className="lw-card lw-card--verified" data-banner="verify">
@@ -46,17 +49,17 @@ export function UnverifiedBanner({ tasks, verifyHref = '/verify' }: UnverifiedBa
         </p>
         <p className="lw-body">{REAL_PRICES_LINE}</p>
 
-        {/* The button classes on the anchor itself — a `Button` inside a link would be two
-            nested interactive elements over one 44 px target (T-33 does the same on its
-            `Back to tasks` link). */}
-        <a
+        {/* A bare button with the `lw-button` classes — wrapping a `Button` would be two
+            nested interactive elements over one 44 px target. */}
+        <button
           className="lw-button lw-button--verified lw-button--full"
           data-cta="verify"
           data-hit="44"
-          href={verifyHref}
+          onClick={openAuthModal}
+          type="button"
         >
           {VERIFY_CTA}
-        </a>
+        </button>
       </div>
 
       {tasks.length === 0 ? (

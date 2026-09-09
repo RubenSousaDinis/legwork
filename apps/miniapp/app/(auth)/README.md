@@ -1,7 +1,8 @@
 # Auth flow + session modes
 
-`/` is the open list. `/verify` is the worker's first minute of auth. One state machine
-(`verify/page.tsx`) walks five steps and then hands over to `/tasks`:
+`/` is the open list. `/verify` is the worker's first minute of auth, and the same machine
+(`AuthFlow`) also runs in the login modal. One state machine walks five steps and then
+calls `onDone` — `/verify` hands over to `/tasks`, the modal just closes:
 
 ```
 unverified landing → verifying (IDKit) → sign-in (walletAuth | idkit) → payout key → register → /tasks
