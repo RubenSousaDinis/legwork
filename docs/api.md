@@ -32,6 +32,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | POST | `/tasks/:id/submit` | worker-session | Submit-time checks (reuse, geofence, GPS downgrade) then relayed submitFor | 200, 400, 409 |
 | POST | `/tasks/:id/report` | worker-session | Worker reports a task (optional feature) | 200 |
 | GET | `/me/earnings` | worker-session | Earned-only: sums TaskReleased to this worker | 200 |
+| POST | `/me/withdraw` | worker-session | Gasless withdrawal: two EIP-3009 authorizations the phone signed, relayed payout leg first and fee leg second, with Legwork paying the gas and keeping 2 % of the amount withdrawn. A signature that does not recover to the session worker is 403 and reaches no chain call; a fee that is not withdrawFeeOn(amount), a destination the payout leg does not name, or an amount under MIN_WITHDRAW_USDC is 422. Replayed on the payout nonce. A fee leg that fails after the payout landed is still a 200, with fee_tx null and fee_pending true | 200, 400, 401, 403, 409, 422, 503 |
 | GET | `/tasks/:id/spec` | worker-session | Spec fields, claimant only — the one route that shows spec to a human | 200, 403 |
 | GET | `/public/feed` | public | Last 20 by posted_at; never spec text, an exact coordinate, a buyer token, a payer or a note | 200 |
 | GET | `/public/task/:id` | public | One task as a stranger sees it: PublicTaskView, coordinate_rounded on the task and inside proof, never a url | 200, 404 |
@@ -12438,6 +12439,940 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
     "completed",
     "score",
     "distinct_raters"
+  ]
+}
+```
+
+
+### `withdraw` — POST `/me/withdraw`
+
+**Request**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "payout": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "valid_after": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "valid_before": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]+$"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "value",
+        "valid_after",
+        "valid_before",
+        "nonce",
+        "signature"
+      ]
+    },
+    "fee": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "valid_after": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "valid_before": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]+$"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "value",
+        "valid_after",
+        "valid_before",
+        "nonce",
+        "signature"
+      ]
+    }
+  },
+  "required": [
+    "to",
+    "payout",
+    "fee"
+  ]
+}
+```
+
+**200**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "payout_tx": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{64}$"
+    },
+    "fee_tx": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payout_usdc": {
+      "type": "number"
+    },
+    "fee_usdc": {
+      "type": "number"
+    },
+    "fee_pending": {
+      "type": "boolean",
+      "const": true
+    },
+    "replay": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "required": [
+    "payout_tx",
+    "fee_tx",
+    "payout_usdc",
+    "fee_usdc"
+  ]
+}
+```
+
+**400**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "const": "invalid_request"
+    },
+    "field": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "allowed_task_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verify-open",
+          "photo-of",
+          "call-confirm",
+          "compare-two"
+        ]
+      }
+    },
+    "suggested_task_type": {
+      "type": "string",
+      "enum": [
+        "verify-open",
+        "photo-of",
+        "call-confirm",
+        "compare-two"
+      ]
+    }
+  },
+  "required": [
+    "error",
+    "field",
+    "reason"
+  ]
+}
+```
+
+**401**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
+**403**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "const": "forbidden"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "not_the_signer",
+        "not_worker"
+      ]
+    }
+  },
+  "required": [
+    "error",
+    "reason"
+  ]
+}
+```
+
+**409**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
+**422**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "const": "withdraw_refused"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "below_minimum",
+        "fee_mismatch",
+        "wrong_fee_recipient",
+        "wrong_destination",
+        "authorization_expired"
+      ]
+    },
+    "min_withdraw_usdc": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "error",
+    "reason"
+  ]
+}
+```
+
+**503**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "const": "withdraw_failed"
+    }
+  },
+  "required": [
+    "error"
   ]
 }
 ```
