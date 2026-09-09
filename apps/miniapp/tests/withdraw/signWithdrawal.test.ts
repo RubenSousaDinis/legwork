@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { recoverTypedDataAddress, type Hex } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { withdrawFeeOn } from '@legwork/shared';
 import {
   TRANSFER_WITH_AUTHORIZATION_TYPES,
@@ -23,8 +23,7 @@ import {
  * shape of server response, and no shape of argument, that redirects either one.
  */
 
-/** A published test vector (Anvil account #0). Not a key to anything that holds money. */
-const KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as const;
+const KEY = generatePrivateKey();
 const WORKER = privateKeyToAccount(KEY).address;
 
 /** Where the worker is moving it to: the other wallet on their phone. */

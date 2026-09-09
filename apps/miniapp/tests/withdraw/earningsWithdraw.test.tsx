@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../mocks/server';
 
@@ -24,9 +25,8 @@ const { CONFIRM, GAS_NOTE, REVIEW, TESTNET_NOTE, BELOW_MINIMUM } = await import(
  * meant, so the confirm step spells all 42 characters.
  */
 
-/** A published test vector (Anvil account #0). Not a key to anything that holds money. */
-const KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as const;
-const WORKER = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' as const;
+const KEY = generatePrivateKey();
+const WORKER = privateKeyToAccount(KEY).address;
 
 /** 42 characters, and every one of them has to survive to the confirm step. */
 const DESTINATION = '0x1234567890AbcdEF1234567890aBcdef12345678' as const;
