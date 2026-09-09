@@ -48,6 +48,8 @@ export type TaskRow = {
   state: 'open' | 'claimed';
   seeded: boolean;
   brief?: TaskBrief;
+  /** Task place, 3 decimals (~100 m). Never the exact coordinate. */
+  coordinate_rounded?: { lat: number; lon: number };
 };
 
 /** The caller's own live claim — `localStorage['legwork.activeClaim.v1']`, verbatim. */
@@ -125,6 +127,19 @@ export function shortTx(tx: string): string {
 export function placePrefix(row: TaskRow): string | null {
   const place = row.brief?.place;
   return place === undefined ? null : `${place.street_address}, ${place.locality}`;
+}
+
+export const DIRECTIONS_LABEL = 'Get directions';
+
+/** Google Maps directions to the posted address — never a coordinate. */
+export function directionsHref(place: {
+  name: string;
+  street_address: string;
+  locality: string;
+}): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${place.name}, ${place.street_address}, ${place.locality}`,
+  )}`;
 }
 
 export function TaskCard({
@@ -250,6 +265,19 @@ export function TaskCard({
             </p>
           )}
         </div>
+      ) : null}
+
+      {row.brief?.place !== undefined ? (
+        <a
+          className="lw-directions"
+          data-directions="true"
+          data-hit="44"
+          href={directionsHref(row.brief.place)}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {DIRECTIONS_LABEL}
+        </a>
       ) : null}
     </li>
   );

@@ -5,31 +5,30 @@ The screen a verified worker lands on after registering. Three files:
 | file | what it is |
 |---|---|
 | `page.tsx` | `requireVerified()`, then `TaskList`. An unverified visitor is sent to `/`. |
-| `TaskList.tsx` | the poll, the claim and release calls, the error copy, the footer |
+| `TaskList.tsx` | the poll, search, the 10 km filter, the claim and release calls, the error copy, the footer |
 | `activeClaim.ts` | `localStorage['legwork.activeClaim.v1']` — `readActiveClaim` / `writeActiveClaim` / `clearActiveClaim` |
 
-`components/TaskCard.tsx` renders one row in its three states and `components/Countdown.tsx`
-is the `mm:ss` clock. Both are used again by T-33.
+`components/TaskCard.tsx` renders one row in its three states, `components/TaskMap.tsx` plots
+rounded pins over OpenStreetMap tiles, and `components/Countdown.tsx` is the `mm:ss` clock.
 
 ## The poll
 
-`GET /tasks/list?area=&lat=&lon=` every **3 seconds**. A claim is a race — a row that is gone
-needs to disappear before the worker walks to it — and three seconds is what `02-architecture`
-asks for.
+`GET /tasks/list?lat=&lon=` every **3 seconds**. The board is global: `area` is not sent. A
+claim is a race — a row that is gone needs to disappear before the worker walks to it — and
+three seconds is what `02-architecture` asks for.
 
 The path is **`/tasks/list`**, not `/tasks`. `apps/api/app/tasks/route.ts` is POST-only so that
 T-16 and T-17 never share a file, so the worker's board is a route of its own; `api-contract.ts`
-(`listTasks`), `docs/api.md` and `apps/api/app/tasks/list/route.ts` all agree. The brief's §2
-and §5 carried the pre-wave-2 spelling — the route on `main` wins, and the lead is amending
-both sections. T-24's mocks answer either path, so nothing but this line changed.
+(`listTasks`), `docs/api.md` and `apps/api/app/tasks/list/route.ts` all agree.
 
-- `area` is the registered geohash-5 cell when the phone stored one, otherwise
-  `resolveArea()`. It is resolved **before the first poll**, and `Refresh list` retries the
-  fix. `lat`/`lon` ride along only when `lastKnownPosition()` has a fix.
-- Empty list: `No open tasks in <area> right now. This board shows the cell you registered
-  in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.` When the
-  current fix is in another cell: `Your phone is in <fixArea>, and your account is
-  registered in <area>.`
+- `lat`/`lon` ride along only when `lastKnownPosition()` has a fix, so the API can sort
+  nearest-first and fill `distance_m`.
+- Empty list: `No open tasks right now. The list refreshes every 3 s.` A search (or the 10 km
+  filter) that matches nothing is a different sentence: `No tasks match this search.`
+- Search is client-side over `title`, `brief.place.{name, street_address, locality}` and
+  `task_type`, case- and accent-insensitive. It does not touch the poll.
+- `within 10 km` keeps rows with `distance_m <= 10_000`. Without a fix the checkbox is
+  disabled and says why.
 - No fix: cards read `distance unavailable` (never `—`) and the header carries
   `GPS unavailable in webview — disclosed`.
 - The interval returns early while `document.hidden`, and a `visibilitychange` or `focus`
@@ -39,9 +38,6 @@ both sections. T-24's mocks answer either path, so nothing but this line changed
   ref. A `poll` that changed identity would tear down and rebuild the interval on every
   render, and every rebuild is an extra request.
 - **401** → `router.replace('/')`. The cookie is the session; there is nothing to retry.
-
-Empty list: `No open tasks in <area> right now. This board shows the cell you registered in;
-tasks posted elsewhere will not appear here. The list refreshes every 3 s.`
 
 ## The claim
 
@@ -95,6 +91,15 @@ metres is as fine as this screen ever gets: it is a "how far do I walk" figure, 
 position. The TTL line is `claim within 30 min`, from `DEFAULT_CLAIM_TTL_S`. The expanded
 card names the distance, the 30-minute window and the 150 m proof fence before `CLAIM`.
 Beyond `CLAIM_RADIUS_M` (2 km) that button stays on screen, disabled, and says why.
+
+Every row with a `brief.place` carries **Get directions** — a plain anchor to Google Maps
+`maps/dir/?api=1&destination=` with the encoded `name, street_address, locality`,
+`target="_blank" rel="noreferrer" data-hit="44"`. No coordinate is in the href.
+
+The map above the list is OpenStreetMap raster tiles as `<img>` elements, one pin per row
+with a `coordinate_rounded`, and a distinct worker pin from `lastKnownPosition()`. Tiles
+carry the ODbL line. No fix → no worker pin and the GPS chip. Tiles that fail to load leave
+the list working and say so.
 
 The address is the row's `title` — the API renders it as `<place> · <street>, <locality>` — and
 the question line is derived from `task_type`, because that line is the same for every task of

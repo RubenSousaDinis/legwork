@@ -5,15 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { EarningsBar } from '../../components/EarningsBar';
 import { TaskCard, formatDistance, type TaskRow } from '../../components/TaskCard';
+import { TaskMap } from '../../components/TaskMap';
 import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
-import {
-  DEFAULT_AREA,
-  areaFromPosition,
-  lastKnownPosition,
-  readRegisteredArea,
-  resolveArea,
-} from '../../lib/area';
+import { lastKnownPosition, resolveArea } from '../../lib/area';
+import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 
 /**
@@ -29,14 +25,18 @@ const EARNINGS_POLL_MS = 60_000;
 export const GPS_UNAVAILABLE_CHIP = 'GPS unavailable in webview — disclosed';
 
 export const NOT_SPENDABLE = 'not spendable';
-export const NEARBY_TASKS = 'NEARBY TASKS';
+export const NEARBY_TASKS = 'OPEN TASKS';
 
-export function emptyBoardCopy(area: string): string {
-  return `No open tasks in ${area} right now. This board shows the cell you registered in; tasks posted elsewhere will not appear here. The list refreshes every 3 s.`;
+export const SEARCH_LABEL = 'Search by city, street, place or type';
+export const NEAR_ME_LABEL = 'within 10 km';
+export const NEAR_ME_NEEDS_FIX = 'Needs a GPS fix — distance is unknown without one.';
+
+export function emptyBoardCopy(): string {
+  return 'No open tasks right now. The list refreshes every 3 s.';
 }
 
-export function emptyBoardMismatch(fixArea: string, registeredArea: string): string {
-  return `Your phone is in ${fixArea}, and your account is registered in ${registeredArea}.`;
+export function emptySearchCopy(): string {
+  return 'No tasks match this search.';
 }
 
 /** The three 409/403 answers `POST /tasks/:id/claim` is allowed to give, in the worker's words. */
@@ -73,16 +73,13 @@ function claimErrorMessage(thrown: unknown): string {
 
 /**
  * `GET /tasks/list`, not `GET /tasks`: `apps/api/app/tasks/route.ts` is POST-only so that T-16
- * and T-17 never share a file, and the worker's board is a route of its own. The brief's §2
- * and §5 carried the pre-wave-2 spelling; `api-contract.ts` (`listTasks`), `docs/api.md` and
- * `apps/api/app/tasks/list/route.ts` all say `/tasks/list`, and the route on `main` wins.
+ * and T-17 never share a file, and the worker's board is a route of its own.
  *
- * `area` is the geohash-5 cell and nothing finer; `lat`/`lon` ride along only so the API can
- * sort nearest-first, and only when the worker already granted the permission.
+ * The board is global: `area` is not sent. `lat`/`lon` ride along only so the API can sort
+ * nearest-first and fill `distance_m`, and only when the worker already granted the permission.
  */
-function tasksPath(area: string | null): string {
+function tasksPath(): string {
   const params = new URLSearchParams();
-  if (area !== null) params.set('area', area);
   const position = lastKnownPosition();
   if (position !== null) {
     params.set('lat', String(position.lat));
@@ -102,13 +99,12 @@ export function TaskList() {
   const [earnings, setEarnings] = useState<number | null>(null);
   const [located, setLocated] = useState(false);
   const [hasFix, setHasFix] = useState(false);
-  const [boardArea, setBoardArea] = useState(DEFAULT_AREA);
-  const [fixArea, setFixArea] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [nearMe, setNearMe] = useState(false);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
   const claimedRow = useRef<TaskRow | null>(null);
-  const area = useRef<string | null>(null);
 
   // Read through a ref so `poll` never changes identity: a new `poll` would tear down and
   // rebuild the interval on every render, and each rebuild is an extra request.
@@ -121,19 +117,13 @@ export function TaskList() {
   }, []);
 
   const locate = useCallback(async () => {
-    const resolved = await resolveArea();
-    const registered = readRegisteredArea();
-    const nextArea = registered ?? resolved;
-    area.current = nextArea;
-    setBoardArea(nextArea);
-    const position = lastKnownPosition();
-    setHasFix(position !== null);
-    setFixArea(position !== null ? areaFromPosition(position.lat, position.lon) : null);
+    await resolveArea();
+    setHasFix(lastKnownPosition() !== null);
   }, []);
 
   const poll = useCallback(async () => {
     try {
-      const data = await apiFetch<TasksResponse>(tasksPath(area.current));
+      const data = await apiFetch<TasksResponse>(tasksPath());
       setRows(data.tasks);
       // `TaskCard` clears the stored claim when its countdown hits `00:00`; this is where the
       // pinned card goes away and the worker is back on the list.
@@ -246,15 +236,23 @@ export function TaskList() {
     [poll],
   );
 
+  const canFilterNear = rows.some((row) => typeof row.distance_m === 'number');
+  const filtered = rows.filter((row) => {
+    if (!rowMatchesQuery(row, query)) return false;
+    if (!nearMe) return true;
+    return typeof row.distance_m === 'number' && row.distance_m <= NEAR_ME_M;
+  });
+
   const pinned =
     claim === null
       ? null
-      : (rows.find((row) => row.task_id === claim.task_id) ?? claimedRow.current);
-  const rest = claim === null ? rows : rows.filter((row) => row.task_id !== claim.task_id);
-  const mismatch =
-    fixArea !== null && fixArea !== boardArea
-      ? emptyBoardMismatch(fixArea, boardArea)
-      : null;
+      : (filtered.find((row) => row.task_id === claim.task_id) ??
+        rows.find((row) => row.task_id === claim.task_id) ??
+        claimedRow.current);
+  const rest = claim === null ? filtered : filtered.filter((row) => row.task_id !== claim.task_id);
+  const searching = query.trim().length > 0 || nearMe;
+  const emptyBoard = rest.length === 0 && claim === null && rows.length === 0;
+  const emptySearch = rest.length === 0 && claim === null && rows.length > 0 && searching;
 
   return (
     <div data-screen="tasks">
@@ -266,6 +264,47 @@ export function TaskList() {
           </Chip>
         </p>
       ) : null}
+
+      <div className="lw-board-tools">
+        <label className="lw-field" htmlFor="board-search">
+          <span className="lw-list-label lw-list-label--flush">{SEARCH_LABEL}</span>
+          <input
+            className="lw-input lw-input--full"
+            data-hit="44"
+            data-search="board"
+            id="board-search"
+            onChange={(event) => setQuery(event.target.value)}
+            type="search"
+            value={query}
+          />
+        </label>
+        <label className="lw-checkbox" data-hit="44">
+          <input
+            checked={nearMe}
+            data-hit="44"
+            data-near="10km"
+            disabled={!canFilterNear}
+            onChange={(event) => setNearMe(event.target.checked)}
+            type="checkbox"
+          />
+          {NEAR_ME_LABEL}
+        </label>
+        {located && !hasFix ? (
+          <p className="lw-note" data-floor="20" data-near="disabled-reason">
+            {NEAR_ME_NEEDS_FIX}
+          </p>
+        ) : null}
+      </div>
+
+      <TaskMap
+        gpsUnavailableChip={GPS_UNAVAILABLE_CHIP}
+        located={located}
+        onSelect={setExpandedId}
+        rows={filtered}
+        selectedId={expandedId}
+        worker={lastKnownPosition()}
+      />
+
       <p className="lw-chips lw-chips--stacked">
         <button
           className="lw-plain-button lw-quiet-link"
@@ -292,16 +331,19 @@ export function TaskList() {
         </ul>
       )}
 
-      {rest.length === 0 && claim === null ? (
+      {emptyBoard ? (
         <div data-empty="tasks">
           <p className="lw-body" data-floor="20">
-            {emptyBoardCopy(boardArea)}
+            {emptyBoardCopy()}
           </p>
-          {mismatch === null ? null : (
-            <p className="lw-body" data-empty="mismatch" data-floor="20">
-              {mismatch}
-            </p>
-          )}
+        </div>
+      ) : null}
+
+      {emptySearch ? (
+        <div data-empty="search">
+          <p className="lw-body" data-floor="20">
+            {emptySearchCopy()}
+          </p>
         </div>
       ) : null}
 

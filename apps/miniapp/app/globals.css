@@ -1334,3 +1334,113 @@ body {
 body.lw-modal-open {
   overflow: hidden;
 }
+
+/* T-56 board: search, near-me, directions, map. */
+.lw-board-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+}
+
+.lw-input--full {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lw-directions {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0 var(--s-4) var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--verified-700);
+  text-decoration: none;
+}
+
+.lw-map {
+  position: relative;
+  margin: 0 0 var(--s-4);
+  background: var(--paper-100);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--r-tile);
+  overflow: hidden;
+  min-height: 220px;
+}
+
+.lw-map__grid {
+  display: grid;
+  width: 100%;
+}
+
+.lw-map__tile {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  background: var(--paper-100);
+}
+
+.lw-map__fail,
+.lw-map__empty {
+  margin: 0;
+  padding: var(--s-4);
+}
+
+.lw-map__pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lw-map-pin {
+  position: absolute;
+  left: var(--pin-x);
+  top: var(--pin-y);
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+}
+
+.lw-map-pin__mark {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--verified-600);
+}
+
+.lw-map-pin--worker .lw-map-pin__mark {
+  border-radius: 50%;
+  transform: none;
+  background: var(--ink-text);
+}
+
+.lw-map-pin--selected .lw-map-pin__mark {
+  background: var(--verified-700);
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  bottom: 2px;
+}
+
+.lw-map__attr {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink-text-3);
+  background: var(--paper-50);
+}
