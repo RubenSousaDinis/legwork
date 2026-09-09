@@ -8,7 +8,9 @@ S1: code present, proof rejected (expected)
 
 _World ID Router on Base Sepolia (feedback-doc value only)_
 
-outcome: The World ID Router is deployed at `0x42FF98C4E85212a5D31358ACbFe76a621b50fC02` on Base Sepolia and answers. `cast code` returns 356 characters beginning `0x608060405236601057600e6013565b005b600e` — a 178-byte ERC-1967 proxy in front of `WorldIDRouterImplV1` at `0x379c62556c665f1edd25f2c2a0f76bc70a53b2e4`. The operator has no simulator proof for action `legwork-worker`, because S2' runs Selfie Check through the cloud verify endpoint and that path never produces an onchain proof, so the probe is a `verifyProof` staticcall with all-zero arguments. It reverts, and the two groups the router knows about revert for two different reasons: the router reports `groupCount() = 2`, `routeFor(0)` itself reverts `GroupIsDisabled()` (`0x4ac73bb8`) so group 0 is switched off on this chain, and `routeFor(1)` returns the group-1 verifier `0x163b09b4fE21177c455D850BD815B6D583732432`, against which `verifyProof` reverts `NonExistentRoot()` (`0xddae3b71`) — the all-zero root is not in the bridged root history. That is the expected shape of the answer: onchain verification is Orb-only and the identity roots it checks are the bridged ones, while Legwork's workers hold Selfie Check / Orb-level *staging* credentials that are in neither. Nothing downstream changes on this outcome, as the gate says: `WorkerRegistry` ships one cloud-verified `ATTESTED` mode.
+outcome: PASS
+
+The World ID Router is deployed at `0x42FF98C4E85212a5D31358ACbFe76a621b50fC02` on Base Sepolia and answers. `cast code` returns 356 characters beginning `0x608060405236601057600e6013565b005b600e` — a 178-byte ERC-1967 proxy in front of `WorldIDRouterImplV1` at `0x379c62556c665f1edd25f2c2a0f76bc70a53b2e4`. The operator has no simulator proof for action `legwork-worker`, because S2' runs Selfie Check through the cloud verify endpoint and that path never produces an onchain proof, so the probe is a `verifyProof` staticcall with all-zero arguments. It reverts, and the two groups the router knows about revert for two different reasons: the router reports `groupCount() = 2`, `routeFor(0)` itself reverts `GroupIsDisabled()` (`0x4ac73bb8`) so group 0 is switched off on this chain, and `routeFor(1)` returns the group-1 verifier `0x163b09b4fE21177c455D850BD815B6D583732432`, against which `verifyProof` reverts `NonExistentRoot()` (`0xddae3b71`) — the all-zero root is not in the bridged root history. That is the expected shape of the answer: onchain verification is Orb-only and the identity roots it checks are the bridged ones, while Legwork's workers hold Selfie Check / Orb-level *staging* credentials that are in neither. Nothing downstream changes on this outcome, as the gate says: `WorkerRegistry` ships one cloud-verified `ATTESTED` mode.
 
 evidence: `bash scripts/spikes/s1-router.sh` — output pasted in the T-04 PR. Error selectors were decoded against the verified `WorldIDRouterImplV1` ABI, which declares exactly `CannotRenounceOwnership()`, `ExpiredRoot()`, `GroupIsDisabled()`, `ImplementationNotInitialized()`, `NoSuchGroup(uint256)` and `NonExistentRoot()`.
 
@@ -20,7 +22,9 @@ _IDKit 4.x verify end to end + webview probe (S2')_
 
 S2: PASS on Orb · REFUSED on Selfie Check
 
-outcome: IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
+outcome: DOWNGRADED
+
+IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
 mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
 **"Legwork will see these proofs: Unique Human"**; on approval `POST /idkit/verify` answered **200**
 and the nullifier row was written. Selfie Check — the credential the plan assumed — never worked: the
@@ -54,9 +58,13 @@ value and a deploy. The session ordering was fixed in the mini-app the same day.
 
 _x402 exact-EVM verify → post → settle + replay_
 
-Result: PASS
+S3: PASS
 
-PAYMENT_MODE: x402
+outcome: PASS
+
+evidence: https://sepolia.basescan.org/tx/0x77064504cc36f25767635fedb04f37fc663a104bfcebe81f57e199cf1dec8a46
+
+decision: PAYMENT_MODE stays x402. Exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas.
 
 Time used: 11
 
@@ -97,7 +105,9 @@ S5: PASS
 
 _ERC-8004 ABI confirmation — round-trip against the deployed registries_
 
-outcome: Legwork reads and writes the production ERC-8004 registries on Base Sepolia directly. No fallback is needed, so T-13b is not dispatched and nothing is labelled a self-deployed instance. Two throwaway identities were registered from keys that existed only in the spike process; the second gave unsolicited feedback on the first; the read came back exactly as AbuseMark (T-13) will make it.
+outcome: PASS
+
+Legwork reads and writes the production ERC-8004 registries on Base Sepolia directly. No fallback is needed, so T-13b is not dispatched and nothing is labelled a self-deployed instance. Two throwaway identities were registered from keys that existed only in the spike process; the second gave unsolicited feedback on the first; the read came back exactly as AbuseMark (T-13) will make it.
 
 **Addresses (chain 84532).** IdentityRegistry proxy `0x8004A818BFB912233c491871b3d84c89A494BD9e` → implementation `0x7274e874ca62410a93bd8bf61c69d8045e399c02`. ReputationRegistry proxy `0x8004B663056A597Dffe9eCcC1965A193B7388713` → implementation `0x16e0fa7f7c56b9a767e34b192b51f921be31da34`. Both read from the ERC-1967 implementation slot of the live proxies and both match the addresses named in the gate. Both report `getVersion() = "2.0.0"`; `ReputationRegistry.getIdentityRegistry()` returns the IdentityRegistry proxy, so the pair is wired together.
 
@@ -127,7 +137,9 @@ decision: use the live registries. No self-deploy, no T-13b. `IERC8004Identity` 
 
 _Discord answers: Studio URL as "live data from a Graph provider"; Subgraph MCP as "composable"_
 
-outcome: the subgraph is deployed to Subgraph Studio and indexing Base Sepolia at the chain head. The Discord question is **open** — see "Discord" below; nothing here claims it is settled.
+outcome: PASS
+
+The subgraph is deployed to Subgraph Studio and indexing Base Sepolia at the chain head. The Discord questions are **open** — see "Discord" below; nothing here claims they are settled.
 
 **Deployment.** Slug `legwork-base-sepolia`, version label `6653cb4` (the git short SHA of the manifest commit), deployment id `QmQfhYXvMH7hTvtp3inckP2662USA9c5Nbd2gvFaKUiTcv`.
 Studio: https://thegraph.com/studio/subgraph/legwork-base-sepolia
@@ -153,7 +165,9 @@ One to three blocks behind a 2-second chain, moving with it: at the head, not ca
 
 **Query 3 — the external-poster counter.** `{ posterStats(id: "global") { distinctExternalBuyers externalTasks } }` returns `distinctExternalBuyers: 0, externalTasks: 0`. Both buyers who have posted so far are on the operator allowlist — `0x436cA229…` for the seeded five, `0xc1286562…` for task 6 — and `PosterStats` excludes allowlisted buyers by design. Zero is the honest Day-2 answer for the W3 gate, reported as zero.
 
-**Discord: not asked, no answer.** The question — whether a Subgraph Studio query URL on a testnet counts as "consuming live data from a Graph provider" for the Graph track — was **not put to the Graph Discord as of 2026-09-07T15:06Z**: this deploy ran from a non-interactive shell with no Discord access. It stays open and it is the operator's to ask. Nothing in this repo asserts the track is satisfied.
+**Discord (1) Studio query URL as "live data from a Graph provider":** unanswered as of 2026-09-09. The question — whether a Subgraph Studio query URL on a testnet counts as "consuming live data from a Graph provider" for the Graph track — was **not put to the Graph Discord as of 2026-09-07T15:06Z**: this deploy ran from a non-interactive shell with no Discord access. T-46 recorded no later answer. Nothing in this repo asserts the track is satisfied.
+
+**Discord (2) Subgraph MCP as "composable":** unanswered as of 2026-09-09. Same source: not asked as of 2026-09-07T15:06Z; still no answer on 2026-09-09. The Graph Composable track is not claimed.
 
 What the public docs do and do not settle, from reading them rather than from an answer:
 
@@ -163,24 +177,121 @@ What the public docs do and do not settle, from reading them rather than from an
 
 evidence: `pnpm graph codegen && pnpm graph build` green on the filled manifest; `graph deploy` output and all three query responses pasted verbatim into the T-23 PR. The four addresses in `subgraph/subgraph.yaml` match `contracts/deployments/base-sepolia.json` character for character.
 
-decision: Studio is where the subgraph lives for the demo and its query URL is what every consumer reads. The Graph-track question stays **open** pending a Discord answer; anyone writing it up must say "Subgraph Studio, Base Sepolia" and not claim more.
+decision: Studio is where the subgraph lives for the demo and its query URL is what every consumer reads. The Graph-track questions stay **open** — unanswered as of 2026-09-09; anyone writing them up must say "Subgraph Studio, Base Sepolia" and not claim more.
 
 ## Preflight
 
-_live Studio data, Day 8 (T-46)_
+_live Studio data, Day 9 (T-46) — re-shot after the first real errand_
 
-outcome: pending
+outcome: PASS
 
-evidence: pending
+`preflight_workers` answers from the live Studio subgraph, and every number it returned
+is the number the dashboard card renders — field for field, same minute. **The median is drawn
+from a real completion**: `n_real: 1`, `median_source: "real"`, and the card reads
+`median 1 min (real, n=1)`. That is a person, not seeded data. Nothing had aged out of the
+seven-day window and no re-seed was needed.
 
-decision: pending
+**The call.** Made against the deployed MCP server at `POST $API_BASE_URL/mcp` (streamable HTTP,
+stateless), tool `preflight_workers`, arguments `{"task_type":"verify-open","area":"ez1dn"}`.
+`ez1dn` is the cell the real errand was completed in. Captured `2026-09-09T17:19:56Z`:
+
+```json
+{
+  "active": 3,
+  "verified": 0,
+  "seeded": 3,
+  "n_real": 1,
+  "score_floor": 1,
+  "median_minutes": 1,
+  "median_source": "real",
+  "dashboard_url": "https://legwork-dashboard.vercel.app"
+}
+```
+
+Not the fixture: diffed against `packages/subgraph-client/fixtures/preflight.json`, which prints
+`OK: live` — the fixture describes `0x5eed…`/`0x0417…` addresses that do not exist on Base Sepolia.
+
+**Where the real completion came from.** On 2026-09-09 a World ID-verified worker walked to a shop
+on Rua do Cruzeiro in Leiria, photographed the door and its hours sign, and was paid 3.00 USDC.
+The release transaction carries the two USDC `Transfer` logs the escrow promises —
+`3_000_000` to the worker and `450_000` to the treasury — and the worker is
+`0xaed0c1102e45b7f528224eacb9309a0925015810`, `seeded: false`, `completed: 1` in the index. It is
+the first non-seeded completion the subgraph has ever held.
+
+**The seven-day window: every counted timestamp is inside it.**
+`{ workers(where:{seeded:true}){ id seeded lastCompletedAt } }`, checked against `now − 604800`
+(cutoff `1788369607`):
+
+```
+0x1d6662abfbcc49751235717fd18a30242cbfad37 1788781022 IN
+0x244183988b0779990c4c0a581aff797b99c87a4c 1788796528 IN
+0x24f9c1b734d304dd7c753c5253656c1389e076c6 1788780998 IN
+0x5a95ec323ecce89d9f92ec59faec37d8fab88f66 1788857026 IN
+0x79d2de6f266839da58f3467df69104ba037981d3 1788796420 IN
+0x7b4eb10df800881f73bc1d85bdef02f82386271e 1788855340 IN
+0x87b90a409b0a84c378f8b11903eccdaa2cf74cab 1788781006 IN
+0x8b02a09a50f91debed73c9ea4dd9f6ad7a1bc0eb 1788856986 IN
+0x98e4682f8a1a6201907eeab9f7826a0ba4e408a9 1788781014 IN
+0xc24f49b0262cbfb52bc10a59dcfb4b33c3c04358 1788856944 IN
+```
+
+Ten seeded workers carry a `lastCompletedAt`; all ten are `IN`, none near the edge. **No re-seed
+was needed and none was run**; the window constant, the `sinceTs` argument and the fixtures are
+untouched.
+
+The index is at the head, so the numbers are not a lag artefact: `_meta.block.number = 46603057`
+and `hasIndexingErrors: false`, against an `eth_blockNumber` of `46603059` — two blocks on a
+two-second chain.
+
+**`verified: 0` beside `n_real: 1` is not a contradiction, and it is worth writing down.** The two
+fields count different things against different cells. `verified` counts workers whose own
+`Worker.area` is the queried cell; `n_real` counts completions whose *task* was in it. The worker
+registered in `ez19y` and did the errand in `ez1dn`, so they are real in the median and invisible
+in the split. A worker who registers in one cell and works in another is counted by the second
+field and not the first. Nothing was changed to close the gap: the phone was not re-registered, no
+area was edited, and `demo-data.json` was left alone.
+
+For the same reason the split reads `3 active · 0 verified · 3 seeded` rather than the
+`4 active · 1 verified · 3 seeded` the brief originally predicted. No area produces that split;
+the lead amended §2 on Sept 9 with the measured values for all three candidate cells.
+
+**The card.** `docs/media/preflight-card.png`, captured from the deployed dashboard at
+`2026-09-09T17:23:04Z`, about three minutes after the tool call above. It reads
+`3 active · 0 verified · 3 seeded` over `score ≥ 1 · median 1 min (real, n=1)`. Every number on it
+appears in the JSON: `3 = active`, `0 = verified`, `3 = seeded`, `1 = score_floor`,
+`1 min = median_minutes`, `(real, n=1) = median_source` with `n_real`. Nothing was edited, rounded
+or re-run for a better figure. The card now lives at `/live` rather than `/` — T-51 made `/` the
+landing page — and the still frames the same `section.preflight.card` the Day-8 still did.
+
+In plain words: three workers have finished a `verify-open` errand in this area in the last seven
+days, and the typical one took about a minute — measured from a real person's errand, not from
+seeded data. No World ID-verified worker is *registered* in this particular cell, because the one
+who worked here registered in the next one over.
+
+evidence: the §9 commands, run by hand against the deployed MCP server, the Studio query URL and
+Base Sepolia, with their output pasted into the T-46 PR alongside the PNG. §9's first command was
+written `npx @legwork/mcp call preflight_workers …`; it cannot run, because `@legwork/mcp` is a
+private workspace package (`npm error 404 '@legwork/mcp@*' is not in this registry`) whose `bin`
+points at `dist/bin/legwork-mcp.js`, and no package in this repo emits `dist` — `build` is
+`tsc --noEmit` everywhere. The call was made instead as a JSON-RPC `tools/call` against the hosted
+mount, which is what §2 asks for either way. The lead corrected §9 in PR #201.
+
+decision: the tool, the reduction and the card are correct and honest, and as of Day 9 the numbers
+behind them are real. The Day-8 capture recorded `1 active · 0 verified · 1 seeded` with a seeded
+median and said it should be re-shot once the pool was real; this is that re-shoot. The remaining
+gap — `verified: 0` while a real worker is active in the cell — is a property of counting
+registration cells and completion cells separately, recorded above and not papered over.
 
 ## Timing
 
 _Day-3 green loop tx links (T-29); Day-5 fresh install → verify → claim_
 
-outcome: green. `pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
+outcome: PASS
+
+`pnpm demo:reset && pnpm demo:run` posts, claims, submits and releases on Base
 Sepolia with no human in the loop, exits 0, and prints `RELEASED` last.
+
+Day-5 fresh-install → verify → claim: unanswered as of 2026-09-09. No number appears in T-29's PR, T-33's operator step, `FEEDBACK-WORLD.md`, or `OPERATOR.md`.
 
 Day-3 green loop 16:49 UTC: post/claim/submit/release https://sepolia.basescan.org/tx/0xdab710d01c9259d6919edaa4bd8f57b1b3b3c82355a87af1d3744d16c31fbb60 https://sepolia.basescan.org/tx/0x78c85e57e5ac81c58af27bdb5ef3b278df4d03d4d8adc9b8877df86924f2b544 https://sepolia.basescan.org/tx/0x58064beeb92541339090820a707dfccc2870afa50e10d7a6a34944bb0302aa0d https://sepolia.basescan.org/tx/0x395aeb59530605dae38005edd16a5aab62c39ed41514e61aaa33f211994e1238
 
@@ -444,8 +555,8 @@ agent-side feedback. `BUYER_AGENT_ID=9196` is the demo agent's id and belongs in
 
 ## Locked architecture
 
-- credential level: selfie | orb → narration variant: A | B — _pending_
-- GPS: available | downgraded (photo + server timestamp + tapped confirmation) — _pending_
+- credential level: orb → narration variant: B — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are `orb`; Selfie Check was REFUSED (`verification_disabled`), never available. Variant A is the Selfie Check narration; the product ships Orb.
+- GPS: available — `FEEDBACK-WORLD.md` has no GPS-downgrade entry after the Day-4/5 mini-app build or the Sept 9 Pão Doce errand. The fallback (photo + server timestamp + tapped confirmation) exists in T-33 and is not the locked demo variant.
 - payment: x402 — S3 PASS (Sept 6): exact-EVM, reference facilitator, requirements built inside the handler, settle after post, nonce-keyed idempotency; buyer paid no gas
 - ERC-8004: live registries — S5 PASS (Sept 7): production IdentityRegistry `0x8004A818…` and ReputationRegistry `0x8004B663…` on Base Sepolia, interfaces confirmed unchanged, `_safeMint` (a contract holder needs `onERC721Received`), unsolicited feedback legal, `getSummary` needs named clients and lags its receipt by a block; T-13b not dispatched
 
