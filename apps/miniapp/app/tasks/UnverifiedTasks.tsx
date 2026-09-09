@@ -59,7 +59,7 @@ export function UnverifiedTasks() {
 
   return (
     <div data-screen="tasks-unverified">
-      <UnverifiedBanner tasks={tasks ?? []} verifyHref="/" />
+      <UnverifiedBanner tasks={tasks ?? []} verifyHref="/verify" />
       {failed ? (
         <p className="lw-error-line" data-error="feed">
           {FEED_UNAVAILABLE}

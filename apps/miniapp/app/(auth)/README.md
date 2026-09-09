@@ -1,14 +1,14 @@
 # Auth flow + session modes
 
-`/` is the worker's first minute. One state machine (`page.tsx`) walks five steps and then
-hands over to `/tasks`:
+`/` is the open list. `/verify` is the worker's first minute of auth. One state machine
+(`verify/page.tsx`) walks five steps and then hands over to `/tasks`:
 
 ```
 unverified landing → verifying (IDKit) → sign-in (walletAuth | idkit) → payout key → register → /tasks
 ```
 
 A worker who already has a session never sees any of it: `useSession()` restores on load and
-`page.tsx` redirects when the restored session is `registered`.
+`verify/page.tsx` redirects when the restored session is `registered`.
 
 ## The two session modes
 

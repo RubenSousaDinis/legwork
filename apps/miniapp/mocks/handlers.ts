@@ -165,6 +165,41 @@ export const TASKS_TWO_ROWS = {
 
 export const TASKS_EMPTY = { tasks: [] };
 
+/**
+ * `GET /public/feed` — what a visitor sees at `/` with no session. No title, no exact
+ * coordinate: `area` is a geohash-5 cell and the preview titles the row from `task_type`.
+ */
+export const PUBLIC_FEED = {
+  tasks: [
+    {
+      task_id: '1024',
+      state: 'open' as const,
+      task_type: 'verify-open' as const,
+      price_usdc: 3.0,
+      fee_usdc: 0.45,
+      area: 'ez1dn',
+      seeded: false,
+      posted_at: POSTED_AT,
+      tx: { post: TX_POST },
+      links: { post: `https://sepolia.basescan.org/tx/${TX_POST}` },
+      dashboard_url: DASHBOARD_URL,
+    },
+    {
+      task_id: '1025',
+      state: 'open' as const,
+      task_type: 'photo-of' as const,
+      price_usdc: 3.0,
+      fee_usdc: 0.45,
+      area: 'ez1dn',
+      seeded: true,
+      posted_at: POSTED_AT,
+      tx: { post: TX_POST },
+      links: { post: `https://sepolia.basescan.org/tx/${TX_POST}` },
+      dashboard_url: DASHBOARD_URL,
+    },
+  ],
+};
+
 export const CLAIM_RESPONSE = {
   tx: TX_CLAIM,
   claim_expires_at: CLAIM_EXPIRES_AT,
@@ -380,6 +415,8 @@ export const handlers = [
     return json({ ...REGISTER_RESPONSE, worker });
   }),
 
+  http.get('*/api/public/feed', () => json(PUBLIC_FEED)),
+
   // `/tasks/list` is the contract's path and `/tasks` is the one T-24 §2 and T-25 §2 call;
   // both are answered so neither task's tests hang on the spelling. See the PR body.
   http.get('*/api/tasks/list', ({ request }) => {
@@ -467,6 +504,7 @@ export const RESPONSE_FIXTURES = [
   { route: 'session', status: 200, body: SESSION_RESPONSE },
   { route: 'session', status: 200, body: { ...SESSION_RESPONSE, mode: 'idkit' } },
   { route: 'register', status: 200, body: REGISTER_RESPONSE },
+  { route: 'publicFeed', status: 200, body: PUBLIC_FEED },
   { route: 'listTasks', status: 200, body: TASKS_TWO_ROWS },
   { route: 'listTasks', status: 200, body: TASKS_EMPTY },
   { route: 'claim', status: 200, body: CLAIM_RESPONSE },
