@@ -22,6 +22,7 @@ import { LocationStep } from './Downgrade';
 import { reencodeImage } from './image';
 import { PaidState } from './PaidState';
 import { uploadProof, type ProofsResponse } from './upload';
+import { Waiting } from '../../components/ui/Waiting';
 
 /**
  * Capture → location → answer → SUBMIT → released. The beat the whole submission rests on.
@@ -48,6 +49,16 @@ export const REPORT_TASK_LABEL = 'Report task';
 export const PAID_FOR_THE_PROOF =
   "you are paid for the proof, not the answer — 'closed' pays the same as 'open'";
 export const NO_PEOPLE = "don't photograph people";
+
+/*
+ * Submitting is two round trips with a photo in the middle, on a phone connection, with the
+ * worker standing in the doorway they just photographed. It used to be silent: the button
+ * greyed out and nothing else on the screen changed until it was over or had failed. These
+ * are the two halves, and they are named separately because they fail separately —
+ * `UPLOAD_FAILED` and `SUBMIT_FAILED` are already two different sentences.
+ */
+export const SENDING_PHOTO = 'Sending the photo…';
+export const SUBMITTING_PROOF = 'Submitting the proof…';
 
 export const WAITING_LINE = 'Submitted · waiting for release';
 export const APPROVAL_CAPTION = "after approval · or auto-release when the task's window ends";
@@ -121,6 +132,8 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   const [note, setNote] = useState('');
 
   const [phase, setPhase] = useState<Phase>('capture');
+  /** Which half of `submitting` is running: the photo upload, or the submit itself. */
+  const [step, setStep] = useState<'upload' | 'submit' | null>(null);
   const [submission, setSubmission] = useState<SubmitResponse | null>(null);
   /** The server's timestamp for the photo — the phone's own clock never reaches the receipt. */
   const [capturedAt, setCapturedAt] = useState<string | null>(null);
@@ -242,6 +255,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     if (!canSubmit || photo === null || taskType === null || answer.answer === null) return;
     setError(null);
     setPhase('submitting');
+    setStep('upload');
 
     const form = new FormData();
     form.append('file', photo.blob, 'proof.jpg');
@@ -262,10 +276,12 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     } catch {
       setError(UPLOAD_FAILED);
       setPhase('capture');
+      setStep(null);
       return;
     }
 
     setCapturedAt(uploaded.captured_at);
+    setStep('submit');
 
     const trimmedNote = note.trim();
     const body: Record<string, unknown> = {
@@ -290,6 +306,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     } catch {
       setError(SUBMIT_FAILED);
       setPhase('capture');
+      setStep(null);
       return;
     }
 
@@ -297,6 +314,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
     // the worker can go and do again.
     clearActiveClaim();
     setSubmission(result);
+    setStep(null);
     setPhase(result.status === 'submitted' ? 'waiting' : 'settled');
   }, [answer, canSubmit, gps, note, photo, taskId, taskType]);
 
@@ -364,7 +382,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
         <SettledWithoutRelease submission={submission} task={task} />
       ) : null}
 
-      {phase === 'waiting' ? <Waiting submission={submission} /> : null}
+      {phase === 'waiting' ? <WaitingForRelease submission={submission} /> : null}
 
       {phase === 'capture' || phase === 'submitting' ? (
         <div className="lw-card">
@@ -423,6 +441,14 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
             <Button disabled={!canSubmit} full onClick={() => void onSubmit()} size="lg" variant="primary">
               {SUBMIT_LABEL}
             </Button>
+
+            {/* The button keeps its name and stops taking taps; this says which of the two
+                round trips is running. */}
+            {phase === 'submitting' ? (
+              <Waiting step={step ?? 'upload'}>
+                {step === 'submit' ? SUBMITTING_PROOF : SENDING_PHOTO}
+              </Waiting>
+            ) : null}
           </div>
 
           {error === null ? null : (
@@ -502,7 +528,7 @@ function TxChip({ tx }: { tx: string }) {
   );
 }
 
-function Waiting({ submission }: { submission: SubmitResponse | null }) {
+function WaitingForRelease({ submission }: { submission: SubmitResponse | null }) {
   return (
     <div className="lw-card" data-state="waiting">
       <p className="lw-body" data-floor="20">

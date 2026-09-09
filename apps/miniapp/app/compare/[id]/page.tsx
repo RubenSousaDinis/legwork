@@ -11,6 +11,7 @@ import { CREDENTIAL_LEVEL } from '../../../lib/env';
 import { requireVerified } from '../../../lib/session';
 import { readActiveClaim, type ActiveClaim } from '../../tasks/activeClaim';
 import { CompareView } from './CompareView';
+import { Waiting } from '../../../components/ui/Waiting';
 
 /**
  * `/compare/<task_id>` — the travel-free screen, for the one task this worker is holding.
@@ -95,11 +96,11 @@ export default function ComparePage({ params }: { params: Promise<{ id: string }
   }, [id]);
 
   if (session.status !== 'verified' || claim === undefined) {
-    return <p className="lw-placeholder">{OPENING_LINE}</p>;
+    return <Waiting step="opening">{OPENING_LINE}</Waiting>;
   }
 
   if (claim === null || claim.task_id !== id) {
-    return <p className="lw-placeholder">{WRONG_TASK_LINE}</p>;
+    return <Waiting step="wrong-task">{WRONG_TASK_LINE}</Waiting>;
   }
 
   const level = session.level === 'selfie' ? 'selfie' : CREDENTIAL_LEVEL;
@@ -122,7 +123,7 @@ export default function ComparePage({ params }: { params: Promise<{ id: string }
       </header>
 
       {spec.status === 'ready' ? <CompareView spec={spec.spec} taskId={id} /> : null}
-      {spec.status === 'loading' ? <p className="lw-placeholder">{OPENING_LINE}</p> : null}
+      {spec.status === 'loading' ? <Waiting step="spec">{OPENING_LINE}</Waiting> : null}
       {spec.status === 'unavailable' ? (
         <p className="lw-error-line" data-error="spec">
           {SPEC_UNAVAILABLE}

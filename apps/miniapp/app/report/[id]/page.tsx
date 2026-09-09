@@ -8,6 +8,7 @@ import { CREDENTIAL_LEVEL } from '../../../lib/env';
 import { requireVerified } from '../../../lib/session';
 import { readActiveClaim, type ActiveClaim } from '../../tasks/activeClaim';
 import { REPORT_HEADING, ReportForm } from './ReportForm';
+import { Waiting } from '../../../components/ui/Waiting';
 
 /**
  * `/report/<task_id>` — the way out of a task that should not have been posted.
@@ -60,11 +61,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   }, [id]);
 
   if (session.status !== 'verified' || claim === undefined) {
-    return <p className="lw-placeholder">{OPENING_LINE}</p>;
+    return <Waiting step="opening">{OPENING_LINE}</Waiting>;
   }
 
   if (claim === null || claim.task_id !== id) {
-    return <p className="lw-placeholder">{WRONG_TASK_LINE}</p>;
+    return <Waiting step="wrong-task">{WRONG_TASK_LINE}</Waiting>;
   }
 
   const level = session.level === 'selfie' ? 'selfie' : CREDENTIAL_LEVEL;

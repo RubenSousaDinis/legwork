@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Waiting } from '../../components/ui/Waiting';
 import { Chip } from '../../components/ui/Chip';
 import { apiFetch } from '../../lib/api';
 import { requireVerified } from '../../lib/session';
@@ -68,11 +69,11 @@ export default function EarningsPage() {
   }, []);
 
   if (session.status !== 'verified') {
-    return <p className="lw-placeholder">Opening your earnings…</p>;
+    return <Waiting step="session">Opening your earnings…</Waiting>;
   }
 
   if (earnings === null) {
-    return <p className="lw-placeholder">Reading what you earned…</p>;
+    return <Waiting step="earnings">Reading what you earned…</Waiting>;
   }
 
   return (

@@ -994,3 +994,77 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------ waiting */
+
+/*
+ * DESIGN-SPEC "The idea": the route line — a dot, a dashed path, a footprint at the end —
+ * "appears as dividers, progress bars and the escrow meter". This is the progress bar, and
+ * it is the only waiting affordance either surface has. It does not spin: it walks, toward
+ * an end it has not reached, which is why there is no footprint on it.
+ *
+ * The worker phone draws the same thing in `apps/miniapp/app/globals.css` on paper.
+ */
+.route-wait {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin: 0;
+}
+
+.route-wait-line {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  color: var(--fg-3);
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.route-wait-track {
+  flex: 1 1 auto;
+  min-width: var(--sp-6);
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--hairline-1) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 12px 100%;
+  animation: route-travel 900ms linear infinite;
+}
+
+@keyframes route-travel {
+  to {
+    background-position-x: 12px;
+  }
+}
+
+/*
+ * A route that walked in place would be worse than one that stands still. This file has no
+ * blanket reduced-motion reset — it disables named animations — so the track is named here.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .route-wait-track {
+    animation: none;
+  }
+}
+
+/*
+ * The shell every dynamic route paints while the API and the subgraph are read. Its job is
+ * that the ink ground and the wordmark are on screen in the first frame instead of a white
+ * document: with a `loading.tsx` in the segment, Next streams this immediately and fills the
+ * page in behind it. Nothing on it is a number.
+ */
+.route-loading {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: var(--sp-10) var(--sp-8);
+  background: var(--ink-900);
+}
+
+.route-loading .wordmark {
+  font-size: var(--text-h2);
+}

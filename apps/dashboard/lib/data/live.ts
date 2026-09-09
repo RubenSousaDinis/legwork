@@ -7,6 +7,7 @@ import {
   type TaskType,
 } from '@legwork/shared';
 import { createSubgraphClient, type SubgraphClient } from '@legwork/subgraph-client';
+import { resolvedCredentialLevel } from '../../app/copy';
 import type {
   AgentData,
   DashboardData,
@@ -435,8 +436,12 @@ export interface LiveDashboardOptions {
    * The credential level the server already resolved. `WORLD_CREDENTIAL_LEVEL` is a
    * server var, and this mapper also runs in the browser through `useLiveDashboard`,
    * where a non-`NEXT_PUBLIC_` var reads `undefined` — so the poll carries the
-   * server-rendered value forward instead of silently downgrading `orb` to `selfie`
-   * on the first tick.
+   * server-rendered value forward instead of re-deriving it on the first tick.
+   *
+   * With no level given the fall-back is `resolvedCredentialLevel()`, the same one every
+   * other surface in this app uses. It used to be an inline ternary that read the other
+   * way, which is why the Supply card chipped `World ID · Selfie Check` on a deployment
+   * whose landing page, `/about` and worker phone all said `World ID · Orb`.
    */
   level?: 'selfie' | 'orb';
 }
@@ -582,7 +587,7 @@ export async function getLiveDashboardData(
       .sort((a, b) => Number(b.releasedAt ?? 0) - Number(a.releasedAt ?? 0))[0];
     poolData.highlighted = {
       id: poolWorkerId(highlightedWorker.id),
-      level: opts.level ?? (process.env.WORLD_CREDENTIAL_LEVEL === 'orb' ? 'orb' : 'selfie'),
+      level: opts.level ?? resolvedCredentialLevel(),
     };
     if (newestReleased?.releasedAt) {
       poolData.highlighted.minutesReal = Math.round(
