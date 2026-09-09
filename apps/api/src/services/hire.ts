@@ -265,11 +265,16 @@ export async function screenEnvelope(
     };
   }
   if (!verdict.ok) {
+    const placeId = placeIdFromBody(body);
+    const unresolvable =
+      verdict.field === 'spec.place.place_id' &&
+      placeId !== undefined &&
+      deps.places.resolve(placeId) === undefined;
     return {
       kind: 'invalid',
       spec_hash: hash,
       field: verdict.field,
-      reason: verdict.reason,
+      reason: unresolvable ? `unresolvable place_id ${placeId}` : verdict.reason,
       ...(verdict.allowed_task_types ? { allowed_task_types: verdict.allowed_task_types } : {}),
       ...(verdict.suggested_task_type ? { suggested_task_type: verdict.suggested_task_type } : {}),
     };
@@ -288,7 +293,17 @@ export async function screenEnvelope(
     };
   }
 
-  return { kind: 'accepted', envelope: parsed.data, spec_hash: hash, place: placeOf(parsed.data, deps.places) };
+  const place = placeOf(parsed.data, deps.places);
+  if (parsed.data.task_type !== 'compare-two' && place === null) {
+    return {
+      kind: 'invalid',
+      spec_hash: hash,
+      field: 'spec.place.place_id',
+      reason: `unresolvable place_id ${parsed.data.spec.place.place_id}`,
+    };
+  }
+
+  return { kind: 'accepted', envelope: parsed.data, spec_hash: hash, place };
 }
 
 /** `compare-two` has no place; the other three resolved one a moment ago in the gate. */
@@ -297,6 +312,12 @@ function placeOf(envelope: Envelope, places: PlaceIndex): ResolvedPlace | null {
   const place = envelope.spec.place;
   const coordinate = places.coordinateOf(place.place_id);
   return coordinate ? { ...coordinate, name: place.name } : null;
+}
+
+function placeIdFromBody(body: unknown): string | undefined {
+  const spec = asRecord(asRecord(body)['spec']);
+  const place = asRecord(spec['place']);
+  return typeof place['place_id'] === 'string' ? place['place_id'] : undefined;
 }
 
 // ---------------------------------------------------------------- the handler
@@ -409,6 +430,33 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
   }
 
   const { envelope, place } = verdict;
+
+  // A place the extract cannot locate would null `exact_lat/lon` and silently disable the
+  // geofence, the claim radius and `distance_m`. Refuse it here even if a mocked screen
+  // handed back `accepted` without a coordinate.
+  if (envelope.task_type !== 'compare-two' && place === null) {
+    const placeId = envelope.spec.place.place_id;
+    await deps.idem.release(nonce);
+    await logScreening(
+      {
+        task_type: taskType,
+        class: null,
+        reason: `unresolvable place_id ${placeId}`,
+        rule_id: 'schema.spec.place.place_id',
+        spec_hash: verdict.spec_hash,
+        marked: false,
+        mark_tx: null,
+        agent_id: null,
+        payer,
+      },
+      serviceDeps(deps),
+    );
+    logDecision({ ...common, decision: 'invalid_request', rule_id: 'schema.spec.place.place_id' });
+    throw ApiError.of('invalid_request', {
+      field: 'spec.place.place_id',
+      reason: `unresolvable place_id ${placeId}`,
+    });
+  }
 
   // 5. The caps. Over either one is a 429 that never marks, never posts and never settles.
   const capped = await deps.caps.check(payer, quote.price_units);

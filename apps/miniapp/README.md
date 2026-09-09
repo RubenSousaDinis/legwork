@@ -192,6 +192,7 @@ any red keyword or hex in the file.
 | `lw-footprint` | The in-UI glyph, inline SVG, always `--verified-600`. |
 | `lw-nav`, `lw-nav__link`, `lw-nav__auth` | Header links and the Login / Logout control. |
 | `lw-modal`, `lw-modal__panel`, `lw-modal__bar` | The login overlay: a div scrim above the header, not a `<dialog>`. |
+| `lw-map`, `lw-map-pin` | OpenStreetMap tile grid and pins on the board. ODbL attribution is in `.lw-map__attr`. |
 
 Supporting classes carry the same rules where a screen needs them: `lw-card--tight`,
 `lw-card--top`, `lw-card--verified`, `lw-landing-title`, `lw-banner-heading`, `lw-question`,
@@ -200,7 +201,7 @@ Supporting classes carry the same rules where a screen needs them: `lw-card--tig
 `lw-answer-question`, `lw-waiting-caption`, `lw-photo-slot`, `lw-thumb`, `lw-proof-header`,
 `lw-proof-head`, `lw-pair`, `lw-picker`, `lw-plain-button`, `lw-quiet-link`, `lw-list`,
 `lw-countdown`, `lw-header__brand`, `lw-header__caption`, `lw-header__banner`,
-`lw-header__state`.
+`lw-header__state`, `lw-board-tools`, `lw-directions`, `lw-input--full`.
 
 ### The floors, as they are enforced
 

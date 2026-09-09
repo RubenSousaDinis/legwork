@@ -34,7 +34,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
 | GET | `/me/earnings` | worker-session | Earned-only: sums TaskReleased to this worker | 200 |
 | GET | `/tasks/:id/spec` | worker-session | Spec fields, claimant only — the one route that shows spec to a human | 200, 403 |
 | GET | `/public/feed` | public | Last 20 by posted_at; never spec text, an exact coordinate, a buyer token, a payer or a note | 200 |
-| GET | `/public/task/:id` | public | One task as a stranger sees it: PublicTaskView, coordinate_rounded inside proof, never a url | 200, 404 |
+| GET | `/public/task/:id` | public | One task as a stranger sees it: PublicTaskView, coordinate_rounded on the task and inside proof, never a url | 200, 404 |
 | GET | `/public/refusals` | public | The six classes zero-filled, the last 20 refusals, and the demo examples; recent never carries reason, spec_hash, agent_id or payer | 200 |
 | GET | `/public/posters` | public | External demand as counts only; source says which zero a zero is | 200 |
 | GET | `/public/preflight` | public | The MCP preflight_workers shape | 200 |
@@ -100,7 +100,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -229,7 +229,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -357,7 +357,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -5263,7 +5263,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -5392,7 +5392,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -5520,7 +5520,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -9415,6 +9415,21 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 "type": "string"
               }
             }
+          },
+          "coordinate_rounded": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lon": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ]
           }
         },
         "required": [
@@ -12906,6 +12921,21 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
               "gps_unavailable"
             ]
           },
+          "coordinate_rounded": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lon": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ]
+          },
           "tx": {
             "type": "object",
             "properties": {
@@ -13091,6 +13121,21 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
         "hash_ok",
         "captured_at",
         "gps_unavailable"
+      ]
+    },
+    "coordinate_rounded": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lon": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "lat",
+        "lon"
       ]
     },
     "tx": {
@@ -15121,7 +15166,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -15250,7 +15295,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [
@@ -15378,7 +15423,7 @@ Money on public surfaces: `price_usdc` is the worker rate (3.00) with `fee_usdc`
                 },
                 "country": {
                   "type": "string",
-                  "const": "PT"
+                  "pattern": "^[A-Z]{2}$"
                 }
               },
               "required": [

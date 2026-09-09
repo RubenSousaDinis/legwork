@@ -13,6 +13,7 @@ export const Place = z.object({
   name: z.string().min(1).max(120),
   street_address: z.string().min(1).max(160),
   locality: z.string().min(1).max(80),
-  country: z.literal('PT'),
+  /** ISO-3166-1 alpha-2. The extract still covers Leiria and Lisbon only. */
+  country: z.string().regex(/^[A-Z]{2}$/, 'ISO-3166-1 alpha-2'),
 });
 export type Place = z.infer<typeof Place>;

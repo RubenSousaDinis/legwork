@@ -22,6 +22,7 @@ One test per row, named after the attack, is the artifact a judge opens. **FIX**
 | **DOC** Dispute / auto-release boundary race | One constant; documented, not built | README | — |
 | **DOC** Worker-directed harm (a lure, a stakeout, 23:00) | Daylight-hours default, max distance and a kill switch **before the first external poster** (pre-W3, not hackathon); `Report task` if built | README | — |
 | **DOC** Worker's approximate location exposed to the poster | Rounded coordinate only; stated | README | — |
+| **DOC** Task's approximate location exposed to every reader | Rounded coordinate only (3 decimals, about 100 m), published so a worker can decide whether to walk there; the exact coordinate stays on the private row | `publicFeedPublishesOnlyTheRoundedCoordinate` | — |
 | **DOC** Settle → post custody block | The operator float holds the task's funds between `post` and `settle`; stated | README, narration | — |
 
 Not a row: reentrancy. USDC has no transfer hooks; a plain-ERC20 escrow has no callback surface.

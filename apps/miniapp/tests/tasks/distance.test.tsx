@@ -59,6 +59,6 @@ describe('distance on the board', () => {
     for (const node of distances) {
       expect(node.textContent).toBe('distance unavailable');
     }
-    expect(screen.getByText(GPS_CHIP)).toBeTruthy();
+    expect(screen.getAllByText(GPS_CHIP).length).toBeGreaterThan(0);
   });
 });

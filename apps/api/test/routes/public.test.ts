@@ -180,6 +180,42 @@ describe('/public/*', () => {
     expect(refusalBody.examples.every((row) => row.example === true)).toBe(true);
   });
 
+  it('publicFeedPublishesOnlyTheRoundedCoordinate', async () => {
+    await seed();
+
+    const surfaces: Record<string, string> = {
+      '/public/feed': await (await call(feed, { url: 'http://localhost/public/feed' })).text(),
+      '/public/task/1': await (
+        await call(publicTask, { url: 'http://localhost/public/task/1', params: { id: '1' } })
+      ).text(),
+    };
+
+    for (const [surface, text] of Object.entries(surfaces)) {
+      expect(text, `${surface} leaked exact_lat`).not.toContain('exact_lat');
+      expect(text, `${surface} leaked exact_lon`).not.toContain('exact_lon');
+      expect(text, `${surface} leaked the exact latitude`).not.toContain(EXACT_LAT);
+      expect(text, `${surface} leaked the exact longitude`).not.toContain(EXACT_LON);
+    }
+
+    const rounded = { lat: 39.744, lon: -8.807 };
+    const feedBody = JSON.parse(surfaces['/public/feed'] as string) as {
+      tasks: { coordinate_rounded: { lat: number; lon: number } }[];
+    };
+    const taskBody = JSON.parse(surfaces['/public/task/1'] as string) as {
+      coordinate_rounded: { lat: number; lon: number };
+    };
+    expect(feedBody.tasks[0]?.coordinate_rounded).toEqual(rounded);
+    expect(taskBody.coordinate_rounded).toEqual(rounded);
+
+    const decimalPlaces = (n: number): number => {
+      const text = String(n);
+      const dot = text.indexOf('.');
+      return dot < 0 ? 0 : text.length - dot - 1;
+    };
+    expect(decimalPlaces(rounded.lat)).toBe(3);
+    expect(decimalPlaces(rounded.lon)).toBe(3);
+  });
+
   it('serves the feed newest first and refuses a preflight that is not a geohash', async () => {
     await seed();
 
