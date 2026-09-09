@@ -49,8 +49,9 @@ const { setScenario } = await import('../mocks/scenarios');
 const { resetSessionForTests } = await import('../lib/session');
 const { loadOrCreatePayoutKey } = await import('../lib/workerKey');
 const AuthPage = (await import('../app/(auth)/verify/page')).default;
+const { VERIFY_BUTTON } = await import('../app/(auth)/Landing');
 
-const CTA = 'Verify with World ID';
+const CTA = VERIFY_BUTTON;
 
 const WALLET_AUTH_DATA = {
   address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',

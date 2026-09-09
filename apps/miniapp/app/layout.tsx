@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { MiniKitProvider } from '../components/MiniKitProvider';
+import { SiteNav } from '../components/SiteNav';
 import { VerifiedState } from '../components/VerifiedState';
 import './globals.css';
 
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="lw-wordmark">LEGWORK</span>
               <Footprint />
             </span>
+            <SiteNav />
             <VerifiedState />
           </header>
           <main className="lw-main">{children}</main>

@@ -78,9 +78,10 @@ body {
 
 /* ---------------------------------------------------------------- chrome */
 /*
- * Two rows without a wrapper element: row 1 is the brand and the state, side by side;
- * row 2 is the verified banner, spanning both columns. A grid rather than nested flex
- * rows so the header stays one flat list of children — which is what `layout.tsx` and
+ * Three rows, still one flat list of children: row 1 is the brand and the state,
+ * side by side; row 2 is the nav, spanning both columns; row 3 is the verified
+ * banner, spanning both columns. A grid rather than nested flex rows so the
+ * header stays one flat list of children — which is what `layout.tsx` and
  * `tests/verifiedChipAboveFold.test.tsx` both render.
  */
 .lw-header {
@@ -97,17 +98,52 @@ body {
   border-bottom: 1px solid var(--paper-border);
 }
 
-/* Row 2, full width: the `Verify to claim` chip, or the verified banner after it. */
-.lw-header__banner {
-  display: block;
-  grid-column: 1 / -1;
-}
-
 /* Row 1, left: the wordmark and the footprint glyph. */
 .lw-header__brand {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Row 1, right: `mini app` or the compact verified pill. */
+.lw-header__state {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+/* Row 2, full width: links plus Login / Logout. */
+.lw-nav {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.lw-nav__link {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 var(--s-3);
+  color: var(--ink-text-2);
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-decoration: none;
+}
+
+.lw-nav__auth {
+  margin-left: auto;
+}
+
+/* Row 3, full width: the `Verify to claim` chip, or the verified banner after it. */
+.lw-header__banner {
+  display: block;
+  grid-column: 1 / -1;
+  grid-row: 3;
 }
 
 /* DESIGN-SPEC "Type": wordmark Archivo 800; the prototype tracks it +0.06 em. */
@@ -1253,4 +1289,48 @@ body {
 
 .lw-list > li {
   margin-bottom: var(--s-4);
+}
+
+/* ---------------------------------------------------------------- modal */
+/*
+ * Above `.lw-header` (z-index 10) and `.lw-earnings-bar` (z-index 9). A div, not
+ * `<dialog>`: jsdom does not implement `showModal()`.
+ */
+.lw-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--s-6) var(--s-4);
+  background: rgba(23, 25, 27, 0.45);
+}
+
+.lw-modal__panel {
+  width: 100%;
+  max-width: 28rem;
+  max-height: calc(100vh - var(--s-8));
+  overflow: auto;
+  background: var(--paper-50);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--card-shadow);
+  padding: var(--s-4);
+}
+
+.lw-modal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.lw-modal__bar .lw-list-label {
+  margin: 0;
+}
+
+body.lw-modal-open {
+  overflow: hidden;
 }

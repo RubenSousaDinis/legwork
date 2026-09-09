@@ -24,13 +24,15 @@ export function VerifiedState() {
 
   return (
     <>
-      {verified ? (
-        <VerifiedChip compact level={level} state={state} />
-      ) : (
-        <span className="lw-header__caption" data-header="caption">
-          mini app
-        </span>
-      )}
+      <span className="lw-header__state">
+        {verified ? (
+          <VerifiedChip compact level={level} state={state} />
+        ) : (
+          <span className="lw-header__caption" data-header="caption">
+            mini app
+          </span>
+        )}
+      </span>
       <span className="lw-header__banner">
         <VerifiedChip level={level} state={state} />
       </span>

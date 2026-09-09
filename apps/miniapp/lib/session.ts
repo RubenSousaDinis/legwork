@@ -60,6 +60,22 @@ function publish(next: Snapshot): void {
 }
 
 function getSnapshot(): Snapshot {
+  if (snapshot === SERVER_SNAPSHOT) {
+    const mirror = readMirror();
+    if (mirror !== null) {
+      snapshot = {
+        state: {
+          status: 'verified',
+          nullifier: mirror.nullifier,
+          level: mirror.level,
+          mode: mirror.mode,
+          worker: mirror.worker,
+          registered: mirror.registered,
+        },
+        ready: false,
+      };
+    }
+  }
   return snapshot;
 }
 
@@ -207,10 +223,17 @@ export async function restoreSession(): Promise<SessionState> {
   return state;
 }
 
-/** Drops the mirror and the in-memory state. The cookie expires on its own. */
-export function signOut(): void {
+/** Drops the cookie, the mirror and the in-memory state. A failed request still clears locally. */
+export async function signOut(): Promise<void> {
+  let failure: unknown;
+  try {
+    await apiFetch('/session/logout', { method: 'POST' });
+  } catch (err) {
+    failure = err;
+  }
   clearMirror();
   publish({ state: UNVERIFIED, ready: true });
+  if (failure !== undefined) throw failure;
 }
 
 // ----------------------------------------------------------------- the hooks
