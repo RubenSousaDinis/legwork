@@ -104,7 +104,7 @@ local install line; local mode pays via x402 and returns the task.
 | `payment_required` | `true` | |
 | `endpoint` | `url` | the REST route the local server pays |
 | `price_usdc` | `number` | `amount × 1.15` — a 3.00 task is 3.45 |
-| `network` | `'eip155:84532'` | Base Sepolia |
+| `network` | `'eip155:84532' \| 'eip155:31337'` | Base Sepolia, or anvil |
 | `asset` | `'USDC'` | |
 | `pay_to` | `string` | |
 | `install_line` | `'claude mcp add legwork -- npx @legwork/mcp'` | |
@@ -190,7 +190,7 @@ Dry-run the screening for a task without posting or paying. Never marks.
 | Field | Type | Notes |
 |---|---|---|
 | `accepted` | `true` | |
-| `spec_hash` | `0x…` 32-byte hex | the hash that would go onchain |
+| `spec_hash` | `string` | the hash that would go onchain |
 | `price_usdc` | `number` | what you would pay, fee included |
 | `dashboard_url` | `url` | |
 
