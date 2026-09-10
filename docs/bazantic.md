@@ -134,6 +134,56 @@ The 402 is the point of step (f).
 | Bazantic account username | TODO(operator) |
 | Screen-recording link | TODO(operator) |
 
+## Overpass gateway — T-59
+
+The Task API gateway above lists Legwork. This section is a second gateway, for Overpass, so
+an agent can resolve a place outside the two cities the product ships.
+
+| Field | Value |
+|---|---|
+| Overpass gateway URL | TODO(operator) |
+| Upstream | `https://overpass-api.de/api/interpreter` — a community service we do not own |
+| Bazantic-side price | must be 0 — do not put pricing in front of the public instance |
+| Recipe name | `place-anywhere-then-quote` |
+| Recipe text in this repo | `examples/recipes/place-anywhere-then-quote.md` |
+| Live copy in Bazantic's UI | TODO(operator) |
+| Screen-recording link | TODO(operator) |
+| Worked example | Farmácia Adriana, Coimbra — `node/536546148` |
+| In the packaged index | no |
+
+### Why Overpass qualifies as a new service
+
+The prize wants a service that was not on Bazantic and is not an API from another sponsor of
+this hackathon. The sponsor list is The Graph, Hedera, Arc, World, 1inch, ENS,
+Uniswap Foundation, Ledger, Privy, Chainlink and Bazantic. OpenStreetMap is not among them.
+
+### The shipped limit
+
+Runtime place lookup reads `packages/screening/fixtures/osm/leiria-lisbon.json.gz` through
+`OsmPlaceIndex`. That file is a cached extract of Leiria and Lisbon business POIs, not
+OpenStreetMap. The shipped index covers Leiria and Lisbon only. A `place_id` outside it does
+not resolve; `placeOf` returns null and the task cannot be posted. The gateway widens what an
+agent can resolve and quote. It does not change what the deployed product accepts.
+
+© OpenStreetMap contributors, ODbL.
+
+### Worked example — agent-run on 2026-09-10
+
+One query, no loop:
+
+```
+curl -s -G https://overpass-api.de/api/interpreter --data-urlencode 'data=[out:json][timeout:25];node["name"="Farmácia Adriana"]["addr:city"="Coimbra"];out 1;'
+```
+
+Returned `node` id `536546148` at 40.210, -8.419 (3 decimals).
+`OsmPlaceIndex.coordinateOf("node/536546148")` is undefined.
+Live `POST /check` against `https://legwork-api.vercel.app/check` answered **400**
+`unresolvable place_id node/536546148`.
+Unpaid `POST /tasks` answered **402** `price_usdc: 3.45` — payment is asked before the place
+is checked. No `PAYMENT-SIGNATURE`. No task posted.
+
+the gateway lists the API; paying is still the agent's own x402 call.
+
 ## (g) Outcome
 
 | Step | Outcome |
