@@ -162,8 +162,18 @@ the recipe names.
   It does not change what the deployed product accepts: a task whose `place_id` is outside the
   packaged extract still cannot be posted today, and the recipe must say so rather than implying
   the limitation is gone.
-- Overpass is a free, shared, community-run service. Do not hammer it: one query per run, and no
-  loop in any committed script.
+- **Overpass is a free, community-run service and its fair-use policy asks people not to build
+  services on the public instances.** Putting a paid gateway in front of `overpass-api.de` is the
+  one framing here that could turn a prize entry into a complaint. So: the Bazantic gateway over
+  Overpass stays **free** — do not enable Bazantic-side pricing on it — one query per run, no loop
+  in any committed script, and `docs/bazantic.md` says out loud that the upstream is a community
+  service we do not own.
+- **ODbL attribution is not optional.** Anything this task publishes that carries OSM-derived data
+  must carry `ATTRIBUTION` from `packages/screening/src/osm/buildExtract.ts` — the string is
+  already `© OpenStreetMap contributors, ODbL`. Import it; do not retype it. Name the covered
+  region too: this is a cached extract of Leiria and Lisbon business POIs, not OpenStreetMap.
+- **`scripts/ci/banned-words.sh` excludes only `docs/plan/`.** Everything this task writes under
+  `docs/` and `examples/` is scanned, so the banned list above applies to the files you produce.
 - Tests never call a live model or a live chain. The §8 tests read the packaged fixture; they do
   not call Overpass.
 
@@ -200,8 +210,16 @@ particular:
 - **The operator has not supplied the Overpass gateway URL or the recording.** Write everything
   else, mark those `TODO(operator)`, and say so.
 - **Overpass is rate-limiting or down.** It is a shared community service and this is a real
-  possibility. Say so and stop; do not retry in a loop and do not substitute a different
-  geocoder without asking — the prize is about the service you actually gatewayed.
+  possibility — 429s and timeouts on a heavy query are normal, not a bug in your work. Say so and
+  stop; do not retry in a loop and do not substitute a different geocoder without asking — the
+  prize is about the service you actually gatewayed.
+- **A judge may not accept Overpass as "a new API you agentified".** The bullet asks for a service
+  that was not on Bazantic and is not another sponsor's; Overpass qualifies on both counts, but it
+  is also a public API we did not build. If the operator wants the safer reading, the alternative
+  is to publish our own cached extract as a small read-only service with its own document and
+  gateway — which is unambiguously new, cannot rate-limit, and cannot be accused of reselling a
+  community service. **That is a different task, not a variation of this one: raise it with the
+  lead rather than switching mid-flight.**
 
 Interfaces in `packages/shared`, `contracts/src/interfaces`, `subgraph/schema.graphql` and
 `apps/api/src/db/schema.ts` are frozen. Dependencies: `DEP REQUEST:`. Env vars: `ENV REQUEST:`.

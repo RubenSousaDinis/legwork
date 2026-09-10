@@ -123,14 +123,18 @@ holds it or a dependency is open: stop.
 1. Read `apps/api/app/openapi.json/README.md` in full before anything else. It is the procedure;
    this task executes it and then records what happened.
 2. Run steps (a) and (b) yourself — the document fetch and `redocly lint`. Keep the exact output.
-3. Steps (c), (d), (e), (f) need the bazantic.com account and are **operator-only** (see §14). Ask
+3. **Before anything is created, ask the operator to check how many gateways their bazantic.com
+   plan allows, and record it.** T-59 needs a second gateway. If the plan allows exactly one, T-59
+   is impossible as briefed and the lead must know that on day one rather than on the last day —
+   say so on the issue immediately.
+4. Steps (c), (d), (e), (f) need the bazantic.com account and are **operator-only** (see §14). Ask
    the operator to run them and hand you: the gateway URL, the six operation ids as the gateway
    listed them, the `postCheck` response, and the unpaid `postTasks` status and body.
-4. Write `docs/bazantic.md` from what came back. Anything the operator has not supplied is
+5. Write `docs/bazantic.md` from what came back. Anything the operator has not supplied is
    `TODO(operator)` — never a guess, never a placeholder that reads like a fact.
-5. Write `examples/recipes/worker-pool-then-quote.md`. Copy the shape of `examples/prompt.md`.
-6. Amend step (g) of the checklist to name `docs/bazantic.md` rather than `tracker.md`.
-7. Add the §8 tests to `apps/api/src/openapi.test.ts`.
+6. Write `examples/recipes/worker-pool-then-quote.md`. Copy the shape of `examples/prompt.md`.
+7. Amend step (g) of the checklist to name `docs/bazantic.md` rather than `tracker.md`.
+8. Add the §8 tests to `apps/api/src/openapi.test.ts`.
 
 ## 8. Acceptance tests
 
@@ -171,6 +175,9 @@ fine — paste the summary line); the api suite green; `banned-words: clean`.
 - **Do not fund anything from the gateway.** Step (f) is an unpaid call that must answer 402. If
   something posts a real task, stop and say so.
 - Tests never call a live model or a live chain.
+- **`scripts/ci/banned-words.sh` excludes only `docs/plan/`.** Everything this task writes under
+  `docs/` and `examples/` is scanned, so the banned list above applies to the files you produce,
+  not just to this brief.
 
 ## 11. Definition of done
 
