@@ -636,3 +636,27 @@ inventing an interface.
 - Class C sessions never receive a key, an RPC URL, or a `.env`.
 - Never dispatch a task whose `depends_on` are still open.
 - Drop the `optional` tasks before anything on the critical path when the day runs short.
+
+---
+
+## Day 7 · Wed Sept 10 — the Bazantic tracks
+
+Added after the operator asked why we were submitting to two partners rather than three. The
+honest answer was that Bazantic was the planned third and nobody built it. Both are `must: false`:
+they are the first things to drop, and **neither may displace the demo video**, which is required.
+
+Most of the value here happens in a third-party web UI that no `owned_paths` glob covers. Both
+prompts say so: the agent writes the repo half and asks the operator for the rest, and an agent
+that writes a gateway URL it never saw has fabricated evidence.
+
+### T-58 — Bazantic gateway for the Task API, and a recipe that needs The Graph too
+
+`T-58-bazantic-gateway-recipe.md` · lane E · size M · class L · depends on nothing · issue #209
+
+> Read `AGENTS.md`, then `docs/plan/T-58-bazantic-gateway-recipe.md` in full and do exactly what it says. Start with `scripts/claim.sh T-58` — it must print `CLAIMED`. Read `apps/api/app/openapi.json/README.md` before anything else: it is a seven-step import checklist that has never been run, and this task runs it and records what happened. Steps (a) and (b) are yours; steps (c)–(f) need the bazantic.com account and are the operator's — ask for their outputs and write `TODO(operator)` for anything they have not supplied, never a guess. The one rule that outranks the rest: **the gateway lists the API; paying is still the agent's own x402 call** — nothing you write may claim or imply the gateway funds, signs or pays for a task, and there is a §8 test that fails if it does. Stay inside §4; the prize rows in `README.md` and `docs/submission.md` are deliberately out of scope. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
+
+### T-59 — Agentify Overpass on Bazantic, so a place resolves outside two cities
+
+`T-59-bazantic-agentify-overpass.md` · lane E · size M · class L · **depends on T-58** · issue #210
+
+> Read `AGENTS.md`, then `docs/plan/T-59-bazantic-agentify-overpass.md` in full and do exactly what it says. Start with `scripts/claim.sh T-59` — it must print `CLAIMED`; it enforces `depends_on`, so if T-58 has not merged it will refuse and you should stop rather than create the branch by hand. The claim this task rests on is that the shipped place index covers Leiria and Lisbon only, so pick a worked example outside it, resolve it against live Overpass yourself, and prove the gap with `packagedIndexDoesNotResolveTheRecipePlace`. Overpass is a free community service: one query per run, never a loop. Do not overstate what the gateway changes — it widens what an agent can resolve and quote; the deployed product still refuses a place outside its packaged index, and the recipe must say so. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
