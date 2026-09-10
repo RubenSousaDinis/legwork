@@ -77,6 +77,22 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash scripts/ci/banned-words.sh
 
+  # `docs/api.md` and `docs/mcp-schema.md` are generated and say so in their own first line, but
+  # nothing checked that the committed copies matched the generator. T-45 was asked to add the
+  # POST /tasks handler order to `docs/api.md` and added it by hand; CI was green, and the next
+  # `pnpm docs:gen` deleted it. This job is what would have caught that.
+  docs-generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm docs:gen
+      - name: the committed docs must be what the generator writes
+        run: git diff --exit-code docs/api.md docs/mcp-schema.md
+
   path-ownership:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'bootstrap') && !contains(github.event.pull_request.labels.*.name, 'interface-change')
