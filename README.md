@@ -10,6 +10,8 @@ and submits proof. The escrow releases on proof. Built on Base Sepolia for ETHOn
 
 *State of this repo on 2026-09-10: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are deployed and answering, and a World ID-verified person has been paid 3.00 USDC for a real errand on the street. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
 
+testnet USDC; the worker was paid for real, separately.
+
 ## Start Fresh disclosure
 
 Pre-kickoff artifacts: this planning pack, a pitch deck and a static UI mockup, all dated and public. No code or stylesheet from them is in this repo.
