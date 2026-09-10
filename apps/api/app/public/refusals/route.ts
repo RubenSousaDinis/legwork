@@ -13,7 +13,7 @@ import { route, preflight } from '@/src/http/route';
 import { rateLimit, clientKey } from '@/src/http/rateLimit';
 import { getDb } from '@/src/db/client';
 import { screeningLog } from '@/src/db/schema';
-import { PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
+import { CACHE_SLOW, PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
 import demoDataJson from '../../../../../demo-data.json';
 
 export const runtime = 'nodejs';
@@ -73,7 +73,7 @@ export const GET = route(async (req) => {
       example: true as const,
     }));
 
-  return publicJson({ classes, recent, examples });
+  return publicJson({ classes, recent, examples }, CACHE_SLOW);
 });
 
 export const OPTIONS = preflight;

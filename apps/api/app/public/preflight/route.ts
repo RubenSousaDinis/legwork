@@ -10,7 +10,7 @@ import { route, preflight } from '@/src/http/route';
 import { rateLimit, clientKey } from '@/src/http/rateLimit';
 import { preflightWorkers } from '@/src/services/preflight';
 import { fail } from '@/src/services/statusBus';
-import { PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
+import { CACHE_SLOW, PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,7 +37,7 @@ export const GET = route(async (req) => {
     });
   }
 
-  return publicJson(await preflightWorkers(parsed.data));
+  return publicJson(await preflightWorkers(parsed.data), CACHE_SLOW);
 });
 
 export const OPTIONS = preflight;

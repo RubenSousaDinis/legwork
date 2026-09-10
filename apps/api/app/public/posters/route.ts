@@ -5,7 +5,7 @@
  */
 import { route, preflight } from '@/src/http/route';
 import { rateLimit, clientKey } from '@/src/http/rateLimit';
-import { PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
+import { CACHE_RARE, PUBLIC_RATE_LIMIT, publicJson } from '../_shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,7 @@ const listPosters = async () => ({
 
 export const GET = route(async (req) => {
   rateLimit(`public:${clientKey(req)}`, PUBLIC_RATE_LIMIT);
-  return publicJson(await listPosters());
+  return publicJson(await listPosters(), CACHE_RARE);
 });
 
 export const OPTIONS = preflight;

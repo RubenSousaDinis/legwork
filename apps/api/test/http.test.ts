@@ -10,6 +10,7 @@ import { requireAdminKey } from '../src/http/adminKey';
 import { clientKey, rateLimit, resetRateLimitForTests } from '../src/http/rateLimit';
 import { route } from '../src/http/route';
 import { call } from './app';
+import { setDbForTests } from '../src/db/client';
 import { createTestDb, type TestDb } from './db';
 
 const MINIAPP = 'https://miniapp.legwork.test';
@@ -127,5 +128,34 @@ describe('healthz', () => {
     });
     // Public route: nothing derived from a key belongs in it.
     expect(JSON.stringify(body)).not.toMatch(/0x[0-9a-fA-F]{40}/);
+  });
+
+  /**
+   * This is the endpoint you ask when you suspect the others are lying, so a shared cache
+   * answering it from a warmer minute would defeat its only purpose.
+   */
+  it('is never cached', async () => {
+    const res = await call(healthz, { url: 'http://localhost/healthz' });
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
+  /**
+   * `ok` used to be the literal `true` beside a `db` that could read `error`. On 2026-09-10,
+   * with the connection pool empty and every query failing, this answered
+   * `{"ok": true, "db": "error"}` and anything watching `ok` called that healthy. The database
+   * here is one whose every query throws, which is what an emptied pool looks like from the
+   * route's side.
+   */
+  it('says it is not ok when the database is not', async () => {
+    const thrower = {
+      execute: () => Promise.reject(new Error('no connection available')),
+    } as unknown as Parameters<typeof setDbForTests>[0];
+    setDbForTests(thrower);
+
+    const res = await call(healthz, { url: 'http://localhost/healthz' });
+    const body = (await res.json()) as { ok: boolean; db: string };
+
+    expect(body.db).toBe('error');
+    expect(body.ok).toBe(false);
   });
 });
