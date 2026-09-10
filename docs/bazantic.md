@@ -24,7 +24,7 @@ did not: the unpaid post returned 402, and no `PAYMENT-SIGNATURE` was sent.
 | Recipe in Bazantic's UI | https://bazantic.com/dashboard/recipes/worker-pool-then-quote — operator pasted 2026-09-11; dashboard path, login-walled |
 | Bazantic account username | TODO(operator) |
 | Screen-recording link | TODO(operator) |
-| Gateways the plan allows | TODO(operator) |
+| Gateways the plan allows | at least two, demonstrated 2026-09-10 (`nf26bnkznrbc3cg5rbq2hmej5q` Legwork, `vz23lkwccfa6hfawpnzw5ohzyy` Overpass). Exact plan cap: TODO(operator) |
 
 The prize rows in `README.md` and `docs/submission.md` stay as they are until the username and
 the recording exist. That edit is the lead's.
@@ -43,18 +43,19 @@ the recording exist. That edit is the lead's.
 | unpaid `postTasks` through the gateway | agent, through the gateway | step (f) |
 | Bazantic account username | operator | TODO(operator) |
 | Screen-recording link | operator | TODO(operator) |
-| Gateways the plan allows | operator | TODO(operator) — asked on issue #209 before any gateway was created |
+| Gateways the plan allows | operator | at least two, demonstrated 2026-09-10 (both hosts answer). Exact plan cap: TODO(operator) — asked on issue #209 before any gateway was created |
 
 ## Plan limit — asked before anything was created
 
-T-59 needs a second gateway (Overpass) on the same account. If the plan allows exactly one,
-T-59 is impossible as briefed.
+T-59 needed a second gateway (Overpass) on the same account. Two gateways now exist and both
+answer, so the question that decided whether this task was possible is settled: the plan
+allows at least two. The exact cap is still unknown.
 
 | Field | Value |
 |---|---|
-| Gateways the bazantic.com plan allows | TODO(operator) |
+| Gateways the bazantic.com plan allows | at least two, demonstrated 2026-09-10. Exact plan cap: TODO(operator) |
 | Asked on | issue #209, 2026-09-10, before any gateway was created |
-| What T-59 needs | a second gateway; one is not enough |
+| What T-59 needs | a second gateway; one is not enough — now met |
 
 ## (a) Document fetch
 
