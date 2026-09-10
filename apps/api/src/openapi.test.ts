@@ -120,7 +120,8 @@ describe('openapi', () => {
 
       const scheme = EXPECTED_SCHEME[route.auth];
       if (scheme === null) {
-        expect(operation.security, `${route.path} is public`).toBeUndefined();
+        // `[]` is "no security required" said out loud; `undefined` is a tool's guess at it.
+        expect(operation.security, `${route.path} is public`).toEqual([]);
       } else {
         expect(operation.security, `${route.path} wants ${scheme}`).toContainEqual({ [scheme]: [] });
       }

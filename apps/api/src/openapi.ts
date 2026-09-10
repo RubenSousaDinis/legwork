@@ -474,7 +474,11 @@ function operationFor(route: Route, convert: SchemaConverter): JsonObject {
   }
 
   const scheme = SECURITY_SCHEME_BY_AUTH[route.auth];
-  if (scheme) operation.security = [{ [scheme]: [] }];
+  // A public operation gets `security: []` — "no security required" — rather than no `security`
+  // key at all. Both mean the same thing to a reader; only the empty array means it to a tool.
+  // `redocly lint` counts a missing key as 17 errors on this document (`security-defined`), and
+  // the gateway import checklist tells the operator to expect none.
+  operation.security = scheme ? [{ [scheme]: [] }] : [];
 
   operation.responses = responsesFor(route, convert);
 
