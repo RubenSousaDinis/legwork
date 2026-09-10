@@ -86,19 +86,29 @@ table shows method + path only; it has no operation-id column.
 
 Command: `npx @redocly/cli@latest lint "$API_BASE_URL/openapi.json"` (`@redocly/cli@2.52.0`).
 
+First run, 2026-09-10, before #213 — against the T-35 document:
+
 | Field | Value |
 |---|---|
 | Summary line | Validation failed with 17 errors and 20 warnings. |
-| Errors | 17, all `security-defined` — public operations omit `security` rather than setting `security: []` |
+| Errors | 17, all `security-defined` — public operations omitted `security` rather than setting `security: []` |
 | Warnings | 20 (`operation-4xx-response`, `no-unused-components`, `info-license`) |
 | Outcome | did not meet the checklist's "no errors" line |
 
-T-35's tests assert that a public operation's `security` is undefined, which is what the
-generator emits and what redocly's recommended `security-defined` rule rejects. This task does
-not patch `apps/api/src/openapi.ts`. INTERFACE REQUEST: set `security: []` on public operations
-(and update the T-35 assertion that requires `undefined`) so redocly recommended reports no
-errors — answered in #213, not yet merged. Do not hand-edit the document in Bazantic's UI.
-Re-run this step against the redeployed origin after #213 merges.
+A public operation with no `security` key is what T-35's tests required (`undefined`) and what
+redocly recommended's `security-defined` rule rejects. This task did not patch
+`apps/api/src/openapi.ts`. #213 shipped `security: []` ("no security required" said out loud)
+and updated that assertion. The document was not hand-edited in Bazantic's UI.
+
+Re-run, 2026-09-10, after #213 merged (`82f8da5`) and `https://legwork-api.vercel.app/openapi.json`
+redeployed (`GET /check` now has `"security": []`):
+
+| Field | Value |
+|---|---|
+| Summary line | Woohoo! Your API description is valid. 🎉 You have 20 warnings. |
+| Errors | 0 |
+| Warnings | 20 |
+| Outcome | met the checklist's no-errors line |
 
 ## (c)–(f) Gateway — run on 2026-09-10
 
@@ -129,7 +139,7 @@ The 402 is the point of step (f).
 | Step | Outcome |
 |---|---|
 | (a) | worked — `"3.1.0"`, zero `/admin` paths, six checklist operation ids present in the document |
-| (b) | 17 errors (all `security-defined` on public operations) and 20 warnings; re-run after #213 merges |
+| (b) | first run: 17 `security-defined` errors. After #213 redeploy: 0 errors, 20 warnings — met the checklist's no-errors line |
 | (c) | worked — `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`, import by URL, price 0, No Auth, unpublished |
 | (d) | six ids in the gateway-served document; UI shows method + path; `PAYMENT-SIGNATURE` on `x402` |
 | (e) | 400 on corpus `node/900000001`; 200 accepted / `price_usdc: 3.45` on live `node/3092370961` |
