@@ -21,7 +21,7 @@ did not: the unpaid post returned 402, and no `PAYMENT-SIGNATURE` was sent.
 | Listing price | 0 mcent / `$0.00` on every imported resource |
 | Marketplace | Unpublished |
 | Recipe in this repo | `examples/recipes/worker-pool-then-quote.md` |
-| Recipe in Bazantic's UI | TODO(operator) |
+| Recipe in Bazantic's UI | https://bazantic.com/dashboard/recipes/worker-pool-then-quote — operator pasted 2026-09-11; dashboard path, login-walled |
 | Bazantic account username | TODO(operator) |
 | Screen-recording link | TODO(operator) |
 | Gateways the plan allows | TODO(operator) |
@@ -129,7 +129,7 @@ The 402 is the point of step (f).
 |---|---|
 | Recipe name | `worker-pool-then-quote` |
 | Text in this repo | `examples/recipes/worker-pool-then-quote.md` |
-| Live copy in Bazantic's UI | TODO(operator) |
+| Live copy in Bazantic's UI | https://bazantic.com/dashboard/recipes/worker-pool-then-quote — operator pasted 2026-09-11; dashboard path, login-walled |
 | Second service | The Graph — Subgraph Studio query URL `https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4` |
 | Bazantic account username | TODO(operator) |
 | Screen-recording link | TODO(operator) |
