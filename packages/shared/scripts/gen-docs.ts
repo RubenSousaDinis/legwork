@@ -7,7 +7,20 @@ const js = (s: z.ZodType) => { try { return z.toJSONSchema(s, { io: 'input', unr
 
 let api = `# API contract\n\nRendered from \`packages/shared/src/api-contract.ts\` by \`pnpm docs:gen\` — do not edit by hand.\n\n`;
 api += `Auth classes: \`public\` · \`x402\` (\`${HEADERS.paymentSignature}\`) · \`buyer-token\` (\`${HEADERS.buyerToken}\`) · \`worker-session\` (cookie) · \`idkit-session\` (cookie) · \`admin-key\` (\`${HEADERS.adminKey}\`) · \`signed-header\` (\`${HEADERS.buyerSignature}\` + \`${HEADERS.buyerTimestamp}\`, direct mode only).\n\n`;
-api += `Money on public surfaces: \`price_usdc\` is the worker rate (3.00) with \`fee_usdc\` (0.45) alongside; the agent's total (3.45) appears only on buyer-authenticated responses.\n\n## Routes\n\n| Method | Path | Auth | Summary | Responses |\n|---|---|---|---|---|\n`;
+api += `Money on public surfaces: \`price_usdc\` is the worker rate (3.00) with \`fee_usdc\` (0.45) alongside; the agent's total (3.45) appears only on buyer-authenticated responses.\n\n`;
+
+/*
+ * The handler order is part of the contract, not commentary: it is the sequence that decides
+ * whether a refusal can still take someone's money. T-45 was asked to put it in `docs/api.md`
+ * and did — by hand, into a file whose own first line says it is generated. The next
+ * `pnpm docs:gen` deleted it, and would have deleted it again during T-49's final checks.
+ * It is emitted here so the file the generator writes is the file the brief asks for.
+ */
+api += `## POST /tasks handler order\n\n`;
+api += `\`x402 verify (no money moves) → envelope + schema → deterministic gate → classifier (free-text path only) → caps → agent-id verification → TaskEscrow.post(buyer = payer, buyerAgentId) via TxQueue → x402 settle (idempotency key = authorization nonce) → 201\`\n\n`;
+api += `A refusal from the gate/classifier → \`AbuseMark.mark\` (if a verified agent id) and 422. A failed \`post\` never settles.\n\n`;
+
+api += `## Routes\n\n| Method | Path | Auth | Summary | Responses |\n|---|---|---|---|---|\n`;
 for (const r of Object.values(API_ROUTES)) api += `| ${r.method} | \`${r.path}\` | ${r.auth} | ${r.summary} | ${Object.keys(r.responses).join(', ')} |\n`;
 api += `\n## Shapes\n`;
 for (const [name, r] of Object.entries(API_ROUTES)) {
