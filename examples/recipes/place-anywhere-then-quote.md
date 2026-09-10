@@ -50,8 +50,10 @@ Coimbra is outside Leiria and Lisbon. That is the whole claim.
 
 ## 1. Resolve the place on Overpass
 
-One POST (or GET with `data=`) to `https://overpass-api.de/api/interpreter`. Name and locality,
-not a description of a query:
+One POST to the Overpass gateway
+`https://vz23lkwccfa6hfawpnzw5ohzyy.bazgateway.com/api/interpreter`
+(upstream `https://overpass-api.de/api/interpreter`). Send a descriptive `User-Agent`.
+Name and locality, not a description of a query. GET on the gateway path is 405.
 
 ```
 [out:json][timeout:25];

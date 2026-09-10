@@ -141,7 +141,7 @@ an agent can resolve a place outside the two cities the product ships.
 
 | Field | Value |
 |---|---|
-| Overpass gateway URL | TODO(operator) |
+| Overpass gateway URL | `https://vz23lkwccfa6hfawpnzw5ohzyy.bazgateway.com` — pasted from the Bazantic Copy control on 2026-09-10 |
 | Upstream | `https://overpass-api.de/api/interpreter` — a community service we do not own |
 | Bazantic-side price | must be 0 — do not put pricing in front of the public instance |
 | Recipe name | `place-anywhere-then-quote` |
@@ -181,6 +181,12 @@ Live `POST /check` against `https://legwork-api.vercel.app/check` answered **400
 `unresolvable place_id node/536546148`.
 Unpaid `POST /tasks` answered **402** `price_usdc: 3.45` — payment is asked before the place
 is checked. No `PAYMENT-SIGNATURE`. No task posted.
+
+Same query through the Overpass gateway, **POST**
+`https://vz23lkwccfa6hfawpnzw5ohzyy.bazgateway.com/api/interpreter` with a descriptive
+`User-Agent`, 2026-09-10: **200** and the same `id` `536546148`. GET on that path is **405**
+(`Allow: POST`) — the imported spec lists interpreter as POST only. Bazantic's connection
+test GET with no `User-Agent` is **406** from Overpass; that probe is not the recipe.
 
 the gateway lists the API; paying is still the agent's own x402 call.
 
