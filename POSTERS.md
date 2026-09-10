@@ -12,6 +12,15 @@ Distinct external = distinct ERC-8004 agent id or payer address not on the opera
 
 ## Count
 
-self-funded external posters: 0 · sponsored trials: 0
+**self-funded external posters: 0 · sponsored trials: 0**
 
-_Finalized by T-49 on Day 10._
+Cross-checked against the subgraph on 2026-09-10:
+`PosterStats { distinctExternalBuyers: 0, externalTasks: 0 }` — the same zero, from the index
+rather than from this file. Every task posted during the window was paid for by the operator's own
+demo agent, which sits on the escrow allowlist and is excluded from the count by design.
+
+The table above carries no rows because none were offered: no external builder posted a
+self-funded task, and no sponsored trial was run either. Zero is the honest answer and it is
+reported as zero rather than left blank.
+
+_Finalized by T-49 on 2026-09-10._
