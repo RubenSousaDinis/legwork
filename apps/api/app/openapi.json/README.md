@@ -9,11 +9,16 @@ This is the operator's checklist. Run it end to end on Day 9, before the filmed 
 here needs a secret: every step below is a public read, and the one authenticated call is made
 with a token you already hold.
 
-State it plainly, in the tracker and to anyone watching: **the gateway lists the API; paying is
+State it plainly, in `docs/bazantic.md` and to anyone watching: **the gateway lists the API; paying is
 still the agent's own x402 call.** Importing the document does not give the gateway a wallet, a
 key or the ability to spend on an agent's behalf.
 
 Set `API_BASE_URL` to the deployed API before you start.
+
+The run of this checklist is recorded in [`docs/bazantic.md`](../../../../docs/bazantic.md).
+The gateway that imported this document is
+`https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`. It lists the API; paying is still the
+agent's own x402 call.
 
 ---
 
@@ -37,7 +42,7 @@ On the operator machine (not in CI — this one reaches the network):
 npx @redocly/cli@latest lint "$API_BASE_URL/openapi.json"
 ```
 
-Expect **no errors**. Warnings are allowed; paste the summary line into `tracker.md`.
+Expect **no errors**. Warnings are allowed; paste the summary line into `docs/bazantic.md`.
 
 ## (c) Import it
 
@@ -87,8 +92,8 @@ agent's own x402 client, holding the agent's own key.
 
 ## (g) Record it
 
-Write the outcome in `tracker.md` — worked, or exactly what failed and at which step — together
-with the redocly summary from (b).
+Write the outcome in `docs/bazantic.md` — worked, or exactly what failed and at which step — together
+with the redocly summary from (b). There is no `tracker.md` in this repository.
 
 ---
 
