@@ -27,7 +27,51 @@ import { fromUsdcUnits, type TaskType } from '@legwork/shared';
 export const EXPLORER_TX = 'https://sepolia.basescan.org/tx/';
 
 export const PUBLIC_RATE_LIMIT = { limit: 60, windowS: 60 } as const;
-export const PUBLIC_CACHE_CONTROL = 'public, max-age=5';
+
+/**
+ * Shared-cache policy for the public reads.
+ *
+ * These endpoints are polled, not requested once: the dashboard's present canvas asks four of
+ * them on every tick, and it does that per viewer. `max-age` alone only talks to the browser,
+ * so every viewer's every tick used to reach Postgres. On 2026-09-10 that emptied the
+ * connection pool and *every* query started failing — the feed, the screening log, the caps
+ * count, the idempotency insert — while `/healthz` still answered from a warm connection.
+ *
+ * `s-maxage` is what the CDN reads, and it collapses N viewers into one origin hit per window.
+ * `stale-while-revalidate` means the refresh never blocks a viewer. `stale-if-error` is the one
+ * that matters most here: where the CDN honours it, a struggling origin serves the last good
+ * answer instead of a 500, which is exactly the failure this comment exists because of.
+ *
+ * The windows are chosen per endpoint from how fast the underlying number can actually move,
+ * not from a single default — a board that lags three seconds is fine, a worker count that
+ * lags thirty is fine, and a 500 is not.
+ */
+export interface CachePolicy {
+  /** Seconds the shared cache may serve without asking the origin. */
+  sMaxAge: number;
+  /** Seconds it may keep serving a stale answer while it refreshes in the background. */
+  staleWhileRevalidate: number;
+}
+
+export function cacheControl(policy: CachePolicy): string {
+  return [
+    'public',
+    `s-maxage=${policy.sMaxAge}`,
+    `stale-while-revalidate=${policy.staleWhileRevalidate}`,
+    `stale-if-error=${policy.staleWhileRevalidate}`,
+  ].join(', ');
+}
+
+/** The board and one task: they carry the beat a demo is watching, so they stay tight. */
+export const CACHE_LIVE: CachePolicy = { sMaxAge: 3, staleWhileRevalidate: 60 };
+
+/** Worker counts move on a seven-day window; a refusal tally moves when someone is refused. */
+export const CACHE_SLOW: CachePolicy = { sMaxAge: 30, staleWhileRevalidate: 300 };
+
+/** External posters change when a stranger posts, which so far is never. */
+export const CACHE_RARE: CachePolicy = { sMaxAge: 60, staleWhileRevalidate: 600 };
+
+export const PUBLIC_CACHE_CONTROL = cacheControl(CACHE_LIVE);
 
 export interface PublicProofView {
   hash: string;
@@ -60,8 +104,8 @@ export interface PublicTaskView {
 }
 
 /** A response every public route shares: cheap to cache, never a private byte in it. */
-export function publicJson(body: unknown): Response {
-  return Response.json(body, { headers: { 'cache-control': PUBLIC_CACHE_CONTROL } });
+export function publicJson(body: unknown, policy: CachePolicy = CACHE_LIVE): Response {
+  return Response.json(body, { headers: { 'cache-control': cacheControl(policy) } });
 }
 
 function linksOf(tx: TxSet): TxSet {
