@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AbuseClass } from '@legwork/shared';
 import { FakeClassifier } from '../src/classifier/types.js';
 import { screen } from '../src/pipeline.js';
-import type { OsmExtract } from '../src/osm/buildExtract.js';
+import { ATTRIBUTION, type OsmExtract } from '../src/osm/buildExtract.js';
 import { OsmPlaceIndex, checkDemoPlace } from '../src/osm/placeIndex.js';
 
 type CorpusRow = { id: number; class: AbuseClass | null; envelope: unknown };
@@ -128,5 +129,58 @@ describe('osm-placeindex', () => {
     for (const id of ['node/1', 'node/2', 'node/3']) {
       expect(index.phoneOf(id)).toBe('+351244000000');
     }
+  });
+});
+
+const PACKAGED_GZIP = fileURLToPath(new URL('../fixtures/osm/leiria-lisbon.json.gz', import.meta.url));
+const packaged = OsmPlaceIndex.fromGzip(PACKAGED_GZIP);
+const recipeMd = readFileSync(new URL('../../../examples/recipes/place-anywhere-then-quote.md', import.meta.url), 'utf8');
+const bazanticMd = readFileSync(new URL('../../../docs/bazantic.md', import.meta.url), 'utf8');
+
+/** Worked example for T-59: Coimbra, outside the Leiria and Lisbon extract. */
+const RECIPE_PLACE_ID = 'node/536546148';
+/** Live Farmácia Central in Leiria — present in the packaged gzip. */
+const LEIRIA_PLACE_ID = 'node/3092370961';
+
+describe('T-59 packaged extract coverage', () => {
+  it('packagedIndexDoesNotResolveTheRecipePlace', () => {
+    expect(packaged.coordinateOf(RECIPE_PLACE_ID)).toBeUndefined();
+  });
+
+  it('packagedIndexStillResolvesLeiria', () => {
+    expect(packaged.coordinateOf(LEIRIA_PLACE_ID)).toBeDefined();
+  });
+
+  it('recipeChainsOverpassAndLegwork', () => {
+    expect(recipeMd).toMatch(/overpass-api\.de\/api\/interpreter/);
+    expect(recipeMd).toMatch(/node\["name"="Farmácia Adriana"\]\["addr:city"="Coimbra"\]/);
+    expect(recipeMd).toMatch(/\bpostCheck\b/);
+    expect(recipeMd).toContain(ATTRIBUTION);
+    expect(recipeMd).toContain('the gateway lists the API; paying is still the agent\'s own x402 call');
+  });
+
+  it('bazanticRecordStatesThePlaceIndexLimit', () => {
+    expect(bazanticMd).toContain('packages/screening/fixtures/osm/leiria-lisbon.json.gz');
+    expect(bazanticMd).toMatch(/covers Leiria and Lisbon only/);
+    expect(bazanticMd).toContain(ATTRIBUTION);
+  });
+
+  it('overpassIsNotASponsorApi', () => {
+    for (const sponsor of [
+      'The Graph',
+      'Hedera',
+      'Arc',
+      'World',
+      '1inch',
+      'ENS',
+      'Uniswap Foundation',
+      'Ledger',
+      'Privy',
+      'Chainlink',
+      'Bazantic',
+    ]) {
+      expect(bazanticMd, sponsor).toContain(sponsor);
+    }
+    expect(bazanticMd).toMatch(/OpenStreetMap is not among them/);
   });
 });
