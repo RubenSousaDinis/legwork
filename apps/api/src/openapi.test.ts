@@ -204,4 +204,76 @@ describe('openapi', () => {
     expect(body.paths['/openapi.json'].get).toBeDefined();
     expect(body.paths['/healthz'].get).toBeDefined();
   });
+
+  it('openapiListsTheSixGatewayOperations', () => {
+    const ids = [
+      'postCheck',
+      'postTasks',
+      'getTasksById',
+      'postTasksByIdApprove',
+      'postTasksByIdDispute',
+      'getPublicPreflight',
+    ] as const;
+    const found = new Set<string>();
+    for (const item of Object.values(document.paths)) {
+      if (!item || typeof item !== 'object') continue;
+      for (const operation of Object.values(item as Any)) {
+        if (
+          operation &&
+          typeof operation === 'object' &&
+          typeof operation.operationId === 'string'
+        ) {
+          found.add(operation.operationId);
+        }
+      }
+    }
+    for (const id of ids) {
+      expect(found.has(id), `${id} missing from the served document`).toBe(true);
+    }
+  });
+
+  it('recipeCallsBothServices', () => {
+    const recipe = repoFile('examples/recipes/worker-pool-then-quote.md');
+    expect(recipe).toMatch(/api\.studio\.thegraph\.com/);
+    expect(recipe).toMatch(/query\s+PreflightWorkers\s*\(/);
+    expect(recipe).toMatch(/\bpostCheck\b/);
+  });
+
+  it('recipeNeverClaimsTheGatewayPays', () => {
+    const record = repoFile('docs/bazantic.md');
+    const recipe = repoFile('examples/recipes/worker-pool-then-quote.md');
+    const sentence = 'the gateway lists the API; paying is still the agent\'s own x402 call';
+    for (const [name, text] of [
+      ['docs/bazantic.md', record],
+      ['examples/recipes/worker-pool-then-quote.md', recipe],
+    ] as const) {
+      expect(text, name).toContain(sentence);
+      const lower = text.toLowerCase();
+      for (const banned of ['gateway pays', 'gateway funds', 'gateway signs', 'pay on your behalf']) {
+        expect(lower.includes(banned), `${name} contains "${banned}"`).toBe(false);
+      }
+    }
+  });
+
+  it('bazanticRecordNamesItsGaps', () => {
+    const record = repoFile('docs/bazantic.md');
+    for (const line of record.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('|')) continue;
+      if (/^\|[\s:|-]+\|$/.test(trimmed)) continue;
+      const cells = trimmed.split('|').slice(1, -1).map((cell) => cell.trim());
+      for (const cell of cells) {
+        expect(cell.length, `empty table cell in: ${trimmed}`).toBeGreaterThan(0);
+      }
+    }
+    for (const match of record.match(/TODO[^\n|]*/g) ?? []) {
+      expect(match, `unsupplied field not marked TODO(operator): ${match}`).toMatch(
+        /TODO\(operator\)/,
+      );
+    }
+  });
 });
+
+function repoFile(rel: string): string {
+  return readFileSync(fileURLToPath(new URL(`../../../${rel}`, import.meta.url)), 'utf8');
+}
