@@ -2,16 +2,32 @@
 
 the gateway lists the API; paying is still the agent's own x402 call.
 
-This file is the record of T-58's run of `apps/api/app/openapi.json/README.md`. Steps (a) and
-(b) were run against the deployed Task API by the claiming agent. Steps (c)–(f) happen in the
-bazantic.com UI, which no owned path covers: they are the operator's, and every field that
-comes from that UI is `TODO(operator)` until the operator hands it over. A URL written here
-that nobody opened is fabricated evidence.
-
 `PAYMENT-SIGNATURE` is an EIP-3009 authorization signed by the buyer's own key. The facilitator
 recovers the payer from it, and that recovered payer becomes the escrow's buyer onchain. A
 gateway holding no key cannot construct one. A gateway holding its own key would spend its own
 money and would own every task it posted. Nothing in this record claims otherwise.
+
+## Status — 2026-09-10
+
+The Task API is listed on a Bazantic gateway. The two dry runs went through that host. Paying
+did not: the unpaid post returned 402, and no `PAYMENT-SIGNATURE` was sent.
+
+| Field | Value |
+|---|---|
+| Payment gateway | `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com` |
+| Origin API | `https://legwork-api.vercel.app` |
+| Import | by URL, `$API_BASE_URL/openapi.json` |
+| Connection | No Auth — gateway forwards as-is, no credential |
+| Listing price | 0 mcent / `$0.00` on every imported resource |
+| Marketplace | Unpublished |
+| Recipe in this repo | `examples/recipes/worker-pool-then-quote.md` |
+| Recipe in Bazantic's UI | TODO(operator) |
+| Bazantic account username | TODO(operator) |
+| Screen-recording link | TODO(operator) |
+| Gateways the plan allows | TODO(operator) |
+
+The prize rows in `README.md` and `docs/submission.md` stay as they are until the username and
+the recording exist. That edit is the lead's.
 
 ## Who produced what
 
@@ -19,11 +35,12 @@ money and would own every task it posted. Nothing in this record claims otherwis
 |---|---|---|
 | OpenAPI fetch (step a) | agent | `GET https://legwork-api.vercel.app/openapi.json` on 2026-09-10 |
 | redocly lint (step b) | agent | `npx @redocly/cli@latest lint` against that URL, same day |
-| Six operation ids in the served document | agent | read off the fetched document, not off a gateway |
-| Gateway URL | operator | TODO(operator) |
-| Six operation ids as the gateway listed them | operator | TODO(operator) |
-| `postCheck` response through the gateway | operator | TODO(operator) |
-| unpaid `postTasks` status and body through the gateway | operator | TODO(operator) |
+| Six operation ids in the origin document | agent | read off the fetched document, not off a gateway |
+| Gateway URL | operator | pasted from the Bazantic Copy control on 2026-09-10 |
+| Six routes as the UI listed them | operator | method + path only, no operation-id column; `POST /tasks` at 0 mcent / `$0.00` |
+| Six operation ids in the gateway-served document | agent, through the gateway | `GET https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com/openapi.json` |
+| `postCheck` through the gateway | agent, through the gateway | step (e) |
+| unpaid `postTasks` through the gateway | agent, through the gateway | step (f) |
 | Bazantic account username | operator | TODO(operator) |
 | Screen-recording link | operator | TODO(operator) |
 | Gateways the plan allows | operator | TODO(operator) — asked on issue #209 before any gateway was created |
@@ -50,7 +67,7 @@ Command: `curl -s "$API_BASE_URL/openapi.json" | jq '.openapi, (.paths | keys)'`
 | `/admin` paths in the served document | 0 |
 | Outcome | worked — public and agent routes present, no `/admin` path |
 
-The six operation ids the checklist tells the operator to confirm are in the served document:
+The six operation ids the checklist tells the operator to confirm:
 
 | Operation id | Route |
 |---|---|
@@ -61,8 +78,9 @@ The six operation ids the checklist tells the operator to confirm are in the ser
 | `postTasksByIdDispute` | `POST /tasks/{id}/dispute` |
 | `getPublicPreflight` | `GET /public/preflight` |
 
-That is what the document contains. What the gateway lists is a different column, and it is
-still TODO(operator).
+The origin document contains those ids. So does the document the gateway serves at
+`GET https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com/openapi.json`. The Bazantic resources
+table shows method + path only; it has no operation-id column.
 
 ## (b) redocly lint
 
@@ -79,21 +97,21 @@ T-35's tests assert that a public operation's `security` is undefined, which is 
 generator emits and what redocly's recommended `security-defined` rule rejects. This task does
 not patch `apps/api/src/openapi.ts`. INTERFACE REQUEST: set `security: []` on public operations
 (and update the T-35 assertion that requires `undefined`) so redocly recommended reports no
-errors. Until that ships, the document is the one T-35 generated; do not hand-edit it in
-Bazantic's UI.
+errors — answered in #213, not yet merged. Do not hand-edit the document in Bazantic's UI.
+Re-run this step against the redeployed origin after #213 merges.
 
-## (c)–(f) Operator — not run
+## (c)–(f) Gateway — run on 2026-09-10
 
-No gateway has been created. Nothing below is a guess at what the UI will show.
+Host: `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`.
 
 | Step | Expectation | Outcome |
 |---|---|---|
-| (c) Import `$API_BASE_URL/openapi.json` | gateway created from the served document | TODO(operator) |
-| (d) Six operation ids as listed | the six ids above, `x402` on `postTasks` as header `PAYMENT-SIGNATURE` not HTTP bearer | TODO(operator) |
-| (e) `postCheck` dry run | `{accepted: true, spec_hash, price_usdc: 3.45}` for the Act-1 `verify-open` at `amount_usdc: 3.00` | TODO(operator) |
-| (f) unpaid `postTasks` | **402** with `price_usdc: 3.45`, `accepts[]`, `remaining_budget`; no task posted | TODO(operator) |
+| (c) Import `$API_BASE_URL/openapi.json` | gateway created from the served document | worked — import by URL; No Auth; price 0; unpublished |
+| (d) Six operations as listed | the six ids above, `x402` on `postTasks` as header `PAYMENT-SIGNATURE` not HTTP bearer | UI lists method + path, including `POST /check` and `POST /tasks`. Gateway-served OpenAPI carries the six ids. `postTasks` security is `x402` + `buyerSignature`; `x402` is `apiKey` header `PAYMENT-SIGNATURE`, not HTTP bearer |
+| (e) `postCheck` dry run | `{accepted: true, spec_hash, price_usdc: 3.45}` for the Act-1 `verify-open` at `amount_usdc: 3.00` | corpus Act-1 `place_id` `node/900000001` → **400** `{error: invalid_request, field: spec.place.place_id, reason: unresolvable place_id node/900000001}`. Same spec with live `node/3092370961` (Farmácia Central, Leiria) → **200** `{"accepted":true,"spec_hash":"0x445a6491367fe091005f37749655f83d5753342dd743e1a8e4a9a738abe6ae21","price_usdc":3.45}` |
+| (f) unpaid `postTasks` | **402** with `price_usdc: 3.45`, `accepts[]`, `remaining_budget`; no task posted | **402** `{"error":"payment_required","price_usdc":3.45,"accepts":[{"scheme":"exact","network":"eip155:84532","amount":"3450000","asset":"0x036CbD53842c5426634e7929541eC2318f3dCF7e","payTo":"0x436cA2299e7fDF36C4b1164cA3e80081E68c318A","maxTimeoutSeconds":300,"extra":{"name":"USDC","version":"2"}}],"remaining_budget":{"open_tasks":5,"daily_usdc":25}}`. No `PAYMENT-SIGNATURE` was sent. No task posted |
 
-Do not attach a `PAYMENT-SIGNATURE` during (f). The 402 is the point of the step.
+The 402 is the point of step (f).
 
 ## Recipe
 
@@ -106,17 +124,14 @@ Do not attach a `PAYMENT-SIGNATURE` during (f). The 402 is the point of the step
 | Bazantic account username | TODO(operator) |
 | Screen-recording link | TODO(operator) |
 
-Prize rows in `README.md` and `docs/submission.md` stay as they are until the username and the
-recording exist. That edit is the lead's.
-
 ## (g) Outcome
 
 | Step | Outcome |
 |---|---|
 | (a) | worked — `"3.1.0"`, zero `/admin` paths, six checklist operation ids present in the document |
-| (b) | 17 errors (all `security-defined` on public operations) and 20 warnings; summary line above |
-| (c) | TODO(operator) |
-| (d) | TODO(operator) |
-| (e) | TODO(operator) |
-| (f) | TODO(operator) |
+| (b) | 17 errors (all `security-defined` on public operations) and 20 warnings; re-run after #213 merges |
+| (c) | worked — `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`, import by URL, price 0, No Auth, unpublished |
+| (d) | six ids in the gateway-served document; UI shows method + path; `PAYMENT-SIGNATURE` on `x402` |
+| (e) | 400 on corpus `node/900000001`; 200 accepted / `price_usdc: 3.45` on live `node/3092370961` |
+| (f) | 402 `price_usdc: 3.45`, `accepts[]`, `remaining_budget`; no task posted |
 | (g) | this file |

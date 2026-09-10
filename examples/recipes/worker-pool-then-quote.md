@@ -10,6 +10,9 @@ Work in three moves, in this order. Stop after the quote. Do not attach a `PAYME
 
 the gateway lists the API; paying is still the agent's own x402 call.
 
+The Task API is listed at `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`. Call
+`postCheck` and unpaid `postTasks` on that host. Do not attach a `PAYMENT-SIGNATURE`.
+
 This recipe copies the hosted hire tool's key-free shape (`hostedHireTool`): screen with
 `postCheck`, then call `postTasks` with no payment header so the API answers 402. That is the
 whole of what a caller without the buyer's key can honestly do.

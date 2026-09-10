@@ -15,6 +15,11 @@ key or the ability to spend on an agent's behalf.
 
 Set `API_BASE_URL` to the deployed API before you start.
 
+The run of this checklist is recorded in [`docs/bazantic.md`](../../../../docs/bazantic.md).
+The gateway that imported this document is
+`https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`. It lists the API; paying is still the
+agent's own x402 call.
+
 ---
 
 ## (a) Read the document
