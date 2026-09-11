@@ -677,25 +677,25 @@ live Overpass by hand and pastes the evidence.
 
 ### T-60 — Interface change — ISO currency, place-lookup env vars, stale geohash comment
 
-`T-60-interface-international-literals.md` · lane lead · size S · class L · depends on nothing · **the lead runs this one**
+`T-60-interface-international-literals.md` · lane lead · size S · class L · depends on nothing · **the lead runs this one** · issue #217
 
 > Read `AGENTS.md`, then `docs/plan/T-60-interface-international-literals.md` in full and do exactly what it says. Start with `scripts/claim.sh T-60` — it must print `CLAIMED`. This is the one lane allowed to edit frozen interfaces, and the brief lists exactly seven files and exactly what changes in each: one regex in `proofs.ts`, two comments in `place.ts`, four additions to `api-contract.ts`, two lines in `.env.example`, one Solidity comment, and the regenerated `docs/api.md`. Anything beyond that list is out of scope even if it looks obviously right. `EUR` must keep parsing. Run `pnpm docs:gen` and commit the generated doc. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
 
 ### T-61 — Live Overpass lookup and a layered PlaceIndex, so any OSM id can resolve
 
-`T-61-overpass-lookup-layered-index.md` · lane C · size M · class C · depends on nothing
+`T-61-overpass-lookup-layered-index.md` · lane C · size M · class C · depends on nothing · issue #218
 
 > Read `AGENTS.md`, then `docs/plan/T-61-overpass-lookup-layered-index.md` in full and do exactly what it says. Start with `scripts/claim.sh T-61` — it must print `CLAIMED`. You are building two pieces and wiring neither: an async `createOverpassLookup` that makes exactly one request for one id and answers `found | not_found | unavailable`, and a sync `LayeredPlaceIndex` that delegates to `JsonPlaceIndex` for the extra layer — if you find yourself retyping the business-tag list or a Levenshtein threshold, stop, you are re-implementing the gate. Every test injects `fetch`; a bare `fetch(` in a test is a live call in CI and a failed review. A looked-up phone is kept only if it starts with `+`. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
 
 ### T-62 — The API resolves a place anywhere — live fallback in /check and /tasks
 
-`T-62-api-resolve-place-anywhere.md` · lane B · size M · class C · **depends on T-60, T-61**
+`T-62-api-resolve-place-anywhere.md` · lane B · size M · class C · **depends on T-60, T-61** · issue #219
 
 > Read `AGENTS.md`, then `docs/plan/T-62-api-resolve-place-anywhere.md` in full and do exactly what it says. Start with `scripts/claim.sh T-62` — it must print `CLAIMED`; it refuses until T-60 and T-61 have merged, so if it exits 1, stop. The change lives in `screenEnvelope` in `hire.ts`: look the id up once before the gate runs, and when it is found use the layered index for **all three** reads — the gate, the `unresolvable` check and `placeOf` — or the gate will accept a place the coordinate step then cannot find. `unavailable` is a **503** `place_lookup_unavailable` with `retry_after_s: 30`, it releases the idempotency nonce like the `invalid` path does, and it never marks and never charges — `postTasksIs503AndChargesNothingWhenTheLookupIsUnavailable` is the test that proves it. The packaged path must not change: the lookup call count for a Leiria id is zero. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
 
 ### T-63 — Seed catalog — 26 real errands in 10 cities, honest on every board
 
-`T-63-seed-catalog-world-errands.md` · lane B · size M · class L · **depends on T-62** · **class L — Overpass by hand, local only**
+`T-63-seed-catalog-world-errands.md` · lane B · size M · class L · **depends on T-62** · **class L — Overpass by hand, local only** · issue #220
 
 ```bash
 cd ~/code/legwork && git fetch origin
@@ -708,18 +708,18 @@ cd ../legwork-wt/t-63 && pnpm install --frozen-lockfile && claude
 
 ### T-64 — Mini-app — seeded rows say so, the board is not Leiria, a price in the place's currency
 
-`T-64-miniapp-seeded-rows-world-board.md` · lane D · size M · class C · **depends on T-60**
+`T-64-miniapp-seeded-rows-world-board.md` · lane D · size M · class C · **depends on T-60** · issue #221
 
 > Read `AGENTS.md`, then `docs/plan/T-64-miniapp-seeded-rows-world-board.md` in full and do exactly what it says. Start with `scripts/claim.sh T-64` — it must print `CLAIMED`; it refuses until T-60 has merged. A seeded row gets **no** CLAIM button and one sentence saying why; a real row keeps its button exactly as before — `realRowStillHasTheClaimButton` guards against inverting the condition. The board is already global; do not add an `area` parameter back — the only Leiria left is the registration fallback, and the brief tells you to name it. `'EUR'` ends up in exactly one file, `lib/currency.ts`. Build against the msw handlers in the brief if T-63 has not merged yet. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
 
 ### T-65 — Dashboard — international copy, and the city on every live row
 
-`T-65-dashboard-international-copy-locality.md` · lane D · size S · class C · **depends on T-62**
+`T-65-dashboard-international-copy-locality.md` · lane D · size S · class C · **depends on T-62** · issue #222
 
 > Read `AGENTS.md`, then `docs/plan/T-65-dashboard-international-copy-locality.md` in full and do exactly what it says. Start with `scripts/claim.sh T-65` — it must print `CLAIMED`; it refuses until T-62 has merged. The hero and the Agents page stop naming Leiria as the product's home; the *Honest limits* section is rewritten, not deleted, and it names the 503. A live feed row reads `posted 14:02 · Berlin · DE` when the wire carries `locality`/`country` and falls back to the geohash when it does not — never both. Demo mode (`lib/data/demo.ts`) is the filmed story and must not change: `git diff origin/main -- apps/dashboard/lib/data/demo.ts` is empty. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
 
 ### T-66 — Docs — the shipped limit moved; say where it is now
 
-`T-66-docs-place-anywhere.md` · lane E · size S · class C · **depends on T-59, T-62**
+`T-66-docs-place-anywhere.md` · lane E · size S · class C · **depends on T-59, T-62** · issue #223
 
 > Read `AGENTS.md`, then `docs/plan/T-66-docs-place-anywhere.md` in full and do exactly what it says. Start with `scripts/claim.sh T-66` — it must print `CLAIMED`; it refuses until T-59 and T-62 have merged. Before you write a sentence about the live lookup, read `screenEnvelope` in `apps/api/src/services/hire.ts` on `main` and take the status codes from the code — if they differ from the brief, the code wins and you say so. The 2026-09-10 worked example in `docs/bazantic.md` is a dated record and stays byte-identical; the re-run is `TODO(operator)`, never a number you did not see. The limit did not vanish, it moved: every file you touch says packaged-first, one live request, 503 when Overpass does not answer. Root `README.md` and `examples/transcript.md` are not yours. Comment `BLOCKED:` rather than working around anything. Paste the §9 output into the draft PR, then `gh pr ready`, and stop.
