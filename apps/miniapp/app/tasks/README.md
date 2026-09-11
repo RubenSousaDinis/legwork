@@ -27,11 +27,12 @@ T-16 and T-17 never share a file, so the worker's board is a route of its own; `
   filter) that matches nothing is a different sentence: `No tasks match this search.`
 - Search is client-side over `title`, `brief.place.{name, street_address, locality}` and
   `task_type`, case- and accent-insensitive. It does not touch the poll. Matching pins
-  reframe the map (the worker pin is left out of the tile grid so the view can actually
-  move). An address that matches no row is geocoded through Nominatim and the map pans
-  there.
-- `near me` keeps rows with `distance_m <= 10_000`. Without a fix the checkbox is
-  disabled and says why. The 44 px hit target is the label; the box itself is 16 px.
+  reframe the map; a geocoded place uses Nominatim's bounding box so a city is a city, not
+  one street at the centroid.
+- The map pinches with two fingers and pans with one (`touch-action: none` on the map so
+  the page's `manipulation` rule does not swallow the gesture). Wheel zoom works on desktop.
+- `near me` is a button (`role="checkbox"`) that keeps rows with `distance_m <= 10_000`.
+  Without a GPS fix it is disabled and says why.
 - No fix: cards read `distance unavailable` (never `—`) and the header carries
   `GPS unavailable in webview — disclosed`.
 - The interval returns early while `document.hidden`, and a `visibilitychange` or `focus`
