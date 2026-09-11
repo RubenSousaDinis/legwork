@@ -89,7 +89,7 @@ spec: if it ever refuses, the build is red.
 
 * `expected` — `ACCEPT` or `REFUSE`.
 * `class` — one of the six, or `null` for a refusal that never marks (schema, type gate, cap,
-  region not covered). `marks` is exactly `class !== null`.
+  an unresolvable `place_id`). `marks` is exactly `class !== null`.
 * `gate` — which stage is expected to catch it: `schema` · `type` · `deny` · `kw` · `person` ·
   `ident` · `place` · `classifier` · `classifier-timeout` · `cap`, or `null` on an accept.
 * `classifier` — what the `FakeClassifier` should answer on the free-text path, and how slowly.

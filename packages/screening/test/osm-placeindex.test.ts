@@ -59,7 +59,10 @@ describe('osm-placeindex', () => {
 
     // The demo id is a placeholder until Day 2: unresolvable is an answer, never a throw.
     expect(() => checkDemoPlace(places, 'node/000000000')).not.toThrow();
-    expect(checkDemoPlace(places, 'node/000000000')).toEqual({ ok: false, reason: 'region not covered' });
+    expect(checkDemoPlace(places, 'node/000000000')).toEqual({
+      ok: false,
+      reason: 'place_id not found in OpenStreetMap',
+    });
     expect(checkDemoPlace(places, id)).toEqual({ ok: true });
   });
 
@@ -95,7 +98,7 @@ describe('osm-placeindex', () => {
     expect(row17.ok).toBe(false);
     if (row17.ok || row17.kind !== 'invalid_request') throw new Error('row 17 was not a 4xx');
     expect(row17.field).toBe('spec.place.place_id');
-    expect(row17.reason).toBe('region not covered');
+    expect(row17.reason).toBe('place_id not found in OpenStreetMap');
     // A coverage failure never marks: there is no class on this outcome at all.
     expect(row17).not.toHaveProperty('payload');
     expect((row17 as Record<string, unknown>)['class']).toBeUndefined();

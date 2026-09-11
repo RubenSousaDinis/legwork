@@ -73,8 +73,10 @@ export class OsmPlaceIndex implements PlaceIndex {
 let cached: PlaceIndex | undefined;
 
 /**
- * The boot-time singleton. Loaded once on the first call and kept; it never reaches the
- * network, and a missing file is a wiring failure at boot rather than a 500 on a request.
+ * The boot-time singleton. Loaded once on the first call and kept; a missing file is a wiring
+ * failure at boot rather than a 500 on a request. The packaged index never reaches the
+ * network. A single-id live lookup exists in `overpassLookup.ts`; the API decides whether to
+ * use it (T-62).
  */
 export function getPlaceIndex(): PlaceIndex {
   if (!cached) cached = OsmPlaceIndex.fromGzip(process.env['OSM_EXTRACT_PATH'] ?? PACKAGED_EXTRACT);
@@ -89,8 +91,8 @@ export function getPlaceIndex(): PlaceIndex {
 export function checkDemoPlace(
   index: PlaceIndex,
   placeId: string,
-): { ok: boolean; reason?: 'region not covered' | 'not a business' | 'no phone' } {
-  if (!index.resolve(placeId)) return { ok: false, reason: 'region not covered' };
+): { ok: boolean; reason?: 'place_id not found in OpenStreetMap' | 'not a business' | 'no phone' } {
+  if (!index.resolve(placeId)) return { ok: false, reason: 'place_id not found in OpenStreetMap' };
   if (!index.isBusiness(placeId)) return { ok: false, reason: 'not a business' };
   if (!index.phoneOf(placeId)) return { ok: false, reason: 'no phone' };
   return { ok: true };
