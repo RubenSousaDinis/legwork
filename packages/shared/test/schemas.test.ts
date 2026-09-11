@@ -4,6 +4,7 @@ import {
   VerifyOpenProof, CallConfirmProof, CompareTwoProof, RefusalPayload, InvalidRequest, WorkerAnswer, wrapWorkerAnswer,
   Observation, PublicObservation, specHash, canonicalJson, makeEnvelope, Envelope, DemoData, poolString,
   NO_RETRY_SENTENCE, API_ROUTES, MCP_TOOLS, TaskView, HEADERS,
+  GenericError, PublicTaskView, WorkerBrief,
 } from '../src/index.js';
 
 const place = { place_id: 'node/2734018563', name: 'Farmácia Central', street_address: 'Rua Direita 12', locality: 'Leiria', country: 'PT' as const };
@@ -56,6 +57,18 @@ describe('proofs', () => {
   it('call-confirm: the answer must match the template', () => {
     expect(CallConfirmProof.parse({ template_id: 'open_now', answer: 'yes', called_at: '2026-09-05T10:00:00Z' }).answer).toBe('yes');
     expect(CallConfirmProof.safeParse({ template_id: 'open_now', answer: 'unknown', called_at: '2026-09-05T10:00:00Z' }).success).toBe(false);
+  });
+  it('callConfirmPriceAcceptsAnyIsoCurrency', () => {
+    const base = { template_id: 'price_of' as const, answer: 'price', called_at: '2026-09-11T10:00:00Z' };
+    for (const currency of ['GBP', 'EUR', 'USD', 'JPY'] as const) {
+      expect(CallConfirmProof.parse({ ...base, price: { amount: 12, currency } }).price?.currency).toBe(currency);
+    }
+  });
+  it('callConfirmPriceRejectsLowercaseOrLongCode', () => {
+    const base = { template_id: 'price_of' as const, answer: 'price', called_at: '2026-09-11T10:00:00Z' };
+    expect(CallConfirmProof.safeParse({ ...base, price: { amount: 12, currency: 'eur' } }).success).toBe(false);
+    expect(CallConfirmProof.safeParse({ ...base, price: { amount: 12, currency: 'EURO' } }).success).toBe(false);
+    expect(CallConfirmProof.safeParse({ ...base, price: { amount: 12, currency: '' } }).success).toBe(false);
   });
   it('compare-two: reason is capped at 120', () => {
     expect(CompareTwoProof.parse({ choice: 'a', reason: 'sharper' }).choice).toBe('a');
@@ -135,6 +148,25 @@ describe('contracts', () => {
     for (const t of Object.values(MCP_TOOLS)) { expect(t.hosted && t.local).toBe(true); }
     const tv = TaskView.parse({ task_id: '1', status: 'open', task_type: 'verify-open', amount_usdc: 3, fee_usdc: 0.45, area: 'ez5ku', posted_at: '2026-09-05T10:00:00Z', tx: { post: kec }, dashboard_url: 'https://d.test/task/1', changed: false, poll_after_seconds: 3 });
     expect(tv.dashboard_url).toContain('https://');
+  });
+  it('genericErrorKnowsPlaceLookupUnavailable', () => {
+    expect(GenericError.parse({ error: 'place_lookup_unavailable', retry_after_s: 30 }).error).toBe('place_lookup_unavailable');
+    expect(GenericError.safeParse({ error: 'place_lookup_unavailable' }).success).toBe(false);
+  });
+  it('publicTaskViewCarriesOptionalLocality', () => {
+    const row = {
+      task_id: '1', state: 'open' as const, task_type: 'verify-open' as const,
+      price_usdc: 3, fee_usdc: 0.45, area: 'ez5ku', seeded: false, posted_at: '2026-09-05T10:00:00Z',
+      tx: { post: kec }, links: { post: 'https://d.test/tx/post' }, dashboard_url: 'https://d.test/task/1',
+    };
+    expect(PublicTaskView.parse(row).task_id).toBe('1');
+    expect(PublicTaskView.parse({ ...row, locality: 'Berlin', country: 'DE' }).locality).toBe('Berlin');
+    expect(PublicTaskView.safeParse({ ...row, locality: 'Berlin', country: 'de' }).success).toBe(false);
+  });
+  it('workerBriefPlaceCarriesOptionalCountry', () => {
+    expect(WorkerBrief.parse({ place: { name: 'x', street_address: 'y', locality: 'z', country: 'DE' } }).place?.country).toBe('DE');
+    expect(WorkerBrief.parse({ place: { name: 'x', street_address: 'y', locality: 'z' } }).place?.country).toBeUndefined();
+    expect(WorkerBrief.safeParse({ place: { name: 'x', street_address: 'y', locality: 'z', country: 'Germany' } }).success).toBe(false);
   });
 });
 

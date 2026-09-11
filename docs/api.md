@@ -21,7 +21,7 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
 | POST | `/tasks/:id/approve` | buyer-token | Approve a submitted proof; relayer executes onchain; the row moves only after the hash returns | 200, 401, 409, 503 |
 | POST | `/tasks/:id/dispute` | buyer-token | Dispute inside the window | 200, 400, 401, 409, 503 |
 | POST | `/tasks/:id/refund` | buyer-token | Expire and refund if eligible (409 not_eligible carries eligible_at); never gated by pause | 200, 401, 409, 503 |
-| POST | `/check` | public | Dry-run screening; never posts, never marks | 200, 400, 422 |
+| POST | `/check` | public | Dry-run screening; never posts, never marks | 200, 400, 422, 503 |
 | POST | `/idkit/request` | public | RP-signed rp_context for IDKit v4 | 200 |
 | POST | `/idkit/verify` | public | Forward the IDKit result to World v4 verify; sets idkit-session cookie | 200, 409 |
 | GET | `/config/world` | public | Which World app, action, RP id, credential level and environment the client asks for — five keys and nothing else; max-age=60 | 200 |
@@ -926,6 +926,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -1357,6 +1375,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -1898,6 +1934,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -2265,6 +2319,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -2593,6 +2665,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -2914,6 +3004,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -3356,6 +3464,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -3684,6 +3810,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -4005,6 +4149,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -4379,6 +4541,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -4707,6 +4887,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -5028,6 +5226,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -5934,6 +6150,352 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
 }
 ```
 
+**503**
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "rate_limited"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "payload_too_large"
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "max_bytes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "origin_not_allowed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "unauthorized"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "nonce_used"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "forbidden"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_registered",
+            "not_worker"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_found"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "conflict"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "escrow_post_failed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "bad_state"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "not_eligible"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "claimed",
+            "submitted",
+            "released",
+            "refunded",
+            "disputed",
+            "resolved"
+          ]
+        },
+        "eligible_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "status",
+        "eligible_at"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "dispute_window_closed"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_revert"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "worker_already_bound"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "nullifier_already_registered"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "InCooldown"
+        },
+        "cooldown_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        }
+      },
+      "required": [
+        "error",
+        "cooldown_until"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "AlreadyClaimed"
+        },
+        "active_task_id": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "SeededCannotClaimExternal"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "attestation_rejected"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "chain_unavailable"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}
+```
+
 
 ### `idkitRequest` — POST `/idkit/request`
 
@@ -6170,6 +6732,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -6654,6 +7234,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -6975,6 +7573,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -7344,6 +7960,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -7678,6 +8312,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -8125,6 +8777,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -8446,6 +9116,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -8781,6 +9469,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -9109,6 +9815,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -9384,6 +10108,10 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
                   },
                   "locality": {
                     "type": "string"
+                  },
+                  "country": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{2}$"
                   }
                 },
                 "required": [
@@ -9623,6 +10351,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -9951,6 +10697,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -10300,6 +11064,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -10716,6 +11498,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -11037,6 +11837,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -11407,6 +12225,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -11728,6 +12564,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -12172,6 +13026,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -12791,6 +13663,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -13138,6 +14028,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -13557,6 +14465,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -13877,6 +14803,14 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
               "lon"
             ]
           },
+          "locality": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
           "tx": {
             "type": "object",
             "properties": {
@@ -14078,6 +15012,14 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
         "lat",
         "lon"
       ]
+    },
+    "locality": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
     },
     "tx": {
       "type": "object",
@@ -14281,6 +15223,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
@@ -15315,6 +16275,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       "properties": {
         "error": {
           "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
           "const": "bad_state"
         },
         "status": {
@@ -15636,6 +16614,24 @@ A refusal from the gate/classifier → `AbuseMark.mark` (if a verified agent id)
       },
       "required": [
         "error"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "const": "place_lookup_unavailable"
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "error",
+        "retry_after_s"
       ]
     },
     {
