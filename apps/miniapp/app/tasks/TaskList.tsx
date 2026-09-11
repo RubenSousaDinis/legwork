@@ -9,7 +9,9 @@ import { TaskMap } from '../../components/TaskMap';
 import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
+import { GEOCODE_DEBOUNCE_MS, geocodeAddress } from '../../lib/geocode';
 import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
+import type { LatLon } from '../../lib/tiles';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 import { Waiting } from '../../components/ui/Waiting';
 
@@ -29,7 +31,7 @@ export const NOT_SPENDABLE = 'not spendable';
 export const NEARBY_TASKS = 'OPEN TASKS';
 
 export const SEARCH_LABEL = 'Search by city, street, place or type';
-export const NEAR_ME_LABEL = 'within 10 km';
+export const NEAR_ME_LABEL = 'near me';
 export const NEAR_ME_NEEDS_FIX = 'Needs a GPS fix — distance is unknown without one.';
 
 export function emptyBoardCopy(): string {
@@ -165,6 +167,7 @@ export function TaskList() {
   const [hasFix, setHasFix] = useState(false);
   const [query, setQuery] = useState('');
   const [nearMe, setNearMe] = useState(false);
+  const [searchFocus, setSearchFocus] = useState<LatLon | null>(null);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
@@ -220,6 +223,24 @@ export function TaskList() {
       live = false;
     };
   }, [locate]);
+
+  useEffect(() => {
+    const needle = query.trim();
+    if (needle.length === 0) {
+      setSearchFocus(null);
+      return;
+    }
+    let live = true;
+    const timer = window.setTimeout(() => {
+      void geocodeAddress(needle).then((point) => {
+        if (live) setSearchFocus(point);
+      });
+    }, GEOCODE_DEBOUNCE_MS);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => {
     if (!located) return;
@@ -354,12 +375,13 @@ export function TaskList() {
             value={query}
           />
         </label>
-        <label className="lw-checkbox" data-hit="44">
+        <label className="lw-checkbox" data-hit="44" htmlFor="board-near">
           <input
             checked={nearMe}
-            data-hit="44"
+            className="lw-checkbox__input"
             data-near="10km"
             disabled={!canFilterNear}
+            id="board-near"
             onChange={(event) => setNearMe(event.target.checked)}
             type="checkbox"
           />
@@ -373,6 +395,8 @@ export function TaskList() {
       </div>
 
       <TaskMap
+        fitWorker={query.trim().length === 0}
+        focus={searchFocus}
         gpsUnavailableChip={GPS_UNAVAILABLE_CHIP}
         located={located}
         onSelect={setExpandedId}
