@@ -137,4 +137,17 @@ gzipped), the Overpass query, the keep-listed tag keys and the ODbL attribution 
 [`src/osm/README.md`](src/osm/README.md) (T-22); `pnpm osm:extract` regenerates the file, and
 `getPlaceIndex()` from `src/osm/placeIndex.ts` loads it once at boot.
 
+### Place resolution: packaged first, live fallback
+
+The gate's `PlaceIndex` stays synchronous. Two helpers let the API (T-62) resolve an id
+outside the packaged extract without opening a socket from this package on its own:
+
+* **`createOverpassLookup`** (`src/osm/overpassLookup.ts`) — one POST per call for a single
+  OSM id. Caches `found` for 86400 seconds and `not_found` for 600 seconds; `unavailable`
+  is never cached. At most 1000 entries. A looked-up POI keeps a phone only when the mapper
+  wrote it with a leading `+` (bare local numbers are dropped). Exactly one request — no
+  retry.
+* **`LayeredPlaceIndex`** (`src/osm/layeredIndex.ts`) — the packaged index with looked-up
+  POIs overlaid; the base answers first, then an extra `JsonPlaceIndex` for the live layer.
+
 > © OpenStreetMap contributors, ODbL
