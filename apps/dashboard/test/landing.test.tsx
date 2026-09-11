@@ -5,7 +5,7 @@ import AgentsPage from '../app/agents/page';
 import AboutPage from '../app/about/page';
 import SupportPage from '../app/support/page';
 import { PresentCanvas } from '../app/(present)/PresentCanvas';
-import { CLAIM, TAGLINE, TRUST_MODEL, X402_SENTENCE } from '../app/copy';
+import { CLAIM, LANDING_HERO, TAGLINE, TRUST_MODEL, X402_SENTENCE } from '../app/copy';
 import { demoDashboardData } from '../lib/data/demo';
 import { miniappUrl } from '../lib/urls';
 
@@ -27,6 +27,12 @@ beforeEach(() => {
 const NOW = Date.parse('2026-09-05T11:20:00.000Z');
 
 describe('landing', () => {
+  it('landingHeroNamesNoSingleCityAsHome', () => {
+    expect(LANDING_HERO).not.toMatch(/in Leiria/);
+    expect(LANDING_HERO.length).toBeLessThanOrEqual(320);
+    expect(LANDING_HERO.toLowerCase()).toContain('escrow releases on proof');
+  });
+
   it('rootRendersTheLandingAndNotTheBoard', async () => {
     const ui = await Page({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
