@@ -104,8 +104,10 @@ describe('board search', () => {
 
     const box = document.querySelector('[data-near="10km"]') as HTMLInputElement;
     expect(box.disabled).toBe(false);
-    fireEvent.click(box);
+    expect(box.getAttribute('data-hit')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: NEAR_ME_LABEL }));
 
+    expect(box.checked).toBe(true);
     expect(screen.getByText(PADARIA)).toBeTruthy();
     expect(screen.queryByText(farRow.title)).toBeNull();
 

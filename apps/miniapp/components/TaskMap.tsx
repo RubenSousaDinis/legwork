@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Chip } from './ui/Chip';
 import { gridFor, osmTileUrl, pinPercent, type LatLon } from '../lib/tiles';
 
@@ -26,6 +26,16 @@ export type TaskMapProps = {
   worker: LatLon | null;
   gpsUnavailableChip: string;
   located: boolean;
+  /**
+   * A searched address. Frames the map when the query matched no pin, so typing a place the
+   * board does not yet have still moves the tiles rather than leaving the old neighbourhood.
+   */
+  focus?: LatLon | null;
+  /**
+   * The worker pin still renders. This only decides whether they pull the tile grid — a
+   * search has to be allowed to leave them off the edge, or the map never appears to move.
+   */
+  fitWorker?: boolean;
 };
 
 export function TaskMap({
@@ -35,6 +45,8 @@ export function TaskMap({
   worker,
   gpsUnavailableChip,
   located,
+  focus = null,
+  fitWorker = true,
 }: TaskMapProps) {
   const [tilesFailed, setTilesFailed] = useState(false);
 
@@ -43,13 +55,26 @@ export function TaskMap({
       row.coordinate_rounded !== undefined,
   );
 
-  const points = useMemo(() => {
-    const next: LatLon[] = pins.map((row) => row.coordinate_rounded);
-    if (worker !== null) next.push(worker);
-    return next;
-  }, [pins, worker]);
+  const pinKey = pins
+    .map((row) => `${row.task_id}:${row.coordinate_rounded.lat},${row.coordinate_rounded.lon}`)
+    .join('|');
+  const focusKey = focus === null ? '' : `${focus.lat},${focus.lon}`;
+  const workerKey =
+    fitWorker && worker !== null ? `${worker.lat},${worker.lon}` : '';
 
-  const grid = useMemo(() => gridFor(points), [points]);
+  const grid = useMemo(() => {
+    const next: LatLon[] = pins.map((row) => row.coordinate_rounded);
+    if (next.length === 0 && focus !== null) next.push(focus);
+    if (fitWorker && worker !== null) next.push(worker);
+    return gridFor(next);
+  }, [pinKey, focusKey, workerKey, fitWorker, pins, focus, worker]);
+
+  const gridKey =
+    grid === null ? '' : `${grid.z}/${grid.x0}/${grid.y0}/${grid.cols}x${grid.rows}`;
+
+  useEffect(() => {
+    setTilesFailed(false);
+  }, [gridKey]);
 
   const tiles: { x: number; y: number }[] = [];
   if (grid !== null) {
@@ -65,6 +90,7 @@ export function TaskMap({
       {grid !== null && !tilesFailed ? (
         <div
           className="lw-map__grid"
+          key={gridKey}
           style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)` }}
         >
           {tiles.map((tile) => (
@@ -137,6 +163,21 @@ export function TaskMap({
                 {
                   '--pin-x': `${pinPercent(worker, grid).left}%`,
                   '--pin-y': `${pinPercent(worker, grid).top}%`,
+                } as CSSProperties
+              }
+            >
+              <span className="lw-map-pin__mark" />
+            </span>
+          ) : null}
+          {focus !== null && pins.length === 0 ? (
+            <span
+              aria-label="Search"
+              className="lw-map-pin lw-map-pin--focus"
+              data-pin="search"
+              style={
+                {
+                  '--pin-x': `${pinPercent(focus, grid).left}%`,
+                  '--pin-y': `${pinPercent(focus, grid).top}%`,
                 } as CSSProperties
               }
             >

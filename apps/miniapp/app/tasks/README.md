@@ -26,9 +26,12 @@ T-16 and T-17 never share a file, so the worker's board is a route of its own; `
 - Empty list: `No open tasks right now. The list refreshes every 3 s.` A search (or the 10 km
   filter) that matches nothing is a different sentence: `No tasks match this search.`
 - Search is client-side over `title`, `brief.place.{name, street_address, locality}` and
-  `task_type`, case- and accent-insensitive. It does not touch the poll.
-- `within 10 km` keeps rows with `distance_m <= 10_000`. Without a fix the checkbox is
-  disabled and says why.
+  `task_type`, case- and accent-insensitive. It does not touch the poll. Matching pins
+  reframe the map (the worker pin is left out of the tile grid so the view can actually
+  move). An address that matches no row is geocoded through Nominatim and the map pans
+  there.
+- `near me` keeps rows with `distance_m <= 10_000`. Without a fix the checkbox is
+  disabled and says why. The 44 px hit target is the label; the box itself is 16 px.
 - No fix: cards read `distance unavailable` (never `—`) and the header carries
   `GPS unavailable in webview — disclosed`.
 - The interval returns early while `document.hidden`, and a `visibilitychange` or `focus`

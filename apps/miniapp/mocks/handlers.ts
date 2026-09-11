@@ -434,6 +434,10 @@ export const handlers = [
 
   http.get('*/api/public/feed', () => json(PUBLIC_FEED)),
 
+  // Nominatim: tests never hit the live geocoder. A search that needs a real result
+  // overrides this handler; the default is "nothing found".
+  http.get('https://nominatim.openstreetmap.org/search', () => HttpResponse.json([])),
+
   // `/tasks/list` is the contract's path and `/tasks` is the one T-24 §2 and T-25 §2 call;
   // both are answered so neither task's tests hang on the spelling. See the PR body.
   http.get('*/api/tasks/list', ({ request }) => {
