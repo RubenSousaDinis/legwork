@@ -73,6 +73,13 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 | T-54 | [Selfie Check as the demo credential](T-54-selfie-check-as-the-demo-credential.md) | D | 5 | M / C | — | merged |
 | T-55 | [Navbar, login modal, real logout](T-55-navbar-login-modal-real-logout.md) | D | 6 | M / C | — | planned |
 | T-56 | [The board: all tasks, search, map, directions](T-56-board-search-map-directions.md) | D | 6 | L / C | T-55 | planned |
+| T-60 | [Interface change — ISO currency, place-lookup env vars, stale geohash comment](T-60-interface-international-literals.md) | lead | 8 | S / L | — | planned |
+| T-61 | [Live Overpass lookup and a layered PlaceIndex](T-61-overpass-lookup-layered-index.md) | C | 8 | M / C | — | planned |
+| T-62 | [The API resolves a place anywhere — live fallback in /check and /tasks](T-62-api-resolve-place-anywhere.md) | B | 8 | M / C | T-60, T-61 | planned |
+| T-63 | [Seed catalog — 26 real errands in 10 cities, honest on every board](T-63-seed-catalog-world-errands.md) | B | 8 | M / L | T-62 | planned |
+| T-64 | [Mini-app — seeded rows say so, the board is not Leiria, price in the place's currency](T-64-miniapp-seeded-rows-world-board.md) | D | 8 | M / C | T-60 | planned |
+| T-65 | [Dashboard — international copy, and the city on every live row](T-65-dashboard-international-copy-locality.md) | D | 8 | S / C | T-62 | planned |
+| T-66 | [Docs — the shipped limit moved; say where it is now](T-66-docs-place-anywhere.md) | E | 8 | S / C | T-59, T-62 | planned |
 | T-13b ⇢ | [Self-deploy ERC-8004 registries (S5 FAIL)](T-13b-self-deploy-erc8004.md) | A | 2 | S / L | T-04 | dropped — S5 PASS |
 | T-16b ⇢ | [Direct funding gateway (S3 FAIL)](T-16b-direct-funding.md) | B | 6 | M / C | T-15 | dropped — S3 PASS |
 
@@ -81,5 +88,5 @@ is also the claim board. `scripts/claims.sh` prints who holds what;
 - **Day 1, 16:45** (after T-00): T-02 (C), T-03 (L), T-04 (L). **After T-01b (~19:30)**: T-05, T-06, T-08 (C, evening); then overnight cloud burst: T-07, T-09, T-10, T-11, T-12, T-13.
 - **Day 2 am** (after reviewing the overnight PRs): T-15, T-20, T-21, T-22, T-24; lead runs T-14 at midday. **pm**: T-16, T-17 (1/2), T-18, T-19; lead runs T-23 in the evening.
 - **Day 3 am**: T-17 (2/2), T-27, T-30, T-25, T-31, T-32 (L); lead runs **T-29 at ~15:00**. **pm**: T-28, T-33, T-26.
-- **Day 4 eve**: T-34 (L), T-36 ○, T-37, round-2 fixes from the phone log. **Day 5 eve**: T-35 ○, T-38, T-39, T-40 ○, T-41. **Day 6 eve**: T-42 ○, T-43, hotfixes (T-16b was not needed — S3 passed). **Day 7 eve**: T-44, T-45. **Day 8 eve**: T-46 (L), T-47 (L). **Day 9** (freeze 12:00 UTC): T-48. **Day 10**: T-49.
+- **Day 4 eve**: T-34 (L), T-36 ○, T-37, round-2 fixes from the phone log. **Day 5 eve**: T-35 ○, T-38, T-39, T-40 ○, T-41. **Day 6 eve**: T-42 ○, T-43, hotfixes (T-16b was not needed — S3 passed). **Day 7 eve**: T-44, T-45. **Day 8 eve**: T-46 (L), T-47 (L). **Day 8, international (added Sept 11)**: lead runs T-60 first (interface-change, merged before anything else); then T-61 (C) in parallel with T-64 (C, after T-60); then T-62 (C, after T-60 + T-61); then T-63 (L), T-65 (C), T-66 (C, also after T-59) in parallel once T-62 merges. **Day 9** (freeze 12:00 UTC): T-48. **Day 10**: T-49.
 - Keep ≤ 8 PRs *ready for review* (drafts are claims, not review load); dispatch the next task in a lane only when its `depends_on` are merged (`claim.sh` re-checks this and refuses); check `scripts/claims.sh` for stale claims each evening; drop ○ tasks first when behind; never drop anything on the ★ path.
