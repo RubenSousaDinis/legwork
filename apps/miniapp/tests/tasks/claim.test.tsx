@@ -6,10 +6,11 @@ const replace = vi.fn();
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
 
-const { CLAIM_RESPONSE } = await import('../../mocks/handlers');
+const { CLAIM_RESPONSE, seededDemoRowClaim } = await import('../../mocks/handlers');
+const { server } = await import('../../mocks/server');
 const { setScenario } = await import('../../mocks/scenarios');
 const { ACTIVE_CLAIM_KEY } = await import('../../app/tasks/activeClaim');
-const { TaskList } = await import('../../app/tasks/TaskList');
+const { CLAIM_ERRORS, TaskList } = await import('../../app/tasks/TaskList');
 
 const TASK_ID = '1024';
 const TITLE = 'Padaria Central · Rua de Alcobaça 12, Leiria';
@@ -174,6 +175,26 @@ describe('claiming', () => {
     await claimFirstTask();
     expect((await screen.findByText(/seeded demo worker/)).textContent).toBe(
       'This account is a seeded demo worker; it can only claim operator-funded tasks.',
+    );
+  });
+
+  it('seededDemoRowErrorIsWordedForTheWorker', async () => {
+    // The board no longer offers a CLAIM button on a seeded row, so the only way to send this
+    // request is from a card that was already on screen when the row was seeded — or by hand.
+    // Either way the answer has to be words about this row, not the generic fallback.
+    server.use(seededDemoRowClaim);
+
+    render(<TaskList />);
+    await claimFirstTask();
+
+    const line = await screen.findByText(/seeded demo row/);
+    expect(line.textContent).toBe(CLAIM_ERRORS.SeededDemoRow);
+    expect(line.textContent).toBe(
+      'This is a seeded demo row. It shows what an agent asks for; nobody can claim it.',
+    );
+    expect(line.textContent).not.toBe('That did not go through. Try again in a moment.');
+    expect(document.querySelector('[data-error="claim"]')?.textContent).toBe(
+      CLAIM_ERRORS.SeededDemoRow,
     );
   });
 });
