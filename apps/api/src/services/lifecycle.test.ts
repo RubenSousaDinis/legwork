@@ -14,6 +14,7 @@ import { FakeChain } from '@legwork/chain';
 import {
   DEMO_DISPUTE_WINDOW_S,
   TASK_TYPE_BIT,
+  ZERO_ADDRESS,
   canonicalJson,
   specHash,
   type TaskType,
@@ -34,7 +35,15 @@ import { setChainForTests } from '../chain';
 import { resetConfigForTests } from '../config';
 import { observations, proofs, screeningLog, tasks } from '../db/schema';
 import { issueWorkerSession } from '../session';
-import { dbState, secondsToDate, titleOf, workerBrief } from './lifecycle';
+import {
+  dbState,
+  secondsToDate,
+  titleOf,
+  toWorkerTaskRow,
+  workerBrief,
+  type TaskRow,
+} from './lifecycle';
+import { reconcileOpen } from './reconcile';
 import { resetSweepClockForTests } from './sweeper';
 
 const AREA = 'ez5ku';
@@ -178,6 +187,68 @@ async function rowOf(taskId: bigint) {
   return rows[0];
 }
 
+/** An in-memory `TaskRow` — an open `verify-open` with a real buyer unless overridden. */
+function rowWith(overrides: Partial<TaskRow>): TaskRow {
+  const postedAt = new Date();
+  return {
+    taskId: 9_000_101n,
+    taskType: TASK_TYPE_BIT['verify-open'],
+    specHash: `0x${'11'.repeat(32)}`,
+    amountUnits: AMOUNT_UNITS,
+    feeUnits: 450_000n,
+    priceUnits: 3_450_000n,
+    buyer: BUYER,
+    buyerAgentId: null,
+    area: AREA,
+    worker: null,
+    state: 'open',
+    postedAt,
+    claimedAt: null,
+    submittedAt: null,
+    releasedAt: null,
+    proofHash: null,
+    claimTtlS: CLAIM_TTL,
+    submitTtlS: SUBMIT_TTL,
+    disputeWindowS: DEMO_DISPUTE_WINDOW_S,
+    seeded: false,
+    answer: null,
+    note: null,
+    disputeReason: null,
+    autoDisputeReason: null,
+    txPost: null,
+    txClaim: null,
+    txSubmit: null,
+    txRelease: null,
+    specJson: SPECS['verify-open'],
+    buyerTokenHash: 'hash-9000101',
+    exactLat: null,
+    exactLon: null,
+    agentId: null,
+    payer: BUYER,
+    authNonce: null,
+    floatAbsorbed: false,
+    updatedAt: postedAt,
+    ...overrides,
+  };
+}
+
+/**
+ * A seeded demo row the way `/admin/seed-demo` writes one: no buyer, no payer, no escrow,
+ * `open` and nothing else.
+ */
+async function insertSeededDemoRow(taskId: bigint): Promise<void> {
+  await fixture.db.insert(tasks).values(
+    rowWith({
+      taskId,
+      seeded: true,
+      buyer: ZERO_ADDRESS,
+      payer: ZERO_ADDRESS,
+      specHash: `0x${'de'.repeat(32)}`,
+      buyerTokenHash: `hash-${taskId}`,
+    }),
+  );
+}
+
 beforeEach(async () => {
   resetConfigForTests();
   fixture = await createTestDb();
@@ -221,7 +292,31 @@ describe('workerBrief', () => {
       name: PLACE.name,
       street_address: PLACE.street_address,
       locality: PLACE.locality,
+      country: PLACE.country,
     });
+  });
+
+  it('workerBriefCarriesThePlaceCountry', () => {
+    const brief = workerBrief({
+      taskType: TASK_TYPE_BIT['verify-open'],
+      specJson: {
+        ...SPECS['verify-open'],
+        place: { ...PLACE, country: 'DE' },
+      },
+    });
+    expect(brief.place?.country).toBe('DE');
+  });
+
+  // A DB-seeded row has `payer = 0x0…0`, so the list route's allowlist check says "not
+  // seeded". The row's own column outranks that: the chip never falls off a demo row.
+  it('seededRowCarriesTheChipOnTheWorkerBoard', () => {
+    const seeded = rowWith({ seeded: true, payer: ZERO_ADDRESS, buyer: ZERO_ADDRESS });
+    expect(toWorkerTaskRow(seeded, { now: 0n, seeded: false }).seeded).toBe(true);
+
+    // And the other way round still holds: a real row is only seeded when the caller says so.
+    const real = rowWith({ seeded: false });
+    expect(toWorkerTaskRow(real, { now: 0n, seeded: false }).seeded).toBe(false);
+    expect(toWorkerTaskRow(real, { now: 0n, seeded: true }).seeded).toBe(true);
   });
 
   it('titles a place task by place and a comparison by criterion', () => {
@@ -463,6 +558,43 @@ describe('GET /tasks/list', () => {
   it('401s without a worker session', async () => {
     const res = await call(listRoute, { url: 'http://localhost/tasks/list' });
     expect(res.status).toBe(401);
+  });
+
+  // The board reads seeded rows straight from the database and chips every one of them.
+  it('lists a seeded demo row with the chip on, next to real work', async () => {
+    const token = await sessionFor(WORKER);
+    const real = await postTask('verify-open', { claimTtl: 7200 });
+    await insertSeededDemoRow(9_000_101n);
+
+    const res = await call(listRoute, { url: 'http://localhost/tasks/list', headers: auth(token) });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { tasks: { task_id: string; seeded: boolean; state: string }[] };
+    const byId = new Map(body.tasks.map((t) => [t.task_id, t]));
+    expect(byId.get(real.toString())).toMatchObject({ seeded: false, state: 'open' });
+    expect(byId.get('9000101')).toMatchObject({ seeded: true, state: 'open' });
+  });
+});
+
+// ---------------------------------------------------------------- reconcile and seeded rows
+
+describe('reconcileOpen', () => {
+  // A seeded demo row has no chain twin. `getTask(9000101)` answers state `None`; a mirror
+  // that trusted it would write `none` and the board would never show the row again. The
+  // filter is narrow on purpose: the real row beside it is still read from the chain.
+  it('seededDemoRowsAreNeverReconciledFromTheChain', async () => {
+    const real = await postTask('verify-open');
+    await insertSeededDemoRow(9_000_101n);
+    // The chain has moved the real row on; the mirror is what notices.
+    await fake.claimFor(real, WORKER);
+
+    const mirrored = await reconcileOpen();
+    expect(mirrored.map((r) => r.taskId)).toEqual([real]);
+    expect(mirrored[0]?.state).toBe('claimed');
+
+    const seeded = await rowOf(9_000_101n);
+    expect(seeded?.state).toBe('open');
+    expect(seeded?.seeded).toBe(true);
+    expect(seeded?.buyer).toBe(ZERO_ADDRESS);
   });
 });
 

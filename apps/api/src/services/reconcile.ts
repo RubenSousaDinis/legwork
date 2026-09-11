@@ -8,7 +8,8 @@
  * pass that notices — and the `state_drift` line it logs is the evidence that it did, because
  * a mirror silently corrected is a mirror nobody knows to distrust.
  */
-import { eq, notInArray } from 'drizzle-orm';
+import { and, eq, not, notInArray } from 'drizzle-orm';
+import { ZERO_ADDRESS } from '@legwork/shared';
 import { getChain } from '../chain';
 import { getDb } from '../db/client';
 import { tasks } from '../db/schema';
@@ -31,12 +32,20 @@ export async function reconcileTask(taskId: bigint): Promise<TaskRow | undefined
  *
  * `sweep()` runs this before it does any deadline arithmetic: a sweep that trusts the mirror
  * would expire a task somebody already claimed, and learn about it as a revert.
+ *
+ * A seeded demo row has no chain twin; mirroring it would write `none` and hide it.
  */
 export async function reconcileOpen(): Promise<TaskRow[]> {
   const rows = await getDb()
     .select()
     .from(tasks)
-    .where(notInArray(tasks.state, [...FINAL_STATES]));
+    .where(
+      and(
+        notInArray(tasks.state, [...FINAL_STATES]),
+        // A seeded demo row has no chain twin; mirroring it would write `none` and hide it.
+        not(and(eq(tasks.seeded, true), eq(tasks.buyer, ZERO_ADDRESS))!),
+      ),
+    );
 
   const out: TaskRow[] = [];
   for (const row of rows) out.push(await mirrorOne(row));

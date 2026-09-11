@@ -1,0 +1,658 @@
+[
+  {
+    "id": "leiria-farmacia-central-open",
+    "city": "Leiria",
+    "country": "PT",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 72000,
+    "exact": {
+      "lat": 39.7432834,
+      "lon": -8.8075624
+    },
+    "why": "The listing says open. Is it?",
+    "spec": {
+      "place": {
+        "place_id": "node/3092370961",
+        "name": "Farmácia Central",
+        "street_address": "Rua Direita 12",
+        "locality": "Leiria",
+        "country": "PT"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "Mon–Sat 09:00–19:30",
+      "source": "google"
+    }
+  },
+  {
+    "id": "leiria-junta-parceiros-notice",
+    "city": "Leiria",
+    "country": "PT",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 68000,
+    "exact": {
+      "lat": 39.7294947,
+      "lon": -8.8386411
+    },
+    "why": "An agent tracking municipal notices needs today's board.",
+    "spec": {
+      "place": {
+        "place_id": "way/517343547",
+        "name": "Junta Freguesia de Parceiros",
+        "street_address": "Largo das Escolas",
+        "locality": "Leiria",
+        "country": "PT"
+      },
+      "subject": "notice",
+      "subject_detail": "the public notice board, whole board",
+      "source": "own-list"
+    }
+  },
+  {
+    "id": "lisbon-pasteis-de-belem-queue",
+    "city": "Lisbon",
+    "country": "PT",
+    "task_type": "photo-of",
+    "amount_usdc": 4.0,
+    "posted_ago_s": 5400,
+    "exact": {
+      "lat": 38.6974795,
+      "lon": -9.2033202
+    },
+    "why": "A trip-planning agent decides whether to send its user now or later.",
+    "spec": {
+      "place": {
+        "place_id": "node/398922337",
+        "name": "Pastéis de Belém",
+        "street_address": "Rua de Belém 84-92",
+        "locality": "Lisbon",
+        "country": "PT"
+      },
+      "subject": "queue_length",
+      "subject_detail": "queue at the takeaway door, whole line",
+      "claimed_state": "Google: usually 20 min wait",
+      "source": "google"
+    }
+  },
+  {
+    "id": "lisbon-bertrand-chiado-open",
+    "city": "Lisbon",
+    "country": "PT",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 62000,
+    "exact": {
+      "lat": 38.7106621,
+      "lon": -9.1411539
+    },
+    "why": "The oldest bookshop in the world lists hours three ways online.",
+    "spec": {
+      "place": {
+        "place_id": "node/4398508489",
+        "name": "Livraria Bertrand - Chiado",
+        "street_address": "Rua Garrett 73",
+        "locality": "Lisbon",
+        "country": "PT"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "daily 09:00–22:00",
+      "source": "website"
+    }
+  },
+  {
+    "id": "lisbon-ramiro-reservation",
+    "city": "Lisbon",
+    "country": "PT",
+    "task_type": "call-confirm",
+    "amount_usdc": 2.0,
+    "posted_ago_s": 58000,
+    "exact": {
+      "lat": 38.7201981,
+      "lon": -9.1357063
+    },
+    "why": "A dinner-booking agent cannot book what it cannot confirm.",
+    "spec": {
+      "place": {
+        "place_id": "node/2503432815",
+        "name": "Cervejaria Ramiro",
+        "street_address": "Avenida Almirante Reis 104",
+        "locality": "Lisbon",
+        "country": "PT"
+      },
+      "phone": "+351218841025",
+      "template_id": "takes_reservation",
+      "slots": {}
+    }
+  },
+  {
+    "id": "lisbon-timeout-market-menu",
+    "city": "Lisbon",
+    "country": "PT",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 50000,
+    "exact": {
+      "lat": 38.706777,
+      "lon": -9.1461129
+    },
+    "why": "A price-comparison agent found three different menus online.",
+    "spec": {
+      "place": {
+        "place_id": "way/1286260412",
+        "name": "Time Out Market Lisboa",
+        "street_address": "Praça D. Luís I 49",
+        "locality": "Lisbon",
+        "country": "PT"
+      },
+      "subject": "menu_board",
+      "subject_detail": "one stall's price board, prices legible",
+      "source": "none"
+    }
+  },
+  {
+    "id": "porto-lello-hours-sign",
+    "city": "Porto",
+    "country": "PT",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 46000,
+    "exact": {
+      "lat": 41.1468317,
+      "lon": -8.6148485
+    },
+    "why": "Ticketed entry; the posted hours decide the itinerary.",
+    "spec": {
+      "place": {
+        "place_id": "node/12514092225",
+        "name": "Livraria Lello & Irmão",
+        "street_address": "Rua das Carmelitas 144",
+        "locality": "Porto",
+        "country": "PT"
+      },
+      "subject": "hours_sign",
+      "claimed_state": "website: 09:30–19:00",
+      "source": "website"
+    }
+  },
+  {
+    "id": "porto-bolhao-open",
+    "city": "Porto",
+    "country": "PT",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 42000,
+    "exact": {
+      "lat": 41.1486845,
+      "lon": -8.6071449
+    },
+    "why": "Markets close early on holidays the listing does not know about.",
+    "spec": {
+      "place": {
+        "place_id": "relation/3046626",
+        "name": "Mercado do Bolhão",
+        "street_address": "Rua Formosa 322",
+        "locality": "Porto",
+        "country": "PT"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "Mon–Fri 08:00–20:00, Sat 08:00–18:00",
+      "source": "google"
+    }
+  },
+  {
+    "id": "madrid-san-miguel-queue",
+    "city": "Madrid",
+    "country": "ES",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 38000,
+    "exact": {
+      "lat": 40.4152009,
+      "lon": -3.7092738
+    },
+    "why": "Same question as Belém, different city.",
+    "spec": {
+      "place": {
+        "place_id": "way/4518846",
+        "name": "Mercado de San Miguel",
+        "street_address": "Plaza de San Miguel",
+        "locality": "Madrid",
+        "country": "ES"
+      },
+      "subject": "queue_length",
+      "subject_detail": "entrance queue, whole line in frame",
+      "source": "none"
+    }
+  },
+  {
+    "id": "madrid-san-gines-card",
+    "city": "Madrid",
+    "country": "ES",
+    "task_type": "call-confirm",
+    "amount_usdc": 2.0,
+    "posted_ago_s": 34000,
+    "exact": {
+      "lat": 40.4167707,
+      "lon": -3.706803
+    },
+    "why": "A cash-free traveller's agent asks before sending them.",
+    "spec": {
+      "place": {
+        "place_id": "node/178821166",
+        "name": "Chocolatería San Ginés",
+        "street_address": "Pasadizo de San Ginés 5",
+        "locality": "Madrid",
+        "country": "ES"
+      },
+      "phone": "+34913656546",
+      "template_id": "accepts_payment",
+      "slots": {
+        "payment_method": "card"
+      }
+    }
+  },
+  {
+    "id": "berlin-dussmann-hours-sign",
+    "city": "Berlin",
+    "country": "DE",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 30000,
+    "exact": {
+      "lat": 52.5186399,
+      "lon": 13.3886431
+    },
+    "why": "Late-night hours are the ones listings get wrong.",
+    "spec": {
+      "place": {
+        "place_id": "way/32898110",
+        "name": "Dussmann das KulturKaufhaus",
+        "street_address": "Friedrichstraße 90",
+        "locality": "Berlin",
+        "country": "DE"
+      },
+      "subject": "hours_sign",
+      "claimed_state": "Google: closes at midnight",
+      "source": "google"
+    }
+  },
+  {
+    "id": "berlin-konnopke-open",
+    "city": "Berlin",
+    "country": "DE",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 26000,
+    "exact": {
+      "lat": 52.5404746,
+      "lon": 13.412219
+    },
+    "why": "No listing at all — the agent has nothing but the address.",
+    "spec": {
+      "place": {
+        "place_id": "node/149607221",
+        "name": "Konnopke’s Imbiß",
+        "street_address": "Schönhauser Allee 44b",
+        "locality": "Berlin",
+        "country": "DE"
+      },
+      "question": "open_now",
+      "claimed_open": null,
+      "claimed_hours": null,
+      "source": "none"
+    }
+  },
+  {
+    "id": "berlin-curry36-vegan",
+    "city": "Berlin",
+    "country": "DE",
+    "task_type": "call-confirm",
+    "amount_usdc": 2.0,
+    "posted_ago_s": 22000,
+    "exact": {
+      "lat": 52.4934924,
+      "lon": 13.3876866
+    },
+    "why": "A dietary-preference agent checks before recommending.",
+    "spec": {
+      "place": {
+        "place_id": "node/30022140",
+        "name": "Curry 36",
+        "street_address": "Mehringdamm 36",
+        "locality": "Berlin",
+        "country": "DE"
+      },
+      "phone": "+49302580088336",
+      "template_id": "have_item",
+      "slots": {
+        "item": "vegan currywurst"
+      }
+    }
+  },
+  {
+    "id": "london-dishoom-queue",
+    "city": "London",
+    "country": "GB",
+    "task_type": "photo-of",
+    "amount_usdc": 4.0,
+    "posted_ago_s": 18000,
+    "exact": {
+      "lat": 51.5124971,
+      "lon": -0.1269564
+    },
+    "why": "Walk-in only; the queue is the booking.",
+    "spec": {
+      "place": {
+        "place_id": "way/207104925",
+        "name": "Dishoom",
+        "street_address": "Upper St Martin's Lane 12",
+        "locality": "London",
+        "country": "GB"
+      },
+      "subject": "queue_length",
+      "subject_detail": "the queue outside the door",
+      "claimed_state": "no reservations for small tables",
+      "source": "website"
+    }
+  },
+  {
+    "id": "london-foyles-open",
+    "city": "London",
+    "country": "GB",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 14000,
+    "exact": {
+      "lat": 51.5144469,
+      "lon": -0.1300478
+    },
+    "why": "Sunday hours differ on every listing.",
+    "spec": {
+      "place": {
+        "place_id": "way/96237045",
+        "name": "Foyles",
+        "street_address": "Charing Cross Road 107",
+        "locality": "London",
+        "country": "GB"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "Mon–Sat 09:00–21:00, Sun 11:30–18:00",
+      "source": "google"
+    }
+  },
+  {
+    "id": "london-monmouth-closes",
+    "city": "London",
+    "country": "GB",
+    "task_type": "call-confirm",
+    "amount_usdc": 2.0,
+    "posted_ago_s": 10000,
+    "exact": {
+      "lat": 51.5143659,
+      "lon": -0.1267997
+    },
+    "why": "An agent routing a late errand needs today's closing time, not the usual one.",
+    "spec": {
+      "place": {
+        "place_id": "node/12920922057",
+        "name": "Monmouth Coffee Company",
+        "street_address": "Monmouth Street 27",
+        "locality": "London",
+        "country": "GB"
+      },
+      "phone": "+442072323010",
+      "template_id": "closes_at_today",
+      "slots": {}
+    }
+  },
+  {
+    "id": "nyc-strand-hours-sign",
+    "city": "New York",
+    "country": "US",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 9000,
+    "exact": {
+      "lat": 40.7332796,
+      "lon": -73.9909401
+    },
+    "why": "The sign on the door outranks the website.",
+    "spec": {
+      "place": {
+        "place_id": "node/999934639",
+        "name": "Strand Bookstore",
+        "street_address": "Broadway 828",
+        "locality": "New York",
+        "country": "US"
+      },
+      "subject": "hours_sign",
+      "claimed_state": "website: 10:00–20:00",
+      "source": "website"
+    }
+  },
+  {
+    "id": "nyc-katz-queue",
+    "city": "New York",
+    "country": "US",
+    "task_type": "photo-of",
+    "amount_usdc": 4.0,
+    "posted_ago_s": 8000,
+    "exact": {
+      "lat": 40.7223431,
+      "lon": -73.987353
+    },
+    "why": "Famous for the line; nobody publishes it.",
+    "spec": {
+      "place": {
+        "place_id": "node/1915398676",
+        "name": "Katz's Delicatessen",
+        "street_address": "East Houston Street 205",
+        "locality": "New York",
+        "country": "US"
+      },
+      "subject": "queue_length",
+      "subject_detail": "line at the entrance, whole line in frame",
+      "source": "none"
+    }
+  },
+  {
+    "id": "nyc-joes-pizza-card",
+    "city": "New York",
+    "country": "US",
+    "task_type": "call-confirm",
+    "amount_usdc": 2.0,
+    "posted_ago_s": 7000,
+    "exact": {
+      "lat": 40.7305467,
+      "lon": -74.0020629
+    },
+    "why": "Cash-only rumours persist for years online.",
+    "spec": {
+      "place": {
+        "place_id": "node/931799207",
+        "name": "Joe's Pizza",
+        "street_address": "Carmine Street 7",
+        "locality": "New York",
+        "country": "US"
+      },
+      "phone": "+12123661182",
+      "template_id": "accepts_payment",
+      "slots": {
+        "payment_method": "card"
+      }
+    }
+  },
+  {
+    "id": "sf-city-lights-open",
+    "city": "San Francisco",
+    "country": "US",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 6000,
+    "exact": {
+      "lat": 37.7977229,
+      "lon": -122.4066741
+    },
+    "why": "The listing has not changed in years; the shop may have.",
+    "spec": {
+      "place": {
+        "place_id": "way/32858754",
+        "name": "City Lights Booksellers",
+        "street_address": "Columbus Avenue 261",
+        "locality": "San Francisco",
+        "country": "US"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "daily 10:00–22:00",
+      "source": "google"
+    }
+  },
+  {
+    "id": "sf-tartine-storefront",
+    "city": "San Francisco",
+    "country": "US",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 5000,
+    "exact": {
+      "lat": 37.7614552,
+      "lon": -122.4239452
+    },
+    "why": "A delivery agent wants to see the shop before it dispatches.",
+    "spec": {
+      "place": {
+        "place_id": "node/2247590960",
+        "name": "Tartine Bakery",
+        "street_address": "Guerrero Street 600",
+        "locality": "San Francisco",
+        "country": "US"
+      },
+      "subject": "storefront",
+      "subject_detail": "storefront with the door state visible",
+      "claimed_state": "Google: open",
+      "source": "google"
+    }
+  },
+  {
+    "id": "singapore-tian-tian-menu",
+    "city": "Singapore",
+    "country": "SG",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 4000,
+    "exact": {
+      "lat": 1.280495,
+      "lon": 103.8447984
+    },
+    "why": "Hawker prices change weekly and never online.",
+    "spec": {
+      "place": {
+        "place_id": "node/4629107275",
+        "name": "Tian Tian Hainanese Chicken Rice",
+        "street_address": "Kadayanallur Street 1",
+        "locality": "Singapore",
+        "country": "SG"
+      },
+      "subject": "menu_board",
+      "subject_detail": "the stall's price board, prices legible",
+      "source": "none"
+    }
+  },
+  {
+    "id": "singapore-kinokuniya-open",
+    "city": "Singapore",
+    "country": "SG",
+    "task_type": "verify-open",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 3000,
+    "exact": {
+      "lat": 1.3031381,
+      "lon": 103.8340384
+    },
+    "why": "Mall hours and shop hours disagree.",
+    "spec": {
+      "place": {
+        "place_id": "node/3561043147",
+        "name": "Kinokuniya",
+        "street_address": "Orchard Road 391",
+        "locality": "Singapore",
+        "country": "SG"
+      },
+      "question": "open_now",
+      "claimed_open": true,
+      "claimed_hours": "daily 10:00–21:30",
+      "source": "website"
+    }
+  },
+  {
+    "id": "tokyo-tsutaya-daikanyama-signage",
+    "city": "Tokyo",
+    "country": "JP",
+    "task_type": "photo-of",
+    "amount_usdc": 3.0,
+    "posted_ago_s": 2000,
+    "exact": {
+      "lat": 35.6499829,
+      "lon": 139.6999333
+    },
+    "why": "Japanese listings publish hours in a script the agent's user cannot read.",
+    "spec": {
+      "place": {
+        "place_id": "way/59075788",
+        "name": "Daikanyama T-SITE",
+        "street_address": "Sarugakucho 15",
+        "locality": "Tokyo",
+        "country": "JP"
+      },
+      "subject": "signage",
+      "subject_detail": "today's hours sign at the main entrance",
+      "source": "website"
+    }
+  },
+  {
+    "id": "any-compare-listing-a",
+    "task_type": "compare-two",
+    "amount_usdc": 1.0,
+    "posted_ago_s": 1500,
+    "why": "Entity resolution: which listing is the same shop?",
+    "spec": {
+      "criterion_id": "same_place",
+      "a": {
+        "kind": "text",
+        "text": "Central, Direita 12, Leiria",
+        "sha256": "df584a853ffc282525582e655564ce6b243d1a2759ba4ecf0d23ed2a637ebaf6"
+      },
+      "b": {
+        "kind": "text",
+        "text": "Centro, Direita 21, Leiria",
+        "sha256": "d297184cc9515d64c0ef1c4a081b385ad39a4a99a5538c3e5da15d54afafb18e"
+      }
+    }
+  },
+  {
+    "id": "any-compare-listing-b",
+    "task_type": "compare-two",
+    "amount_usdc": 1.0,
+    "posted_ago_s": 600,
+    "why": "Same question, German listing.",
+    "spec": {
+      "criterion_id": "same_place",
+      "a": {
+        "kind": "text",
+        "text": "Curry 36 Mehringdamm 36",
+        "sha256": "bf8d57e4d5f4baffa98d90e0d7fbd5e99f511881e4ebb04f0199a37ff71ff997"
+      },
+      "b": {
+        "kind": "text",
+        "text": "Curry 66 Mehringdamm 36",
+        "sha256": "32e7841cb65b47d81569ff9173e97b577b04948bc205021de6385a3341c68c6b"
+      }
+    }
+  }
+]
