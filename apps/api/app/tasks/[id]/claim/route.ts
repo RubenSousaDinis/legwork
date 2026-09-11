@@ -6,6 +6,7 @@
  * slips past this pass reverts with the same name and comes back as the same 409.
  */
 import { getAddress, isAddress } from 'viem';
+import { ZERO_ADDRESS } from '@legwork/shared';
 import { route, preflight, pathParam } from '@/src/http/route';
 import { ApiError } from '@/src/errors';
 import { getChain } from '@/src/chain';
@@ -61,6 +62,13 @@ export const POST = route(async (req, ctx) => {
   const caller = getAddress(session.worker);
 
   const row = await loadTask(taskId);
+
+  // A seeded demo row has no escrow twin; claiming it would hit the chain for a task that was
+  // never posted. Refuse before any `chain.*` call.
+  if (row.seeded && row.buyer === ZERO_ADDRESS) {
+    return conflict({ error: 'SeededDemoRow' });
+  }
+
   const chain = getChain();
 
   // The registry is the record. A session is a claim about who this is; `isWorker` is who the
