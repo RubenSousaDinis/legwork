@@ -8,7 +8,7 @@ export const REASONS = {
   transcriptionForbidden: 'transcription is not a compare-two criterion',
   safetyJudgementForbidden: 'safety judgement is not a compare-two criterion',
   needByTooSoon: 'need_by must be at least 20 minutes in the future',
-  regionNotCovered: 'region not covered',
+  regionNotCovered: 'place_id not found in OpenStreetMap',
   placeIsResidential: 'a task may only be about a business, never a home',
   placeNotBusiness: 'place is not a business',
   placeDoesNotMatch: 'place name/street does not match the OSM object',

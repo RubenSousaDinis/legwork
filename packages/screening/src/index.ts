@@ -6,3 +6,5 @@ export * from './gate/person';
 export * from './classifier';
 export * from './osm/placeIndex';
 export * from './osm/buildExtract';
+export * from './osm/overpassLookup';
+export * from './osm/layeredIndex';
