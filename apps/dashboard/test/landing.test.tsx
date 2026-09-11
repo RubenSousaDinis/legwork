@@ -4,6 +4,7 @@ import Page from '../app/page';
 import AgentsPage from '../app/agents/page';
 import AboutPage from '../app/about/page';
 import SupportPage from '../app/support/page';
+import OverviewPage from '../app/overview/page';
 import { PresentCanvas } from '../app/(present)/PresentCanvas';
 import { CLAIM, LANDING_HERO, TAGLINE, TRUST_MODEL, X402_SENTENCE } from '../app/copy';
 import { demoDashboardData } from '../lib/data/demo';
@@ -83,6 +84,8 @@ describe('landing', () => {
     headerOn(render(<AboutPage />).container);
     cleanup();
     headerOn(render(<SupportPage />).container);
+    cleanup();
+    headerOn(render(<OverviewPage />).container);
     cleanup();
 
     const present = render(<PresentCanvas data={demoDashboardData({ nowMs: NOW })} nowMs={NOW} />);

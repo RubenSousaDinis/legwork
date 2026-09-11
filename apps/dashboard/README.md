@@ -13,6 +13,7 @@ ground, one accent. Status-quo red appears only on `/deck` board 2.
 | `/live` | Mission control: feed left, escrow + agent centre, pool / screening / preflight / posters right. Min-width 1280, single column below. | yes |
 | `/agents` | How to hire a human: hosted and local install lines, six tools, four task types, prices, refusals. | yes |
 | `/about` | The claim, the trust model, what is live and what is seeded. | yes |
+| `/overview` | Unlisted briefing: product, worker and agent flows, technical architecture. Not in the header; `robots: { index: false }` and `disallow` in `app/robots.ts`. | yes |
 | `/support` | Four questions for someone who arrived from a task receipt. | yes |
 | `/deck` | Thirteen-board pitch, scroll-snap, no slide runner. | yes |
 | `/opengraph-image` | 1200x630 card so every link unfurls with the escrow meter. | yes |
