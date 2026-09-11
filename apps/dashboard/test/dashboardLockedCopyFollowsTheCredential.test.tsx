@@ -2,6 +2,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutPage from '../app/about/page';
 import DeckPage from '../app/deck/page';
+import OverviewPage from '../app/overview/page';
 import { CLAIM, TRUST_MODEL, claimSentence, trustModelSentence } from '../app/copy';
 
 afterEach(() => {
@@ -19,6 +20,11 @@ describe('dashboard locked copy', () => {
     expect(trustModelSentence('orb')).toBe(TRUST_MODEL);
     cleanup();
 
+    const overviewOrb = render(<OverviewPage />).container;
+    expect(overviewOrb.textContent).toContain(claimSentence('orb'));
+    expect(overviewOrb.textContent).toContain(trustModelSentence('orb'));
+    cleanup();
+
     const deckOrb = render(<DeckPage />).container;
     const board4Orb = deckOrb.querySelector('#board-4')!;
     expect(board4Orb.textContent).toContain(claimSentence('orb'));
@@ -33,6 +39,13 @@ describe('dashboard locked copy', () => {
     expect(aboutSelfie.textContent).toContain(trustModelSentence('selfie'));
     expect(aboutSelfie.textContent).not.toContain('one verified human');
     expect(aboutSelfie.textContent).not.toContain('a live, unique person');
+    cleanup();
+
+    const overviewSelfie = render(<OverviewPage />).container;
+    expect(overviewSelfie.textContent).toContain(claimSentence('selfie'));
+    expect(overviewSelfie.textContent).toContain(trustModelSentence('selfie'));
+    expect(overviewSelfie.textContent).not.toContain('one verified human');
+    expect(overviewSelfie.textContent).not.toContain('a live, unique person');
     cleanup();
 
     const deckSelfie = render(<DeckPage />).container;
