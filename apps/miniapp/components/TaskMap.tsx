@@ -1,8 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Chip } from './ui/Chip';
-import { gridFor, osmTileUrl, pinPercent, type LatLon } from '../lib/tiles';
+import type { GeocodeHit } from '../lib/geocode';
+import {
+  USER_GRID_SIDE,
+  centerKeepingFocus,
+  gridAround,
+  gridCenter,
+  gridFor,
+  osmTileUrl,
+  panCenter,
+  pinPercent,
+  pointFromPercent,
+  zoomFromPinch,
+  type LatLon,
+  type TileGrid,
+} from '../lib/tiles';
 
 export const ODBL_LINE =
   'Place data © OpenStreetMap contributors, available under the Open Database License (ODbL)';
@@ -27,16 +41,18 @@ export type TaskMapProps = {
   gpsUnavailableChip: string;
   located: boolean;
   /**
-   * A searched address. Frames the map when the query matched no pin, so typing a place the
-   * board does not yet have still moves the tiles rather than leaving the old neighbourhood.
+   * A searched place. Its bounding box frames the map even when a matching pin exists —
+   * otherwise "Lisboa" locks onto one street at z16.
    */
-  focus?: LatLon | null;
+  focus?: GeocodeHit | null;
   /**
    * The worker pin still renders. This only decides whether they pull the tile grid — a
    * search has to be allowed to leave them off the edge, or the map never appears to move.
    */
   fitWorker?: boolean;
 };
+
+type UserView = { lat: number; lon: number; z: number };
 
 export function TaskMap({
   rows,
@@ -49,6 +65,17 @@ export function TaskMap({
   fitWorker = true,
 }: TaskMapProps) {
   const [tilesFailed, setTilesFailed] = useState(false);
+  const [userView, setUserView] = useState<UserView | null>(null);
+  const [pinch, setPinch] = useState<{ scale: number; x: string; y: string }>({
+    scale: 1,
+    x: '50%',
+    y: '50%',
+  });
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<TileGrid | null>(null);
+  const userViewRef = useRef<UserView | null>(null);
+  userViewRef.current = userView;
 
   const pins = rows.filter(
     (row): row is MapRow & { coordinate_rounded: { lat: number; lon: number } } =>
@@ -58,16 +85,32 @@ export function TaskMap({
   const pinKey = pins
     .map((row) => `${row.task_id}:${row.coordinate_rounded.lat},${row.coordinate_rounded.lon}`)
     .join('|');
-  const focusKey = focus === null ? '' : `${focus.lat},${focus.lon}`;
+  const focusKey =
+    focus === null
+      ? ''
+      : `${focus.lat},${focus.lon}:${focus.south},${focus.west},${focus.north},${focus.east}`;
   const workerKey =
     fitWorker && worker !== null ? `${worker.lat},${worker.lon}` : '';
 
-  const grid = useMemo(() => {
+  const fitted = useMemo(() => {
     const next: LatLon[] = pins.map((row) => row.coordinate_rounded);
-    if (next.length === 0 && focus !== null) next.push(focus);
+    if (focus !== null) {
+      next.push({ lat: focus.south, lon: focus.west }, { lat: focus.north, lon: focus.east });
+    }
     if (fitWorker && worker !== null) next.push(worker);
-    return gridFor(next);
+    return gridFor(next, fitWorker ? undefined : { minSpanDeg: 0.04 });
   }, [pinKey, focusKey, workerKey, fitWorker, pins, focus, worker]);
+
+  useEffect(() => {
+    setUserView(null);
+    setPinch({ scale: 1, x: '50%', y: '50%' });
+  }, [pinKey, focusKey, fitWorker]);
+
+  const grid =
+    userView === null || fitted === null
+      ? fitted
+      : gridAround(userView, userView.z, USER_GRID_SIDE);
+  gridRef.current = grid;
 
   const gridKey =
     grid === null ? '' : `${grid.z}/${grid.x0}/${grid.y0}/${grid.cols}x${grid.rows}`;
@@ -75,6 +118,130 @@ export function TaskMap({
   useEffect(() => {
     setTilesFailed(false);
   }, [gridKey]);
+
+  useEffect(() => {
+    const el = mapRef.current;
+    if (el === null) return;
+
+    const pinchState = {
+      startDist: 0,
+      startZ: 0,
+      liveScale: 1,
+      focal: { lat: 0, lon: 0 } as LatLon,
+      percent: { left: 50, top: 50 },
+      active: false,
+    };
+    const panState = { x: 0, y: 0, active: false };
+
+    const local = (touch: Touch) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+        w: rect.width,
+        h: rect.height,
+      };
+    };
+
+    const distance = (a: Touch, b: Touch) =>
+      Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    const onTouchStart = (event: TouchEvent) => {
+      const current = gridRef.current;
+      if (current === null) return;
+      if (event.touches.length === 2) {
+        event.preventDefault();
+        panState.active = false;
+        const a = event.touches[0]!;
+        const b = event.touches[1]!;
+        const rect = el.getBoundingClientRect();
+        const percent = {
+          left: rect.width === 0 ? 50 : ((a.clientX + b.clientX) / 2 - rect.left) / rect.width * 100,
+          top: rect.height === 0 ? 50 : ((a.clientY + b.clientY) / 2 - rect.top) / rect.height * 100,
+        };
+        pinchState.active = true;
+        pinchState.startDist = distance(a, b) || 1;
+        pinchState.startZ = current.z;
+        pinchState.liveScale = 1;
+        pinchState.focal = pointFromPercent(percent, current);
+        pinchState.percent = percent;
+        setPinch({ scale: 1, x: `${percent.left}%`, y: `${percent.top}%` });
+      } else if (event.touches.length === 1 && !pinchState.active) {
+        const p = local(event.touches[0]!);
+        panState.x = p.x;
+        panState.y = p.y;
+        panState.active = true;
+      }
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const current = gridRef.current;
+      if (current === null) return;
+      if (pinchState.active && event.touches.length === 2) {
+        event.preventDefault();
+        const scale = distance(event.touches[0]!, event.touches[1]!) / pinchState.startDist;
+        pinchState.liveScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+        setPinch((prev) => ({ ...prev, scale: pinchState.liveScale }));
+        return;
+      }
+      if (panState.active && event.touches.length === 1) {
+        const p = local(event.touches[0]!);
+        const dx = p.x - panState.x;
+        const dy = p.y - panState.y;
+        if (Math.hypot(dx, dy) < 8 && userViewRef.current === null) return;
+        event.preventDefault();
+        panState.x = p.x;
+        panState.y = p.y;
+        const from = userViewRef.current ?? gridCenter(current);
+        const next = panCenter(from, current, dx, dy, p.w, p.h);
+        setUserView({ lat: next.lat, lon: next.lon, z: current.z });
+      }
+    };
+
+    const endPinch = () => {
+      if (!pinchState.active) return;
+      const z = zoomFromPinch(pinchState.startZ, pinchState.liveScale);
+      const center = centerKeepingFocus(pinchState.focal, pinchState.percent, z);
+      setUserView({ lat: center.lat, lon: center.lon, z });
+      setPinch({ scale: 1, x: '50%', y: '50%' });
+      pinchState.active = false;
+      panState.active = false;
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      if (pinchState.active && event.touches.length < 2) endPinch();
+      if (event.touches.length === 0) panState.active = false;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      const current = gridRef.current;
+      if (current === null) return;
+      event.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const percent = {
+        left: rect.width === 0 ? 50 : ((event.clientX - rect.left) / rect.width) * 100,
+        top: rect.height === 0 ? 50 : ((event.clientY - rect.top) / rect.height) * 100,
+      };
+      const focal = pointFromPercent(percent, current);
+      const z = zoomFromPinch(current.z, event.deltaY < 0 ? 2 : 0.5);
+      if (z === current.z) return;
+      const center = centerKeepingFocus(focal, percent, z);
+      setUserView({ lat: center.lat, lon: center.lon, z });
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { capture: true, passive: false });
+    el.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+    el.addEventListener('touchend', onTouchEnd, { capture: true, passive: false });
+    el.addEventListener('touchcancel', onTouchEnd, { capture: true, passive: false });
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart, { capture: true });
+      el.removeEventListener('touchmove', onTouchMove, { capture: true });
+      el.removeEventListener('touchend', onTouchEnd, { capture: true });
+      el.removeEventListener('touchcancel', onTouchEnd, { capture: true });
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   const tiles: { x: number; y: number }[] = [];
   if (grid !== null) {
@@ -85,24 +252,95 @@ export function TaskMap({
     }
   }
 
+  const viewportStyle = {
+    '--pinch-scale': String(pinch.scale),
+    '--pinch-x': pinch.x,
+    '--pinch-y': pinch.y,
+  } as CSSProperties;
+
   return (
-    <div className="lw-map" data-map="tasks">
+    <div
+      className="lw-map"
+      data-map="tasks"
+      data-zoom={grid === null ? undefined : String(grid.z)}
+      ref={mapRef}
+    >
       {grid !== null && !tilesFailed ? (
-        <div
-          className="lw-map__grid"
-          key={gridKey}
-          style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)` }}
-        >
-          {tiles.map((tile) => (
-            <img
-              alt=""
-              className="lw-map__tile"
-              data-tile={`${grid.z}/${tile.x}/${tile.y}`}
-              key={`${grid.z}/${tile.x}/${tile.y}`}
-              onError={() => setTilesFailed(true)}
-              src={osmTileUrl(grid.z, tile.x, tile.y)}
-            />
-          ))}
+        <div className="lw-map__viewport" style={viewportStyle}>
+          <div
+            className="lw-map__grid"
+            key={gridKey}
+            style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)` }}
+          >
+            {tiles.map((tile) => (
+              <img
+                alt=""
+                className="lw-map__tile"
+                data-tile={`${grid.z}/${tile.x}/${tile.y}`}
+                key={`${grid.z}/${tile.x}/${tile.y}`}
+                onError={() => setTilesFailed(true)}
+                src={osmTileUrl(grid.z, tile.x, tile.y)}
+              />
+            ))}
+          </div>
+          <div className="lw-map__pins">
+            {pins.map((row) => {
+              const percent = pinPercent(row.coordinate_rounded, grid);
+              const selected = selectedId === row.task_id;
+              return (
+                <button
+                  aria-label={row.title}
+                  className={
+                    selected ? 'lw-map-pin lw-map-pin--selected' : 'lw-map-pin'
+                  }
+                  data-hit="44"
+                  data-pin="task"
+                  data-task={row.task_id}
+                  key={row.task_id}
+                  onClick={() => onSelect(row.task_id)}
+                  style={
+                    {
+                      '--pin-x': `${percent.left}%`,
+                      '--pin-y': `${percent.top}%`,
+                    } as CSSProperties
+                  }
+                  type="button"
+                >
+                  <span className="lw-map-pin__mark" />
+                </button>
+              );
+            })}
+            {worker !== null ? (
+              <span
+                aria-label="You"
+                className="lw-map-pin lw-map-pin--worker"
+                data-pin="worker"
+                style={
+                  {
+                    '--pin-x': `${pinPercent(worker, grid).left}%`,
+                    '--pin-y': `${pinPercent(worker, grid).top}%`,
+                  } as CSSProperties
+                }
+              >
+                <span className="lw-map-pin__mark" />
+              </span>
+            ) : null}
+            {focus !== null && pins.length === 0 ? (
+              <span
+                aria-label="Search"
+                className="lw-map-pin lw-map-pin--focus"
+                data-pin="search"
+                style={
+                  {
+                    '--pin-x': `${pinPercent(focus, grid).left}%`,
+                    '--pin-y': `${pinPercent(focus, grid).top}%`,
+                  } as CSSProperties
+                }
+              >
+                <span className="lw-map-pin__mark" />
+              </span>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -124,67 +362,6 @@ export function TaskMap({
             {gpsUnavailableChip}
           </Chip>
         </p>
-      ) : null}
-
-      {grid !== null ? (
-        <div className="lw-map__pins">
-          {pins.map((row) => {
-            const percent = pinPercent(row.coordinate_rounded, grid);
-            const selected = selectedId === row.task_id;
-            return (
-              <button
-                aria-label={row.title}
-                className={
-                  selected ? 'lw-map-pin lw-map-pin--selected' : 'lw-map-pin'
-                }
-                data-hit="44"
-                data-pin="task"
-                data-task={row.task_id}
-                key={row.task_id}
-                onClick={() => onSelect(row.task_id)}
-                style={
-                  {
-                    '--pin-x': `${percent.left}%`,
-                    '--pin-y': `${percent.top}%`,
-                  } as CSSProperties
-                }
-                type="button"
-              >
-                <span className="lw-map-pin__mark" />
-              </button>
-            );
-          })}
-          {worker !== null ? (
-            <span
-              aria-label="You"
-              className="lw-map-pin lw-map-pin--worker"
-              data-pin="worker"
-              style={
-                {
-                  '--pin-x': `${pinPercent(worker, grid).left}%`,
-                  '--pin-y': `${pinPercent(worker, grid).top}%`,
-                } as CSSProperties
-              }
-            >
-              <span className="lw-map-pin__mark" />
-            </span>
-          ) : null}
-          {focus !== null && pins.length === 0 ? (
-            <span
-              aria-label="Search"
-              className="lw-map-pin lw-map-pin--focus"
-              data-pin="search"
-              style={
-                {
-                  '--pin-x': `${pinPercent(focus, grid).left}%`,
-                  '--pin-y': `${pinPercent(focus, grid).top}%`,
-                } as CSSProperties
-              }
-            >
-              <span className="lw-map-pin__mark" />
-            </span>
-          ) : null}
-        </div>
       ) : null}
 
       <p className="lw-map__attr" data-map="odbl">

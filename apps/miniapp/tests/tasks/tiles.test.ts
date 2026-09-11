@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { gridFor, pinPercent } from '../../lib/tiles';
+import {
+  USER_MAX_ZOOM,
+  USER_MIN_ZOOM,
+  centerKeepingFocus,
+  gridAround,
+  gridFor,
+  pinPercent,
+  pointFromPercent,
+  zoomFromPinch,
+} from '../../lib/tiles';
 
 const PRIMUSTAKE = { lat: 39.729, lon: -8.84 };
 const JUNTA = { lat: 39.7295, lon: -8.8386 };
@@ -36,5 +45,39 @@ describe('the tile grid', () => {
 
   it('gridIsNullWithoutPoints', () => {
     expect(gridFor([])).toBeNull();
+  });
+
+  it('cityBoundsStayBelowStreetZoom', () => {
+    // Lisboa's Nominatim box. A single centroid at z16 is one street in Baixa;
+    // the box has to pick a city zoom.
+    const grid = gridFor(
+      [
+        { lat: 38.6913994, lon: -9.2298356 },
+        { lat: 38.7967584, lon: -9.0863328 },
+      ],
+    )!;
+    expect(grid.z).toBeLessThan(15);
+    expect(grid.z).toBeGreaterThanOrEqual(10);
+  });
+
+  it('pinchZoomStepsAndKeepsTheFocalPoint', () => {
+    expect(zoomFromPinch(12, 2)).toBe(13);
+    expect(zoomFromPinch(12, 0.5)).toBe(11);
+    expect(zoomFromPinch(USER_MIN_ZOOM, 0.1)).toBe(USER_MIN_ZOOM);
+    expect(zoomFromPinch(USER_MAX_ZOOM, 8)).toBe(USER_MAX_ZOOM);
+
+    const base = gridAround(PRIMUSTAKE, 14);
+    const percent = { left: 30, top: 70 };
+    const focal = pointFromPercent(percent, base);
+    // Same zoom: percent round-trips exactly.
+    expect(pinPercent(focal, base).left).toBeCloseTo(percent.left, 5);
+    expect(pinPercent(focal, base).top).toBeCloseTo(percent.top, 5);
+
+    const center = centerKeepingFocus(focal, percent, 15);
+    const zoomed = gridAround(center, 15);
+    const again = pinPercent(focal, zoomed);
+    // Tile origins snap to integers, so a zoom step can drift by a fraction of a tile.
+    expect(Math.abs(again.left - percent.left)).toBeLessThan(10);
+    expect(Math.abs(again.top - percent.top)).toBeLessThan(10);
   });
 });

@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { geolocationFailing, GEO_ERROR, stubGeolocation } from '../proof/harness';
+import { geolocationAt, geolocationFailing, GEO_ERROR, stubGeolocation } from '../proof/harness';
 import { recordRequests } from './requests';
+import { resetAreaForTests } from '../../lib/area';
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -98,26 +99,30 @@ describe('board search', () => {
       ),
     );
 
+    stubGeolocation(geolocationAt(39.74362, -8.80713, 12));
     render(<TaskList />);
     expect(await screen.findByText(PADARIA)).toBeTruthy();
     expect(screen.getByText(farRow.title)).toBeTruthy();
 
-    const box = document.querySelector('[data-near="10km"]') as HTMLInputElement;
-    expect(box.disabled).toBe(false);
-    expect(box.getAttribute('data-hit')).toBeNull();
+    const box = await waitFor(() => {
+      const node = document.querySelector('[data-near="10km"]') as HTMLButtonElement;
+      expect(node.disabled).toBe(false);
+      return node;
+    });
     fireEvent.click(screen.getByRole('checkbox', { name: NEAR_ME_LABEL }));
 
-    expect(box.checked).toBe(true);
+    expect(box.getAttribute('aria-checked')).toBe('true');
     expect(screen.getByText(PADARIA)).toBeTruthy();
     expect(screen.queryByText(farRow.title)).toBeNull();
 
     cleanup();
+    resetAreaForTests();
     stubGeolocation(geolocationFailing(GEO_ERROR.TIMEOUT));
     server.resetHandlers();
 
     render(<TaskList />);
     expect(await screen.findByText(PADARIA)).toBeTruthy();
-    const disabled = document.querySelector('[data-near="10km"]') as HTMLInputElement;
+    const disabled = document.querySelector('[data-near="10km"]') as HTMLButtonElement;
     expect(disabled.disabled).toBe(true);
     expect(screen.getByText(NEAR_ME_NEEDS_FIX)).toBeTruthy();
     expect(screen.getByText(NEAR_ME_LABEL)).toBeTruthy();

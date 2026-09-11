@@ -9,9 +9,8 @@ import { TaskMap } from '../../components/TaskMap';
 import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
-import { GEOCODE_DEBOUNCE_MS, geocodeAddress } from '../../lib/geocode';
+import { GEOCODE_DEBOUNCE_MS, geocodeAddress, type GeocodeHit } from '../../lib/geocode';
 import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
-import type { LatLon } from '../../lib/tiles';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 import { Waiting } from '../../components/ui/Waiting';
 
@@ -167,7 +166,7 @@ export function TaskList() {
   const [hasFix, setHasFix] = useState(false);
   const [query, setQuery] = useState('');
   const [nearMe, setNearMe] = useState(false);
-  const [searchFocus, setSearchFocus] = useState<LatLon | null>(null);
+  const [searchFocus, setSearchFocus] = useState<GeocodeHit | null>(null);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
@@ -333,7 +332,7 @@ export function TaskList() {
     [poll],
   );
 
-  const canFilterNear = rows.some((row) => typeof row.distance_m === 'number');
+  const canFilterNear = hasFix;
   const filtered = rows.filter((row) => {
     if (!rowMatchesQuery(row, query)) return false;
     if (!nearMe) return true;
@@ -375,18 +374,18 @@ export function TaskList() {
             value={query}
           />
         </label>
-        <label className="lw-checkbox" data-hit="44" htmlFor="board-near">
-          <input
-            checked={nearMe}
-            className="lw-checkbox__input"
-            data-near="10km"
-            disabled={!canFilterNear}
-            id="board-near"
-            onChange={(event) => setNearMe(event.target.checked)}
-            type="checkbox"
-          />
+        <button
+          aria-checked={nearMe}
+          className={nearMe ? 'lw-near-me lw-near-me--on' : 'lw-near-me'}
+          data-hit="44"
+          data-near="10km"
+          disabled={!canFilterNear}
+          onClick={() => setNearMe((current) => !current)}
+          role="checkbox"
+          type="button"
+        >
           {NEAR_ME_LABEL}
-        </label>
+        </button>
         {located && !hasFix ? (
           <p className="lw-note" data-floor="20" data-near="disabled-reason">
             {NEAR_ME_NEEDS_FIX}

@@ -15,6 +15,19 @@ const { MAP_NO_COORDINATES, ODBL_LINE, TaskMap, TILES_FAILED } = await import('.
 
 const PADARIA = 'Padaria Central · Rua de Alcobaça 12, Leiria';
 const PLACE = TASK_PLACE_COORDS['1024']!;
+const LISBON_BOX = ['38.6913994', '38.7967584', '-9.2298356', '-9.0863328'];
+const LISBON_HIT = {
+  lat: '38.7223',
+  lon: '-9.1393',
+  boundingbox: LISBON_BOX,
+  class: 'boundary',
+  type: 'administrative',
+};
+
+function tileZoom(node: Element | null): number {
+  const id = node?.getAttribute('data-tile') ?? '';
+  return Number(id.split('/')[0]);
+}
 
 function round100m(lat: number, lon: number): { lat: number; lon: number } {
   return { lat: Math.round(lat * 1000) / 1000, lon: Math.round(lon * 1000) / 1000 };
@@ -143,35 +156,77 @@ describe('the board map', () => {
           ],
         }),
       ),
+      http.get('https://nominatim.openstreetmap.org/search', () => HttpResponse.json([LISBON_HIT])),
     );
 
     render(<TaskList />);
     expect(await screen.findByText(PADARIA)).toBeTruthy();
     await waitFor(() => expect(document.querySelectorAll('[data-pin="task"]').length).toBe(2));
-    const before = [...document.querySelectorAll('[data-tile]')]
-      .map((node) => node.getAttribute('data-tile'))
-      .sort()
-      .join(',');
 
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Lisboa' } });
 
     await waitFor(() => {
       expect(document.querySelectorAll('[data-pin="task"]').length).toBe(1);
       expect(document.querySelector('[data-pin="task"][data-task="1099"]')).not.toBeNull();
+      expect(tileZoom(document.querySelector('[data-tile]'))).toBeLessThan(15);
     });
-    const after = [...document.querySelectorAll('[data-tile]')]
-      .map((node) => node.getAttribute('data-tile'))
-      .sort()
-      .join(',');
-    expect(after.length).toBeGreaterThan(0);
-    expect(after).not.toBe(before);
+  });
+
+  it('searchForACityUsesTheCityBounds', async () => {
+    stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
+    server.use(
+      http.get('https://nominatim.openstreetmap.org/search', () => HttpResponse.json([LISBON_HIT])),
+    );
+
+    render(<TaskList />);
+    expect(await screen.findByText(PADARIA)).toBeTruthy();
+    await waitFor(() => expect(document.querySelector('[data-tile]')).not.toBeNull());
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Lisboa' } });
+    expect(await screen.findByText(emptySearchCopy())).toBeTruthy();
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-pin="search"]')).not.toBeNull();
+      expect(tileZoom(document.querySelector('[data-tile]'))).toBeLessThan(15);
+    });
+  });
+
+  it('mapPinchAndWheelChangeTheZoom', async () => {
+    stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
+    render(<TaskList />);
+    expect(await screen.findByText(PADARIA)).toBeTruthy();
+    const map = await waitFor(() => {
+      const node = document.querySelector('[data-map="tasks"]') as HTMLElement;
+      expect(node.getAttribute('data-zoom')).toBeTruthy();
+      return node;
+    });
+    const before = Number(map.getAttribute('data-zoom'));
+
+    fireEvent.wheel(map, { deltaY: -120, clientX: 100, clientY: 100 });
+
+    await waitFor(() => {
+      expect(Number(map.getAttribute('data-zoom'))).toBe(before + 1);
+    });
+
+    fireEvent.wheel(map, { deltaY: 120, clientX: 100, clientY: 100 });
+    await waitFor(() => {
+      expect(Number(map.getAttribute('data-zoom'))).toBe(before);
+    });
   });
 
   it('searchPansToAGeocodedAddress', async () => {
     stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
     server.use(
       http.get('https://nominatim.openstreetmap.org/search', () =>
-        HttpResponse.json([{ lat: '41.1496', lon: '-8.6109' }]),
+        HttpResponse.json([
+          {
+            lat: '41.1496',
+            lon: '-8.6109',
+            boundingbox: ['41.1384', '41.1856', '-8.6910', '-8.5564'],
+            class: 'boundary',
+            type: 'administrative',
+          },
+        ]),
       ),
     );
 
