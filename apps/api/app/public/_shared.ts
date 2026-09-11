@@ -145,14 +145,10 @@ export async function publicTaskView(
 
   const hasTaskGps = row.exactLat !== null && row.exactLon !== null;
   const place = (row.specJson as { place?: { locality?: string; country?: string } }).place;
-  const locality =
-    place && typeof place.locality === 'string' && typeof place.country === 'string'
-      ? place.locality
-      : undefined;
-  const country =
-    place && typeof place.locality === 'string' && typeof place.country === 'string'
-      ? place.country
-      : undefined;
+  const hasLocalityCountry =
+    !!place && typeof place.locality === 'string' && typeof place.country === 'string';
+  const locality = hasLocalityCountry ? place.locality : undefined;
+  const country = hasLocalityCountry ? place.country : undefined;
 
   return {
     task_id: row.taskId.toString(),

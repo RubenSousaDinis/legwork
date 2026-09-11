@@ -66,9 +66,10 @@ export const POST = route(async (req) => {
       log,
     );
     logDecision({ decision: 'unavailable' });
+    const retry = verdict.retry_after_s;
     return Response.json(
-      { error: 'place_lookup_unavailable', retry_after_s: 30 },
-      { status: 503, headers: { 'retry-after': '30' } },
+      { error: 'place_lookup_unavailable', retry_after_s: retry },
+      { status: 503, headers: { 'retry-after': String(retry) } },
     );
   }
 
