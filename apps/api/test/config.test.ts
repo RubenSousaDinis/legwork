@@ -66,4 +66,14 @@ describe('config', () => {
   it('refuses a chain other than Base Sepolia', () => {
     expect(() => resetConfigForTests({ CHAIN_ID: '1' })).toThrow(ConfigError);
   });
+
+  it('configDefaultsToOverpassLookup', () => {
+    const config = resetConfigForTests({
+      PLACE_LOOKUP: undefined,
+      OVERPASS_URL: undefined,
+    });
+    expect(config.PLACE_LOOKUP).toBe('overpass');
+    expect(config.OVERPASS_URL).toBe('https://overpass-api.de/api/interpreter');
+    expect(() => resetConfigForTests({ PLACE_LOOKUP: 'bogus' })).toThrow(ConfigError);
+  });
 });

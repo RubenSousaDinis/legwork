@@ -83,7 +83,15 @@ async function seed(): Promise<void> {
     txPost: hashOf(1),
     txClaim: hashOf(2),
     txSubmit: hashOf(3),
-    specJson: { instructions: SENTINEL_SPEC },
+    specJson: {
+      instructions: SENTINEL_SPEC,
+      place: {
+        locality: 'Coimbra',
+        country: 'PT',
+        name: 'SENTINEL-POI-NAME',
+        street_address: 'SENTINEL-STREET',
+      },
+    },
     buyerTokenHash: hashBuyerToken(SENTINEL_TOKEN),
     exactLat: EXACT_LAT,
     exactLon: EXACT_LON,
@@ -178,6 +186,40 @@ describe('/public/*', () => {
       'at', 'class', 'marked', 'rule_id', 'task_type',
     ]);
     expect(refusalBody.examples.every((row) => row.example === true)).toBe(true);
+  });
+
+  it('publicTaskViewCarriesLocalityAndCountry', async () => {
+    await seed();
+
+    const forbidden = [
+      SENTINEL_SPEC, '0xPAYER', AGENT_ID, SENTINEL_TOKEN, hashBuyerToken(SENTINEL_TOKEN),
+      EXACT_LAT, EXACT_LON, 'exact_lat', 'spec_json', 'buyer_token', '"url"',
+      'SENTINEL-POI-NAME', 'SENTINEL-STREET',
+    ];
+
+    const taskRes = await call(publicTask, {
+      url: 'http://localhost/public/task/1',
+      params: { id: '1' },
+    });
+    const feedRes = await call(feed, { url: 'http://localhost/public/feed' });
+    expect(taskRes.status).toBe(200);
+    expect(feedRes.status).toBe(200);
+
+    const taskText = await taskRes.text();
+    const feedText = await feedRes.text();
+    for (const secret of forbidden) {
+      expect(taskText, `/public/task/1 leaked ${secret}`).not.toContain(secret);
+      expect(feedText, `/public/feed leaked ${secret}`).not.toContain(secret);
+    }
+
+    const task = JSON.parse(taskText) as { locality: string; country: string };
+    const feedBody = JSON.parse(feedText) as {
+      tasks: { locality: string; country: string }[];
+    };
+    expect(task.locality).toBe('Coimbra');
+    expect(task.country).toBe('PT');
+    expect(feedBody.tasks[0]?.locality).toBe('Coimbra');
+    expect(feedBody.tasks[0]?.country).toBe('PT');
   });
 
   it('publicFeedPublishesOnlyTheRoundedCoordinate', async () => {
