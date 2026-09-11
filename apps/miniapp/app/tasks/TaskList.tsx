@@ -51,7 +51,7 @@ export function emptySearchCopy(): string {
   return 'No tasks match this search.';
 }
 
-/** The three 409/403 answers `POST /tasks/:id/claim` is allowed to give, in the worker's words. */
+/** The four 409/403 answers `POST /tasks/:id/claim` is allowed to give, in the worker's words. */
 export const CLAIM_ERRORS: Record<string, string> = {
   InCooldown: `You released or let a claim expire recently. You can claim again within ${Math.round(
     CLAIM_COOLDOWN_S / 60,
@@ -59,6 +59,11 @@ export const CLAIM_ERRORS: Record<string, string> = {
   AlreadyClaimed: 'Someone claimed this task first.',
   SeededCannotClaimExternal:
     'This account is a seeded demo worker; it can only claim operator-funded tasks.',
+  // `TaskCard` renders no CLAIM button on a seeded row, so nothing on the board sends this
+  // request any more. The words stay for the card that was already on screen when the row
+  // was seeded, and for a request made by hand.
+  SeededDemoRow:
+    'This is a seeded demo row. It shows what an agent asks for; nobody can claim it.',
 };
 
 /**
