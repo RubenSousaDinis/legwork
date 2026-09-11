@@ -554,7 +554,7 @@
     "spec": {
       "place": {
         "place_id": "node/4629107275",
-        "name": "Tian Tian Hainanese Chicken Rice",
+        "name": "天天海南雞飯 Tian Tian Hainanese Chicken Rice",
         "street_address": "Kadayanallur Street 1",
         "locality": "Singapore",
         "country": "SG"
@@ -598,15 +598,15 @@
     "amount_usdc": 3.0,
     "posted_ago_s": 2000,
     "exact": {
-      "lat": 35.6499829,
-      "lon": 139.6999333
+      "lat": 35.648948,
+      "lon": 139.699489
     },
     "why": "Japanese listings publish hours in a script the agent's user cannot read.",
     "spec": {
       "place": {
-        "place_id": "way/59075788",
-        "name": "Daikanyama T-SITE",
-        "street_address": "Sarugakucho 15",
+        "place_id": "node/1759745060",
+        "name": "蔦屋書店",
+        "street_address": "猿楽町 5",
         "locality": "Tokyo",
         "country": "JP"
       },
