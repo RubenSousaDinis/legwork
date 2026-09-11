@@ -24,6 +24,8 @@ import { resetPosterCacheForTests } from '../src/services/posters';
 import {
   hire,
   screenEnvelope,
+  setScreenEnvelopeDepsForTests,
+  resetLookupForTests,
   type HireDeps,
   type PostParams,
   type ScreenOutcome,
@@ -66,8 +68,14 @@ interface Bench {
 
 let bench: Bench;
 
+const notFoundLookup = async () => ({ kind: 'not_found' as const });
+
 const realScreen = (body: unknown): Promise<ScreenOutcome> =>
-  screenEnvelope(body, { places: getPlaceIndex(), classifier: new FakeClassifier() });
+  screenEnvelope(body, {
+    places: getPlaceIndex(),
+    classifier: new FakeClassifier(),
+    lookup: notFoundLookup,
+  });
 
 async function buildBench(): Promise<Bench> {
   const db = await createTestDb();
@@ -125,10 +133,17 @@ beforeEach(async () => {
   resetConfigForTests({ DASHBOARD_URL });
   resetRateLimitForTests();
   resetPosterCacheForTests();
+  resetLookupForTests();
+  setScreenEnvelopeDepsForTests({
+    places: getPlaceIndex(),
+    classifier: new FakeClassifier(),
+    lookup: notFoundLookup,
+  });
   bench = await buildBench();
 });
 
 afterEach(async () => {
+  resetLookupForTests();
   await bench?.db.close();
   vi.restoreAllMocks();
 });

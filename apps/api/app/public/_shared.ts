@@ -98,6 +98,10 @@ export interface PublicTaskView {
   proof?: PublicProofView;
   /** Task place through `round100m`. Absent when the private row has no coordinate. */
   coordinate_rounded?: { lat: number; lon: number };
+  /** Agent-supplied locality text from the envelope — never the POI's own name. */
+  locality?: string;
+  /** Agent-supplied ISO country from the envelope. */
+  country?: string;
   tx: TxSet;
   links: TxSet;
   dashboard_url: string;
@@ -140,6 +144,11 @@ export async function publicTaskView(
   }
 
   const hasTaskGps = row.exactLat !== null && row.exactLon !== null;
+  const place = (row.specJson as { place?: { locality?: string; country?: string } }).place;
+  const hasLocalityCountry =
+    !!place && typeof place.locality === 'string' && typeof place.country === 'string';
+  const locality = hasLocalityCountry ? place.locality : undefined;
+  const country = hasLocalityCountry ? place.country : undefined;
 
   return {
     task_id: row.taskId.toString(),
@@ -160,6 +169,7 @@ export async function publicTaskView(
     ...(hasTaskGps
       ? { coordinate_rounded: round100m(Number(row.exactLat), Number(row.exactLon)) }
       : {}),
+    ...(locality !== undefined && country !== undefined ? { locality, country } : {}),
     tx,
     links: linksOf(tx),
     dashboard_url: `${getConfig().DASHBOARD_URL ?? 'http://localhost:3000'}/task/${row.taskId.toString()}`,

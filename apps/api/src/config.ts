@@ -95,6 +95,10 @@ export const ConfigEnv = z.object({
   /** Vercel kills a function well before a longer poll returns, so 50 is a ceiling. */
   LONGPOLL_MAX_S: z.coerce.number().int().positive().default(50),
   DATA_MODE: z.enum(['live', 'demo']).default('live'),
+  /** Where a place_id outside the packaged extract is looked up. Public URL, no key. */
+  OVERPASS_URL: z.string().url().default('https://overpass-api.de/api/interpreter'),
+  /** `packaged` never opens a socket and covers Leiria+Lisbon only; `overpass` adds the one-request live fallback (T-61). */
+  PLACE_LOOKUP: z.enum(['packaged', 'overpass']).default('overpass'),
 
   // -- runtime, not from .env.example --
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

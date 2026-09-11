@@ -112,7 +112,7 @@ const STATUS_DESCRIPTIONS: Record<number, string> = {
   422: 'Refused — one of the six abuse classes. A refused task moves no money.',
   429: 'Cap exceeded',
   500: 'Internal error',
-  503: 'The chain or the relayer did not answer; the call is worth retrying.',
+  503: 'The chain, the relayer or the live place lookup did not answer; the call is worth retrying.',
 };
 
 /** T-01's promise, repeated on every surface a stranger can read. */
