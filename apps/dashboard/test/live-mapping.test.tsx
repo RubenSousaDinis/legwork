@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { poolString } from '../lib/format';
-import { getLiveDashboardData, refusalCounts } from '../lib/data/live';
+import { getLiveDashboardData, refusalCounts, toFeedRow } from '../lib/data/live';
+import { metaWithDisclosure } from '../components/TaskRow';
 import { ScreeningLog } from '../components/ScreeningLog';
 import { TaskRow } from '../components/TaskRow';
 import { http, HttpResponse } from 'msw';
@@ -27,18 +28,78 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('live adapter', () => {
+  it('feedRowShowsLocalityWhenTheWireCarriesIt', () => {
+    const row = toFeedRow({
+      task_id: 'b1',
+      task_type: 'photo-of',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'u33db',
+      locality: 'Berlin',
+      country: 'DE',
+      posted_at: '2026-09-05T14:02:00.000Z',
+      seeded: true,
+    });
+    expect(row.locality).toBe('Berlin · DE');
+    expect(row.meta.endsWith('· Berlin · DE')).toBe(true);
+    expect(row.meta).not.toContain('u33db');
+  });
+
+  it('feedRowFallsBackToTheAreaWithoutLocality', () => {
+    const row = toFeedRow({
+      task_id: 'l1',
+      task_type: 'verify-open',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'ez1dp',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    expect(row.locality).toBeUndefined();
+    expect(row.meta.endsWith('· ez1dp')).toBe(true);
+  });
+
+  it('feedRowLocalityAloneWhenCountryIsMissing', () => {
+    const row = toFeedRow({
+      task_id: 'p1',
+      task_type: 'verify-open',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'ez1dp',
+      locality: 'Porto',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    expect(row.locality).toBe('Porto');
+  });
+
+  it('callConfirmDisclosureStillFollowsTheLocality', () => {
+    const row = toFeedRow({
+      task_id: 'c1',
+      task_type: 'call-confirm',
+      fee_usdc: 0.45,
+      amount_usdc: 2,
+      area: 'u33db',
+      locality: 'Berlin',
+      country: 'DE',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    const meta = metaWithDisclosure(row);
+    expect(meta).toContain('· Berlin · DE ·');
+    expect(meta.endsWith('self-reported answer + timestamp (unverified)')).toBe(true);
+  });
+
   it('liveFeedMergesRefusalsWithoutSpec', async () => {
     server.use(...liveHandlers(fixtures.refusals1));
     const result = await getLiveDashboardData();
 
-    // Four funded rows plus two refusals (the five-key wire row and the leaky extra), newest first.
-    expect(result.feed).toHaveLength(6);
+    // Five funded rows plus two refusals (the five-key wire row and the leaky extra), newest first.
+    expect(result.feed).toHaveLength(7);
     expect(result.feed.map((r) => r.taskId.replace(/^refused-.*/, 'refused'))).toEqual([
       '7',
       '8',
       'refused',
       '6',
       '5',
+      '9',
       'refused',
     ]);
 
@@ -132,6 +193,7 @@ describe('live adapter', () => {
       'passed',
       'passed',
       'refused',
+      'passed',
     ]);
     const refused = result.screening[2]!;
     expect(refused.class).toBe('authentication circumvention');
@@ -193,10 +255,16 @@ describe('live adapter', () => {
     expect(Object.keys(fromArray)).toHaveLength(6);
   });
 
-  it('recordedFixturesAreLeiriaAndCarryNothingPublicSurfacesMayNot', () => {
+  it('recordedFixturesCarryNothingPublicSurfacesMayNot', () => {
     const all = JSON.stringify(fixtures);
     expect(all).not.toContain('buyer_token');
-    for (const row of fixtures.feed.tasks) expect(row.area).toBe('ez1dp');
+    for (const row of fixtures.feed.tasks) {
+      expect(row.area).toBeTruthy();
+      if (row.locality !== 'Berlin') expect(row.area).toBe('ez1dp');
+    }
+    const berlin = fixtures.feed.tasks.find((row) => row.locality === 'Berlin');
+    expect(berlin?.seeded).toBe(true);
+    expect(berlin?.area).toBe('u33db');
     // The public feed carries no requester identity, and the adapter does not want one.
     expect(JSON.stringify(fixtures.feed)).not.toContain('buyer_agent_id');
 

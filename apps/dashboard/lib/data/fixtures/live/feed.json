@@ -33,7 +33,9 @@
       "links": {
         "post": "https://sepolia.basescan.org/tx/0x11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900"
       },
-      "dashboard_url": "https://legwork.example/task/7"
+      "dashboard_url": "https://legwork.example/task/7",
+      "locality": "Leiria",
+      "country": "PT"
     },
     {
       "task_id": "8",
@@ -53,7 +55,9 @@
       "links": {
         "post": "https://sepolia.basescan.org/tx/0x55ee66ff7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd"
       },
-      "dashboard_url": "https://legwork.example/task/8"
+      "dashboard_url": "https://legwork.example/task/8",
+      "locality": "Leiria",
+      "country": "PT"
     },
     {
       "task_id": "6",
@@ -75,7 +79,9 @@
       "links": {
         "post": "https://sepolia.basescan.org/tx/0x7788990011aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff"
       },
-      "dashboard_url": "https://legwork.example/task/6"
+      "dashboard_url": "https://legwork.example/task/6",
+      "locality": "Leiria",
+      "country": "PT"
     },
     {
       "task_id": "5",
@@ -93,7 +99,23 @@
       "links": {
         "post": "https://sepolia.basescan.org/tx/0xaa11bb22cc33dd44ee55ff66aa11bb22cc33dd44ee55ff66aa11bb22cc33dd44"
       },
-      "dashboard_url": "https://legwork.example/task/5"
+      "dashboard_url": "https://legwork.example/task/5",
+      "locality": "Leiria",
+      "country": "PT"
+    },
+    {
+      "task_id": "9",
+      "state": "open",
+      "task_type": "photo-of",
+      "price_usdc": 3,
+      "fee_usdc": 0.45,
+      "area": "u33db",
+      "locality": "Berlin",
+      "country": "DE",
+      "seeded": true,
+      "posted_at": "2026-09-05T10:00:00.000Z",
+      "dashboard_url": "https://legwork.example/task/9",
+      "spec_hash": "0xabababababababababababababababababababababababababababababababab"
     }
   ]
 }

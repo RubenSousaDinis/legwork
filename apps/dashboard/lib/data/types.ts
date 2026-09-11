@@ -43,6 +43,8 @@ export interface TaskRowData {
   agentPaysUsdc: number;
   state: TaskRowState;
   meta: string;
+  /** Already joined `Berlin · DE` when the wire carried both; the city alone when only it. */
+  locality?: string;
   seeded: boolean;
   refusal?: { class: AbuseClass | null; reason?: string; ruleId?: string };
   tx?: string;

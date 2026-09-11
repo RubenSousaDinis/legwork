@@ -109,6 +109,8 @@ export interface WireFeedRow {
   price_usdc?: number;
   fee_usdc: number;
   area?: string;
+  locality?: string;
+  country?: string;
   seeded?: boolean;
   posted_at: string;
   released_at?: string;
@@ -253,8 +255,11 @@ const TYPE_LABEL: Record<TaskType, string> = {
 };
 
 const PASSED_REASON = 'schema ok · placeId resolved';
-/** Leiria as a geohash-5. The one area this deployment works in. */
-const LEIRIA_AREA = 'ez1dp';
+/**
+ * The cell the preflight reads when no featured row names one. Leiria — the operator's own
+ * cell, not a claim about where the product works.
+ */
+const FALLBACK_AREA = 'ez1dp';
 const MAX_FEED_ROWS = 20;
 const MAX_SCREENING_LINES = 12;
 const PAGE = 500;
@@ -327,10 +332,17 @@ function toFeatured(row: WireFeedRow): FeaturedTask {
   return featured;
 }
 
-function toFeedRow(row: WireFeedRow): TaskRowData {
+export function toFeedRow(row: WireFeedRow): TaskRowData {
   const amount = rowAmount(row);
   const fee = row.fee_usdc ?? 0;
   const status = rowStatus(row);
+  const locality =
+    row.locality && row.country
+      ? `${row.locality} · ${row.country}`
+      : row.locality
+        ? row.locality
+        : undefined;
+  const place = locality ?? row.area;
   const out: TaskRowData = {
     taskId: row.task_id,
     type: row.task_type,
@@ -338,8 +350,9 @@ function toFeedRow(row: WireFeedRow): TaskRowData {
     priceUsdc: amount,
     agentPaysUsdc: agentPaysFor(amount, fee),
     state: status as TaskRowData['state'],
-    meta: row.area ? `posted ${hhmm(row.posted_at)} · ${row.area}` : `posted ${hhmm(row.posted_at)}`,
+    meta: place ? `posted ${hhmm(row.posted_at)} · ${place}` : `posted ${hhmm(row.posted_at)}`,
     seeded: row.seeded === true,
+    ...(locality ? { locality } : {}),
   };
   const tx = row.tx?.release ?? row.tx?.submit;
   if (tx) out.tx = tx;
@@ -479,7 +492,7 @@ export async function getLiveDashboardData(
   const featuredRow = pinned ?? newest;
   const featured = featuredRow ? toFeatured(featuredRow) : null;
 
-  const preflightArea = featuredRow?.area ?? LEIRIA_AREA;
+  const preflightArea = featuredRow?.area ?? FALLBACK_AREA;
   const preflightResponse = await fetchJson<WirePreflight>(
     `/public/preflight?task_type=verify-open&area=${encodeURIComponent(preflightArea)}`,
   );
