@@ -302,7 +302,7 @@ describe('auth flow', () => {
 
     await verifyAndSignIn();
     expect(await screen.findByText('You will be registered in ez1dp')).toBeTruthy();
-    expect(screen.getByText('default — this phone gave no location fix')).toBeTruthy();
+    expect(screen.getByText(/default cell — Leiria, Portugal \(ez1dp\)/)).toBeTruthy();
     expect(screen.getByText('Use my location')).toBeTruthy();
 
     const { stubGeolocation, geolocationAt } = await import('./proof/harness');
@@ -311,6 +311,16 @@ describe('auth flow', () => {
 
     expect(await screen.findByText("from this phone's location")).toBeTruthy();
     expect(screen.queryByText('Use my location')).toBeNull();
+  });
+
+  it('registrationDefaultNamesLeiria', async () => {
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: undefined });
+
+    await verifyAndSignIn();
+    const line = await screen.findByText(/Leiria, Portugal/);
+    expect(line.textContent).toContain('ez1dp');
+    expect(line.textContent).toContain('Leiria, Portugal');
+    expect(screen.getByText('Use my location')).toBeTruthy();
   });
 
   it('payoutKeyNeverLeavesTheDevice', async () => {

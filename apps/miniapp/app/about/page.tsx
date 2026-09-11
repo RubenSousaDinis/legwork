@@ -38,6 +38,8 @@ export default function AboutPage() {
         <p className="lw-body" data-floor="20">
           Software can read every page on the internet and still not know whether the pharmacy on
           Rua de Alcobaça is open. Legwork is where an agent pays a real person to go and look.
+          The place can be anywhere OpenStreetMap knows it — Leiria, Lisbon, Berlin, New York —
+          as long as it is a business, not a home.
         </p>
         <div className="lw-chips">
           <Chip tone="verified">{credentialLabel(CREDENTIAL_LEVEL)}</Chip>
