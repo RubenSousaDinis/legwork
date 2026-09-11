@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
 const { http, HttpResponse } = await import('msw');
 const { server } = await import('../../mocks/server');
 const { TASK_PLACE_COORDS, TASKS_TWO_ROWS } = await import('../../mocks/handlers');
-const { GPS_UNAVAILABLE_CHIP, TaskList } = await import('../../app/tasks/TaskList');
+const { GPS_UNAVAILABLE_CHIP, TaskList, emptySearchCopy } = await import('../../app/tasks/TaskList');
 const { MAP_NO_COORDINATES, ODBL_LINE, TaskMap, TILES_FAILED } = await import('../../components/TaskMap');
 
 const PADARIA = 'Padaria Central · Rua de Alcobaça 12, Leiria';
@@ -117,5 +117,75 @@ describe('the board map', () => {
     expect(attr.getAttribute('data-map')).toBe('odbl');
     expect(ODBL_LINE).toContain('OpenStreetMap');
     expect(ODBL_LINE).toContain('ODbL');
+  });
+
+  it('searchRecentersTheMap', async () => {
+    const lisbon = { lat: 38.722, lon: -9.139 };
+    stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
+    server.use(
+      http.get('*/api/tasks/list', () =>
+        HttpResponse.json({
+          tasks: [
+            { ...TASKS_TWO_ROWS.tasks[0], coordinate_rounded: round100m(PLACE.lat, PLACE.lon) },
+            {
+              ...TASKS_TWO_ROWS.tasks[1],
+              task_id: '1099',
+              title: 'Pastelaria Versailles · Avenida da República 15, Lisboa',
+              brief: {
+                place: {
+                  name: 'Pastelaria Versailles',
+                  street_address: 'Avenida da República 15',
+                  locality: 'Lisboa',
+                },
+              },
+              coordinate_rounded: lisbon,
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<TaskList />);
+    expect(await screen.findByText(PADARIA)).toBeTruthy();
+    await waitFor(() => expect(document.querySelectorAll('[data-pin="task"]').length).toBe(2));
+    const before = [...document.querySelectorAll('[data-tile]')]
+      .map((node) => node.getAttribute('data-tile'))
+      .sort()
+      .join(',');
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Lisboa' } });
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-pin="task"]').length).toBe(1);
+      expect(document.querySelector('[data-pin="task"][data-task="1099"]')).not.toBeNull();
+    });
+    const after = [...document.querySelectorAll('[data-tile]')]
+      .map((node) => node.getAttribute('data-tile'))
+      .sort()
+      .join(',');
+    expect(after.length).toBeGreaterThan(0);
+    expect(after).not.toBe(before);
+  });
+
+  it('searchPansToAGeocodedAddress', async () => {
+    stubGeolocation(geolocationAt(PLACE.lat, PLACE.lon, 12));
+    server.use(
+      http.get('https://nominatim.openstreetmap.org/search', () =>
+        HttpResponse.json([{ lat: '41.1496', lon: '-8.6109' }]),
+      ),
+    );
+
+    render(<TaskList />);
+    expect(await screen.findByText(PADARIA)).toBeTruthy();
+    await waitFor(() => expect(document.querySelector('[data-tile]')).not.toBeNull());
+    const before = document.querySelector('[data-tile]')?.getAttribute('data-tile');
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Porto São Bento' } });
+    expect(await screen.findByText(emptySearchCopy())).toBeTruthy();
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-pin="search"]')).not.toBeNull();
+    });
+    expect(document.querySelector('[data-tile]')?.getAttribute('data-tile')).not.toBe(before);
   });
 });
