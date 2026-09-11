@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
-import { geocodeAddress } from '../../lib/geocode';
+import { focusFromPoints, geocodeAddress } from '../../lib/geocode';
 
 const LISBON_BOX = ['38.6913994', '38.7967584', '-9.2298356', '-9.0863328'];
 
@@ -59,5 +59,12 @@ describe('geocodeAddress', () => {
   it('returns null for a short query or an empty answer', async () => {
     expect(await geocodeAddress('ab')).toBeNull();
     expect(await geocodeAddress('Lisboa')).toBeNull();
+  });
+
+  it('focusFromPointsPadsASinglePin', () => {
+    const hit = focusFromPoints([{ lat: 38.722, lon: -9.139 }]);
+    expect(hit).not.toBeNull();
+    expect(hit!.north - hit!.south).toBeGreaterThan(0.039);
+    expect(hit!.east - hit!.west).toBeGreaterThan(0.039);
   });
 });

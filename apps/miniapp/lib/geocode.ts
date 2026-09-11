@@ -7,7 +7,10 @@ import type { LatLon } from './tiles';
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
 export const GEOCODE_MIN_CHARS = 3;
-export const GEOCODE_DEBOUNCE_MS = 400;
+/** Short: the list already filters on every keystroke; this only waits for Nominatim. */
+export const GEOCODE_DEBOUNCE_MS = 150;
+
+const geocodeCache = new Map<string, GeocodeHit | null>();
 
 const PLACE_TYPES = new Set([
   'administrative',
@@ -27,25 +30,75 @@ export type GeocodeHit = LatLon & {
   east: number;
 };
 
+/**
+ * Bounds from pins already on the board. Same frame as the keystroke — no network.
+ * Used when the query matches rows; Nominatim only runs when nothing matched.
+ */
+export function focusFromPoints(points: readonly LatLon[]): GeocodeHit | null {
+  if (points.length === 0) return null;
+  let south = points[0]!.lat;
+  let north = points[0]!.lat;
+  let west = points[0]!.lon;
+  let east = points[0]!.lon;
+  for (const point of points) {
+    if (point.lat < south) south = point.lat;
+    if (point.lat > north) north = point.lat;
+    if (point.lon < west) west = point.lon;
+    if (point.lon > east) east = point.lon;
+  }
+  const pad = 0.02;
+  if (north - south < pad * 2) {
+    const mid = (south + north) / 2;
+    south = mid - pad;
+    north = mid + pad;
+  }
+  if (east - west < pad * 2) {
+    const mid = (west + east) / 2;
+    west = mid - pad;
+    east = mid + pad;
+  }
+  return {
+    lat: (south + north) / 2,
+    lon: (west + east) / 2,
+    south,
+    north,
+    west,
+    east,
+  };
+}
+
 export async function geocodeAddress(query: string): Promise<GeocodeHit | null> {
-  const needle = query.trim();
+  const needle = query.trim().toLowerCase();
   if (needle.length < GEOCODE_MIN_CHARS) return null;
+  if (geocodeCache.has(needle)) return geocodeCache.get(needle) ?? null;
 
   const url = new URL(NOMINATIM);
-  url.searchParams.set('q', needle);
+  url.searchParams.set('q', query.trim());
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('limit', '5');
 
   try {
     const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      geocodeCache.set(needle, null);
+      return null;
+    }
     const body: unknown = await response.json();
-    if (!Array.isArray(body) || body.length === 0) return null;
+    if (!Array.isArray(body) || body.length === 0) {
+      geocodeCache.set(needle, null);
+      return null;
+    }
     const hit = pickHit(body);
+    geocodeCache.set(needle, hit);
     return hit;
   } catch {
     return null;
   }
+}
+
+/** Tests clear between cases so a stubbed miss does not poison the next. */
+export function clearGeocodeCacheForTests(): void {
+  geocodeCache.clear();
 }
 
 function pickHit(hits: unknown[]): GeocodeHit | null {

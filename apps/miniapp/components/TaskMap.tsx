@@ -99,7 +99,7 @@ export function TaskMap({
     }
     if (fitWorker && worker !== null) next.push(worker);
     return gridFor(next, fitWorker ? undefined : { minSpanDeg: 0.04 });
-  }, [pinKey, focusKey, workerKey, fitWorker, pins, focus, worker]);
+  }, [pinKey, focusKey, workerKey, fitWorker, focus, worker, pins]);
 
   useEffect(() => {
     setUserView(null);
@@ -118,6 +118,58 @@ export function TaskMap({
   useEffect(() => {
     setTilesFailed(false);
   }, [gridKey]);
+
+  /*
+   * Keep the last fully-loaded tile set on screen while the next grid fetches. Remounting
+   * `<img>`s on every near-me / search left a blank map for a few hundred ms of OSM latency.
+   * Depend on gridKey only — a new grid object with the same key must not restart the load.
+   */
+  const [painted, setPainted] = useState<TileGrid | null>(null);
+  const [loading, setLoading] = useState<TileGrid | null>(null);
+  const loadLeft = useRef(0);
+  const loadGen = useRef(0);
+  const paintedKeyRef = useRef('');
+  const targetGridRef = useRef(grid);
+  targetGridRef.current = grid;
+
+  useEffect(() => {
+    const target = targetGridRef.current;
+    if (target === null || gridKey === '') {
+      loadGen.current += 1;
+      paintedKeyRef.current = '';
+      setPainted(null);
+      setLoading(null);
+      loadLeft.current = 0;
+      return;
+    }
+    if (paintedKeyRef.current === '' || paintedKeyRef.current === gridKey) {
+      paintedKeyRef.current = gridKey;
+      setPainted(target);
+      setLoading(null);
+      return;
+    }
+    const gen = ++loadGen.current;
+    setLoading(target);
+    loadLeft.current = target.cols * target.rows;
+    const failSafe = window.setTimeout(() => {
+      if (gen !== loadGen.current) return;
+      paintedKeyRef.current = gridKey;
+      setPainted(target);
+      setLoading(null);
+      loadLeft.current = 0;
+    }, 450);
+    return () => window.clearTimeout(failSafe);
+  }, [gridKey]);
+
+  const markTileReady = (gen: number, target: TileGrid, key: string) => {
+    if (gen !== loadGen.current) return;
+    if (loadLeft.current <= 0) return;
+    loadLeft.current -= 1;
+    if (loadLeft.current > 0) return;
+    paintedKeyRef.current = key;
+    setPainted(target);
+    setLoading(null);
+  };
 
   useEffect(() => {
     const el = mapRef.current;
@@ -243,20 +295,26 @@ export function TaskMap({
     };
   }, []);
 
-  const tiles: { x: number; y: number }[] = [];
-  if (grid !== null) {
-    for (let y = 0; y < grid.rows; y++) {
-      for (let x = 0; x < grid.cols; x++) {
-        tiles.push({ x: grid.x0 + x, y: grid.y0 + y });
+  const tilesFor = (g: TileGrid): { x: number; y: number }[] => {
+    const next: { x: number; y: number }[] = [];
+    for (let y = 0; y < g.rows; y++) {
+      for (let x = 0; x < g.cols; x++) {
+        next.push({ x: g.x0 + x, y: g.y0 + y });
       }
     }
-  }
+    return next;
+  };
+
+  const shown = painted ?? grid;
+  const showTiles = shown !== null && !tilesFailed;
 
   const viewportStyle = {
     '--pinch-scale': String(pinch.scale),
     '--pinch-x': pinch.x,
     '--pinch-y': pinch.y,
   } as CSSProperties;
+
+  const preloadGen = loadGen.current;
 
   return (
     <div
@@ -265,82 +323,117 @@ export function TaskMap({
       data-zoom={grid === null ? undefined : String(grid.z)}
       ref={mapRef}
     >
-      {grid !== null && !tilesFailed ? (
+      {showTiles ? (
         <div className="lw-map__viewport" style={viewportStyle}>
-          <div
-            className="lw-map__grid"
-            key={gridKey}
-            style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)` }}
-          >
-            {tiles.map((tile) => (
-              <img
-                alt=""
-                className="lw-map__tile"
-                data-tile={`${grid.z}/${tile.x}/${tile.y}`}
-                key={`${grid.z}/${tile.x}/${tile.y}`}
-                onError={() => setTilesFailed(true)}
-                src={osmTileUrl(grid.z, tile.x, tile.y)}
-              />
-            ))}
+          <div className="lw-map__stack">
+            <div
+              className="lw-map__grid"
+              data-tiles="painted"
+              style={{ gridTemplateColumns: `repeat(${shown.cols}, 1fr)` }}
+            >
+              {tilesFor(shown).map((tile) => (
+                <img
+                  alt=""
+                  className="lw-map__tile"
+                  data-tile={`${shown.z}/${tile.x}/${tile.y}`}
+                  key={`p-${shown.z}/${tile.x}/${tile.y}`}
+                  onError={() => setTilesFailed(true)}
+                  src={osmTileUrl(shown.z, tile.x, tile.y)}
+                />
+              ))}
+            </div>
+            {loading !== null ? (
+              <div
+                aria-hidden="true"
+                className="lw-map__grid lw-map__grid--preload"
+                data-tiles="loading"
+                style={{ gridTemplateColumns: `repeat(${loading.cols}, 1fr)` }}
+              >
+                {tilesFor(loading).map((tile) => (
+                  <img
+                    alt=""
+                    className="lw-map__tile"
+                    key={`l-${loading.z}/${tile.x}/${tile.y}`}
+                    onError={() =>
+                      markTileReady(
+                        preloadGen,
+                        loading,
+                        `${loading.z}/${loading.x0}/${loading.y0}/${loading.cols}x${loading.rows}`,
+                      )
+                    }
+                    onLoad={() =>
+                      markTileReady(
+                        preloadGen,
+                        loading,
+                        `${loading.z}/${loading.x0}/${loading.y0}/${loading.cols}x${loading.rows}`,
+                      )
+                    }
+                    src={osmTileUrl(loading.z, tile.x, tile.y)}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="lw-map__pins">
-            {pins.map((row) => {
-              const percent = pinPercent(row.coordinate_rounded, grid);
-              const selected = selectedId === row.task_id;
-              return (
-                <button
-                  aria-label={row.title}
-                  className={
-                    selected ? 'lw-map-pin lw-map-pin--selected' : 'lw-map-pin'
-                  }
-                  data-hit="44"
-                  data-pin="task"
-                  data-task={row.task_id}
-                  key={row.task_id}
-                  onClick={() => onSelect(row.task_id)}
+          {grid !== null ? (
+            <div className="lw-map__pins">
+              {pins.map((row) => {
+                const percent = pinPercent(row.coordinate_rounded, grid);
+                const selected = selectedId === row.task_id;
+                return (
+                  <button
+                    aria-label={row.title}
+                    className={
+                      selected ? 'lw-map-pin lw-map-pin--selected' : 'lw-map-pin'
+                    }
+                    data-hit="44"
+                    data-pin="task"
+                    data-task={row.task_id}
+                    key={row.task_id}
+                    onClick={() => onSelect(row.task_id)}
+                    style={
+                      {
+                        '--pin-x': `${percent.left}%`,
+                        '--pin-y': `${percent.top}%`,
+                      } as CSSProperties
+                    }
+                    type="button"
+                  >
+                    <span className="lw-map-pin__mark" />
+                  </button>
+                );
+              })}
+              {worker !== null ? (
+                <span
+                  aria-label="You"
+                  className="lw-map-pin lw-map-pin--worker"
+                  data-pin="worker"
                   style={
                     {
-                      '--pin-x': `${percent.left}%`,
-                      '--pin-y': `${percent.top}%`,
+                      '--pin-x': `${pinPercent(worker, grid).left}%`,
+                      '--pin-y': `${pinPercent(worker, grid).top}%`,
                     } as CSSProperties
                   }
-                  type="button"
                 >
                   <span className="lw-map-pin__mark" />
-                </button>
-              );
-            })}
-            {worker !== null ? (
-              <span
-                aria-label="You"
-                className="lw-map-pin lw-map-pin--worker"
-                data-pin="worker"
-                style={
-                  {
-                    '--pin-x': `${pinPercent(worker, grid).left}%`,
-                    '--pin-y': `${pinPercent(worker, grid).top}%`,
-                  } as CSSProperties
-                }
-              >
-                <span className="lw-map-pin__mark" />
-              </span>
-            ) : null}
-            {focus !== null && pins.length === 0 ? (
-              <span
-                aria-label="Search"
-                className="lw-map-pin lw-map-pin--focus"
-                data-pin="search"
-                style={
-                  {
-                    '--pin-x': `${pinPercent(focus, grid).left}%`,
-                    '--pin-y': `${pinPercent(focus, grid).top}%`,
-                  } as CSSProperties
-                }
-              >
-                <span className="lw-map-pin__mark" />
-              </span>
-            ) : null}
-          </div>
+                </span>
+              ) : null}
+              {focus !== null && pins.length === 0 ? (
+                <span
+                  aria-label="Search"
+                  className="lw-map-pin lw-map-pin--focus"
+                  data-pin="search"
+                  style={
+                    {
+                      '--pin-x': `${pinPercent(focus, grid).left}%`,
+                      '--pin-y': `${pinPercent(focus, grid).top}%`,
+                    } as CSSProperties
+                  }
+                >
+                  <span className="lw-map-pin__mark" />
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
