@@ -27,8 +27,9 @@ T-16 and T-17 never share a file, so the worker's board is a route of its own; `
   filter) that matches nothing is a different sentence: `No tasks match this search.`
 - Search is client-side over `title`, `brief.place.{name, street_address, locality}` and
   `task_type`, case- and accent-insensitive. It does not touch the poll. Matching pins
-  reframe the map; a geocoded place uses Nominatim's bounding box so a city is a city, not
-  one street at the centroid.
+  reframe the map in the same frame; Nominatim only runs when nothing matched (cached).
+  Tile swaps keep the previous OSM images until the next set has loaded, so near-me and
+  search do not blank the map.
 - The map pinches with two fingers and pans with one (`touch-action: none` on the map so
   the page's `manipulation` rule does not swallow the gesture). Wheel zoom works on desktop.
 - `near me` is a button (`role="checkbox"`) that keeps rows with `distance_m <= 10_000`.

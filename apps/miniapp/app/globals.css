@@ -1637,9 +1637,23 @@ body.lw-modal-open {
   will-change: transform;
 }
 
+.lw-map__stack {
+  position: relative;
+}
+
 .lw-map__grid {
   display: grid;
   width: 100%;
+}
+
+/* Prefetch the next tile set off-screen; swap in when every img has loaded. */
+.lw-map__grid--preload {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .lw-map__tile {

@@ -2,14 +2,14 @@
 
 import { CLAIM_COOLDOWN_S } from '@legwork/shared';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EarningsBar } from '../../components/EarningsBar';
 import { TaskCard, formatDistance, type TaskRow } from '../../components/TaskCard';
 import { TaskMap } from '../../components/TaskMap';
 import { Chip } from '../../components/ui/Chip';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
-import { GEOCODE_DEBOUNCE_MS, geocodeAddress, type GeocodeHit } from '../../lib/geocode';
+import { GEOCODE_DEBOUNCE_MS, focusFromPoints, geocodeAddress, type GeocodeHit } from '../../lib/geocode';
 import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
 import { Waiting } from '../../components/ui/Waiting';
@@ -166,7 +166,8 @@ export function TaskList() {
   const [hasFix, setHasFix] = useState(false);
   const [query, setQuery] = useState('');
   const [nearMe, setNearMe] = useState(false);
-  const [searchFocus, setSearchFocus] = useState<GeocodeHit | null>(null);
+  /** Nominatim only — when the query already matches pins, `pinFocus` wins in the same frame. */
+  const [geoFocus, setGeoFocus] = useState<GeocodeHit | null>(null);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
@@ -226,20 +227,31 @@ export function TaskList() {
   useEffect(() => {
     const needle = query.trim();
     if (needle.length === 0) {
-      setSearchFocus(null);
+      setGeoFocus(null);
+      return;
+    }
+    // Matching pins already frame the map; do not wait on Nominatim for those.
+    const matched = rows.some(
+      (row) =>
+        rowMatchesQuery(row, query) &&
+        row.coordinate_rounded !== undefined &&
+        (!nearMe || (typeof row.distance_m === 'number' && row.distance_m <= NEAR_ME_M)),
+    );
+    if (matched) {
+      setGeoFocus(null);
       return;
     }
     let live = true;
     const timer = window.setTimeout(() => {
       void geocodeAddress(needle).then((point) => {
-        if (live) setSearchFocus(point);
+        if (live) setGeoFocus(point);
       });
     }, GEOCODE_DEBOUNCE_MS);
     return () => {
       live = false;
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, rows, nearMe]);
 
   useEffect(() => {
     if (!located) return;
@@ -338,6 +350,17 @@ export function TaskList() {
     if (!nearMe) return true;
     return typeof row.distance_m === 'number' && row.distance_m <= NEAR_ME_M;
   });
+
+  const pinFocus = useMemo(() => {
+    if (query.trim().length === 0) return null;
+    return focusFromPoints(
+      filtered
+        .map((row) => row.coordinate_rounded)
+        .filter((point): point is { lat: number; lon: number } => point !== undefined),
+    );
+  }, [filtered, query]);
+
+  const searchFocus = pinFocus ?? geoFocus;
 
   const pinned =
     claim === null
