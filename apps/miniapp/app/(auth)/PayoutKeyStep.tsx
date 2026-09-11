@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import type { AreaSource } from '../../lib/area';
+import { DEFAULT_AREA, DEFAULT_AREA_LABEL } from '../../lib/area';
 import { exportPrivateKey, importPrivateKey } from '../../lib/workerKey';
 
 const BASESCAN = 'https://sepolia.basescan.org/address/';
@@ -181,7 +182,7 @@ export function PayoutKeyStep({
                 <p className="lw-meta" data-area-source={areaSource}>
                   {areaSource === 'gps'
                     ? "from this phone's location"
-                    : 'default — this phone gave no location fix'}
+                    : `default cell — ${DEFAULT_AREA_LABEL} (${DEFAULT_AREA}). This phone gave no location fix; use "Use my location" to register where you are.`}
                 </p>
                 {areaSource === 'default' ? (
                   <Button variant="ghost" full onClick={onRetryLocation}>

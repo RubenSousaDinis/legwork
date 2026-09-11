@@ -9,7 +9,9 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
 
 const { http, HttpResponse } = await import('msw');
 const { server } = await import('../../mocks/server');
-const { metresNorthOf, TASK_PLACE_COORDS, TASKS_TWO_ROWS } = await import('../../mocks/handlers');
+const { metresNorthOf, TASK_PLACE_COORDS, TASKS_BOARD, TASKS_TWO_ROWS } = await import(
+  '../../mocks/handlers'
+);
 const { setScenario } = await import('../../mocks/scenarios');
 const { rememberRegisteredArea } = await import('../../lib/area');
 const { TaskList, emptyBoardCopy, emptySearchCopy } = await import('../../app/tasks/TaskList');
@@ -118,7 +120,9 @@ describe('the global board', () => {
     for (const link of links) {
       const card = link.closest('[data-task]') as HTMLElement;
       const id = card.getAttribute('data-task');
-      const row = TASKS_TWO_ROWS.tasks.find((task) => task.task_id === id);
+      // The whole board, Leiria and the three seeded cities alike: every card with a place
+      // links to that place's address, and none of them links to a coordinate.
+      const row = TASKS_BOARD.tasks.find((task) => task.task_id === id);
       expect(row?.brief.place).toBeDefined();
       expect(link.getAttribute('href')).toBe(directionsHref(row!.brief.place));
       expect(link.getAttribute('href')).toContain('maps/dir/?api=1&destination=');

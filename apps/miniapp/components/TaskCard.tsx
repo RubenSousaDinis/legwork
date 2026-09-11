@@ -28,7 +28,8 @@ import { Waiting } from './ui/Waiting';
  * type-derived copy on its own.
  */
 export type TaskBrief = {
-  place?: { name: string; street_address: string; locality: string };
+  /** `country` is the agent's own ISO-3166-1 alpha-2 code; the proof screen prices in it. */
+  place?: { name: string; street_address: string; locality: string; country?: string };
   question?: string;
   subject?: string;
   subject_detail?: string;
@@ -78,6 +79,15 @@ const BASESCAN_TX = 'https://sepolia.basescan.org/tx/';
 export const RELAYED_CHIP = 'relayed claim · gas paid by Legwork';
 export const PAID_FOR_THE_PROOF = 'you are paid for the proof, not the answer';
 export const CLAIM_EXPIRED = 'claim expired — it returned to the pool';
+
+/**
+ * A seeded row shows what an agent asks for. No escrow stands behind it, so the API answers a
+ * claim on one with 409 `SeededDemoRow` before it reaches the chain — and a CLAIM button that
+ * can only fail is a lie the card tells before the worker ever taps it. The button is gone and
+ * this line stands in its place.
+ */
+export const SEEDED_NOT_CLAIMABLE =
+  'Seeded demo row — shows what an agent asks for. Not claimable; no escrow behind it.';
 
 /**
  * A claim is a relayed transaction, so there are seconds between the tap and the answer.
@@ -283,6 +293,12 @@ export function TaskCard({
                 stillHeld={row.state === 'claimed'}
                 taskId={row.task_id}
               />
+            </div>
+          ) : row.seeded ? (
+            <div data-floor="20" data-row="claim">
+              <p className="lw-body" data-claim="seeded" data-floor="20">
+                {SEEDED_NOT_CLAIMABLE}
+              </p>
             </div>
           ) : (
             <ClaimButton claiming={claiming} onClaim={onClaim} row={row} />

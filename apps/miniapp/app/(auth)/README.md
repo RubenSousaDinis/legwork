@@ -58,7 +58,8 @@ App wallet**; outside it, the payout-key screen opens with the import field alre
 ## Area
 
 `resolveArea()` tries `getCurrentPosition` once and falls back to `DEFAULT_AREA` (`ez1dp`,
-Leiria). Public surfaces only ever see the geohash-5 cell; the exact fix stays on the phone.
+Leiria, Portugal). That fallback affects **registration only** — the board is global and never
+sends `area`. Public surfaces only ever see the geohash-5 cell; the exact fix stays on the phone.
 
 ## Registration
 
