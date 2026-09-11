@@ -18,7 +18,7 @@ app/                      one directory per route; every file exports runtime + 
 src/
   config.ts               process.env, parsed once, with the three derived addresses
   log.ts                  pino, JSON, with the redaction list
-  errors.ts               ApiError and the eight codes
+  errors.ts               ApiError and the nine codes
   http/route.ts           the wrapper: request id, one log line, the error envelope, CORS
   http/rateLimit.ts       an in-memory sliding window
   http/adminKey.ts        X-Admin-Key, compared in constant time
@@ -55,6 +55,8 @@ Every name lives in the repo's `.env.example` and is parsed once by `getConfig()
 | `WORLD_CREDENTIAL_LEVEL` | `selfie` \| `orb`. |
 | `LONGPOLL_MAX_S` | Defaults to 50 and is capped at 50 — Vercel ends the invocation well before a longer poll returns. |
 | `DEMO_DISPUTE_WINDOW_S` | Defaults to 120. |
+| `OVERPASS_URL` | Public Overpass interpreter URL. Default `https://overpass-api.de/api/interpreter`. Not a secret. |
+| `PLACE_LOOKUP` | `overpass` (default, live fallback) or `packaged` (offline, Leiria+Lisbon only). |
 | `ADMIN_API_KEY`, `DEPLOYER_PRIVATE_KEY`, `SUBGRAPH_QUERY_URL` | Optional. With `ADMIN_API_KEY` unset the admin routes answer 404, not 401. |
 
 A parse failure lists the **names** of the variables it rejected and never their values.
@@ -98,6 +100,25 @@ ship TypeScript sources rather than a build output, so the bundler compiles them
 ```bash
 pnpm --filter @legwork/api test -t sessionIssuedForRegisteredWorker
 ```
+
+## Place resolution
+
+A `place_id` is resolved packaged-first, then optionally live. The packaged Leiria+Lisbon
+extract answers synchronously and never opens a socket. When `PLACE_LOOKUP=overpass` (the
+default), an id outside that extract is looked up once via Overpass at `OVERPASS_URL`
+(default `https://overpass-api.de/api/interpreter`). Set `PLACE_LOOKUP=packaged` to keep the
+API offline and Leiria+Lisbon-only.
+
+Outcomes on `POST /check` and `POST /tasks`:
+
+| Outcome | Status | Body |
+|---|---|---|
+| Found in the extract or via Overpass, and the gate accepts | 200 / 201 | accepted / posted |
+| Overpass (or the extract) finds nothing usable | 400 | `invalid_request`, `unresolvable place_id …` |
+| Overpass times out, rate-limits or errors | 503 | `place_lookup_unavailable`, `retry_after_s: 30` |
+
+A 503 never marks and never posts: the authorization was verified, not settled, and the
+nonce is released so the same signed header can be sent again.
 
 ## The stub convention
 
