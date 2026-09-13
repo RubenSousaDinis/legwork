@@ -1,6 +1,8 @@
 # Legwork — real-world verification for AI agents
 
-<!-- T-49: 40-second GIF of the hire loop -->
+![The paid beat of the hire loop: an AI agent locked 3.45 USDC in escrow, a verified human claimed, walked and submitted proof, and the contract released 3.00 to the worker and 0.45 fee — the live dashboard's escrow meter beside the worker's phone, Base Sepolia testnet](docs/media/present-1280x720.png)
+
+*video: https://ethglobal.com/showcase/legwork-qnywe — the demo, as submitted. The 40-second hire-loop GIF (LOCKED 3.45 → claim → proof → RELEASED 3.00 + 0.45) is not cut yet; the still above, the 1280×720 frame read for the Day-9 PNG check, stands in its place.*
 
 **Agents hire verified humans for the legwork software can't do. Escrow releases on proof.**
 
@@ -8,7 +10,7 @@ An agent posts a real-world task — confirm a shop is open, photograph a poster
 sign — and funds it in USDC escrow. A World ID-verified person nearby claims it, does it,
 and submits proof. The escrow releases on proof. Built on Base Sepolia for ETHOnline 2026.
 
-*State of this repo on 2026-09-10: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are deployed and answering, and a World ID-verified person has been paid 3.00 USDC for a real errand on the street. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
+*The state of this repo on 2026-09-13: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are deployed and answering, and a World ID-verified person has been paid 3.00 USDC for a real errand on the street. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
 
 testnet USDC; the worker was paid for real, separately.
 
@@ -31,7 +33,7 @@ Then ask your agent:
 
 > Ask Legwork which of these two storefront photos is more legible
 
-**Honest limits.** `verify-open` and `photo-of` are fulfilled in Leiria only (the pool is one real worker plus a hand-recruited standby crew); workers are online `<hours>` UTC; `compare-two` and `call-confirm` (Portuguese) can be done from anywhere; answers come back in minutes, not milliseconds — poll `task_status` with `wait_seconds=50` and never re-post the same task. A malformed request returns a plain 4xx and never produces a `task-refused` mark; only a well-formed request that hits one of the six abuse classes does. Settlement is Base Sepolia testnet; mainnet payouts are roadmap.
+**Honest limits.** `verify-open`, `photo-of` and `call-confirm` need a real business with an OpenStreetMap id — Leiria and Lisbon resolve from a packaged index, anywhere else resolves live with one Overpass request, and a 503 `place_lookup_unavailable` means retry once after `retry_after_s` (the worker pool is one real worker plus a hand-recruited standby crew in Leiria); workers are online `<hours>` UTC; `compare-two` and `call-confirm` can be done from anywhere; answers come back in minutes, not milliseconds — poll `task_status` with `wait_seconds=50` and never re-post the same task. A malformed request returns a plain 4xx and never produces a `task-refused` mark; only a well-formed request that hits one of the six abuse classes does. Settlement is Base Sepolia testnet; mainnet payouts are roadmap.
 
 The six tools, their input and output shapes and the four task types are in [`SKILL.md`](SKILL.md)
 and [`docs/mcp.md`](docs/mcp.md).
@@ -160,7 +162,7 @@ Tick only tracks whose bullets are literally met.
 
 ## External posters
 
-Zero self-funded external posters — logged in [POSTERS.md](POSTERS.md). The subgraph agrees:
+Zero self-funded external posters — logged in [POSTERS.md](POSTERS.md). The subgraph agrees, re-read on 2026-09-13:
 `PosterStats { distinctExternalBuyers: 0, externalTasks: 0 }`. Every task posted so far was paid
 for by the operator's own demo agent, which is on the allowlist and therefore excluded by design.
 
@@ -168,16 +170,16 @@ for by the operator's own demo agent, which is on the allowlist and therefore ex
 
 This project was built with AI assistance and documents it rather than hiding it.
 
-- Every commit carries the trailer `AI-Usage: <tool + model> drafted <what>; human <reviewed|edited> <what>`, and CI fails a commit without one.
+- Every commit carries the trailer `AI-Usage: <tool + model> drafted <what>; human <reviewed|edited> <what>`, and CI fails a pull request with a commit that lacks one (the five exceptions on `main` are listed in the compiled record).
 - Every pull request has an **AI usage** section in its body.
 - The prompts are committed, not described: `examples/prompt.md` for the demo agent, and the screening classifier's system prompt under `packages/screening/src/classifier/`.
-- [`docs/AI-USAGE.md`](docs/AI-USAGE.md) compiles the whole picture — every tool and model named in the trailers, with a row per pull request and per commit. All 373 trailers on `main` are accounted for; none are rolled into an "other".
+- [`docs/AI-USAGE.md`](docs/AI-USAGE.md) compiles the whole picture — every tool and model named in the trailers, with a row per pull request and per commit. All 474 `AI-Usage:` lines on `main` (at `559b83d`, 2026-09-13) are accounted for; none are rolled into an "other", and the five commits that carry none are listed there too.
 
 The Reputation contract is re-implemented from the same threat model, written from a blank file after kickoff.
 
 ## Data sources and licences
 
-Place data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. The cached extract covers Leiria and Lisbon business POIs only.
+Place data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. The packaged extract covers Leiria and Lisbon business POIs; any other `place_id` is looked up live against Overpass, one request per id.
 
 The repo is MIT licensed.
 
@@ -215,7 +217,7 @@ transaction is linked, which is also the Start Fresh evidence — the contracts 
 | Dashboard | https://legwork-dashboard.vercel.app |
 | Subgraph (Studio public query URL) | https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4 |
 
-The subgraph link is the public Studio query URL. No URL in this repository embeds `GRAPH_API_KEY`.
+The subgraph link is the public Studio query URL. No URL in this repository embeds the Studio API key.
 
 ## Docs
 

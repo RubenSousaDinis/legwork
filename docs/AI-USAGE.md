@@ -1,8 +1,10 @@
 # AI usage — Legwork — real-world verification for AI agents
 
-Every commit in this repository carries an `AI-Usage:` trailer naming the tool, the model and who
-reviewed what. This file is the compiled record: it is generated from the trailers and the merged
-pull-request bodies, not written from memory.
+Every commit in this repository is meant to carry an `AI-Usage:` trailer naming the tool, the model and
+who reviewed what. This file is the compiled record: it is generated from the commit messages and the
+merged pull-request bodies, not written from memory. Generated from `main` at `559b83d` on 2026-09-13; the
+command behind each table is quoted above it, and the five commits that carry no trailer are listed at
+the end rather than left out.
 
 ## How it was enforced
 
@@ -16,20 +18,35 @@ pull-request bodies, not written from memory.
 
 ## Tools and models
 
-Copied from the trailers rather than recalled. Across 373 commits carrying a trailer on `main`:
+Copied from the trailers rather than recalled. `main` at `559b83d` has 655 commits: 178 merge commits
+(exempt by design; 2 of them carry a trailer anyway) and 477 non-merge commits, of which 472 carry the
+`AI-Usage:` line and 5 do not. This file counts a trailer the way `scripts/ci/commit-trailers.sh` does —
+any line beginning `AI-Usage:` — which finds 474. `git log --format='%(trailers:key=AI-Usage)'` finds
+430, because 44 of the lines wrap onto a second, unindented line and git's trailer parser stops reading
+them as trailers; the CI check does not have that gap.
 
 | Tool and model, as the trailers name it | Where it was used | Commits |
 | --- | --- | --- |
-| Claude Code (Opus 5) | task agents, one per git worktree, plus cloud sessions with no key or `.env` | 215 |
-| Claude Opus 5 | the lead session — briefs, reviews and lead fixes | 55 |
-| `scripts/claim.sh` | the claim commit each task opens with; no model wrote it | 55 |
-| Cursor Grok 4.6 | task agents run from the editor | 30 |
-| Claude Code (Fable 5.1) | task agents and lead fixes | 18 |
+| `Claude Code (Opus 5)` | task agents, one per git worktree, plus cloud sessions with no key or `.env`; also spelled `Claude Code (claude-opus-5)` and `Claude Code Opus 5` | 240 |
+| `claim script` | the claim commit each task opens with; no model wrote it | 63 |
+| `the lead session (Claude)` | the lead session — briefs, reviews, sync PRs and lead fixes; these trailers name Claude and no model | 58 |
+| `Cursor Grok 4.6` | task agents run from the Cursor editor | 44 |
+| `Claude Code (Fable 5.1)` | task agents and lead fixes; also spelled `Claude Code (claude-fable-5-1)` | 30 |
+| `Claude Opus 5` | the lead session on the first two days, naming its model — the initial commit, the Day-1 scaffolding, brief amendments and CI fixes | 16 |
+| `Cursor Composer` | task agents run from Cursor — the international place resolution and seed catalog (T-61…T-63), the `/check` 503 retry and the board-map fixes; one trailer reads `Cursor Composer + Fable` | 12 |
+| `Cursor Composer (Claude Opus 5)` | the same Cursor sessions, naming the model | 4 |
+| `Claude Fable 5.1` | the lead session on Day 1, naming its model — the TypeScript interface freeze and the claim-check fix | 2 |
+| `Cursor Auto` | task agents run from Cursor with its automatic model choice (T-64, T-65) | 2 |
+| `Cursor + Claude` | the T-60…T-66 briefs and their issue numbers, drafted in Cursor | 2 |
+| a plain `git merge` | one merge commit whose trailer names no tool: `git merge of origin/main after fix/map-filters; human dispatched T-60` | 1 |
 
-The counts sum to 373, which is every trailer on `main` — nothing is rolled into an "other".
-One task ran per session, each in its own git worktree; sessions that only needed fixtures ran in
-the cloud with no access to a key or a `.env`. The lead session wrote the briefs and reviewed every
-pull request, and its own commits carry their own trailers rather than being exempt.
+The counts sum to 474, which is every trailer on `main` — nothing is rolled into an "other". The
+models the trailers name are Opus 5 (also written `claude-opus-5`), Fable 5.1 (also written
+`claude-fable-5-1`) and Grok 4.6; where a trailer says only "Claude", "Cursor Composer" or "Cursor
+Auto", this file says the same and does not guess the model behind it. One task ran per session, each
+in its own git worktree; sessions that only needed fixtures ran in the cloud with no access to a key or
+a `.env`; the Cursor sessions ran from the editor on this machine. The lead session wrote the briefs
+and reviewed every pull request, and its own commits carry their own trailers rather than being exempt.
 
 The Reputation contract is re-implemented from the same threat model, written from a blank file
 after kickoff.
@@ -48,106 +65,108 @@ The prompts are in the repository, not paraphrased in a write-up:
 
 ## Per pull request
 
-Taken from each merged pull request's AI-usage section. `—` means the body carried no such line;
-the commits inside it still do, and they are in the next table.
+Taken from each merged pull request's **AI usage** section: 161 merged pull requests, 74 with a line.
+`—` means the body carried no such line, or only the template placeholder — the commits inside it
+still do, and they are in the next table. Command: `gh pr list --state merged --limit 200 --json
+number,title,body`, reading the lines under `## AI usage`.
 
 | PR | Title | AI-Usage (from the PR body) |
 | --- | --- | --- |
-| [#55](https://github.com/RubenSousaDinis/legwork/pull/55) | T-01a: interface freeze — contracts side | — |
-| [#59](https://github.com/RubenSousaDinis/legwork/pull/59) | T-11: WorkerRegistry — ATTESTED registration, seeding, reset, O(1) views | Claude Code (Opus 5) drafted the contract, the test suite and the round-2 sentinel guards from the T-11 brief and review; human reviewed the `registerFor` check order, the hand-built EIP-712 domain separator in the tests, and the NatSpec disclosure. |
-| [#60](https://github.com/RubenSousaDinis/legwork/pull/60) | T-02: Docs skeletons — FEEDBACK-WORLD, POSTERS, spike RESULTS, threat-model rows, README stubs | — |
-| [#61](https://github.com/RubenSousaDinis/legwork/pull/61) | T-07: packages/chain — clients, TxQueue, typed contracts, FakeChain | Claude Code (Opus 5) drafted every file in `packages/chain`; human dispatched the task, granted the dependency request, and reviewed the check order, the lock boundary and the money math against T-01 §2. |
-| [#62](https://github.com/RubenSousaDinis/legwork/pull/62) | T-12 (1/2): TaskEscrow — the money path, in two PRs | Claude Code (Opus 5) drafted the contract and the twelve §8 tests from the T-12 brief; human reviewed the check orders, the money math, the pause surface and the boundary assertions |
-| [#63](https://github.com/RubenSousaDinis/legwork/pull/63) | T-12 (2/2): TaskEscrow — settlement | Claude Code (Opus 5) drafted the five settlement functions, the two new post guards and the eight §8 settlement tests; human reviewed the fee branches, the hook arguments, the effects-before-interactions order and the boundaries |
-| [#64](https://github.com/RubenSousaDinis/legwork/pull/64) | T-01b: interface freeze — TypeScript side | — |
-| [#65](https://github.com/RubenSousaDinis/legwork/pull/65) | T-10: Dashboard shell on DESIGN-SPEC — tokens, cards, present mode, data-floor | Claude Code (Opus 5) drafted the components, tokens, demo adapter and tests; human reviewed the honesty rules, the money figures and the present-mode geometry. |
-| [#66](https://github.com/RubenSousaDinis/legwork/pull/66) | T-09: Subgraph mappings + packages/subgraph-client | Claude Code (Opus 5) drafted the manifest, the four mappings, the matchstick tests, the client, its fixtures and its README; human reviewed every handler against the brief's §2, the frozen schema and the sixteen event signatures in `contracts/src/interfaces`. |
-| [#67](https://github.com/RubenSousaDinis/legwork/pull/67) | T-05: Mini-app scaffold + `/probe` page for the S2' spike | Claude Code (claude-opus-5) drafted the shell, primitives, probe page, temporary |
-| [#68](https://github.com/RubenSousaDinis/legwork/pull/68) | T-08: Task API skeleton — config, logging, DB, sessions, middleware, 501 stubs | Claude Code (Opus 5) drafted the config, logger, error envelope, route wrapper, DB client, session model, the two live routes, the 35 stubs and the tests; human reviewed the check order in `POST /session`, the redaction list, the generated migration against the frozen schema and every deviation above. |
-| [#69](https://github.com/RubenSousaDinis/legwork/pull/69) | T-06: Screening gate, pipeline and the 56-row corpus (no model) | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
+| [#55](https://github.com/RubenSousaDinis/legwork/pull/55) | T-01a: interface freeze — contracts side | Claude Opus 5 drafted the interfaces, mocks and freeze tests from the brief; human reviewed and dispatched. |
+| [#59](https://github.com/RubenSousaDinis/legwork/pull/59) | T-11: WorkerRegistry — ATTESTED registration, seeding, reset, O(1) views | AI-Usage: Claude Code (Opus 5) drafted the contract, the test suite and the round-2 sentinel guards from the T-11 brief and review; human reviewed the `registerFor` check order, the hand-built EIP-712 domain separator in the tests, and the NatSpec disclosure. |
+| [#60](https://github.com/RubenSousaDinis/legwork/pull/60) | T-02: Docs skeletons — FEEDBACK-WORLD, POSTERS, spike RESULTS, threat-model rows, README stubs | Claude Code (Opus 5) drafted all five files from the brief's §2/§7 strings and the round-2 honesty-sentence restore; human reviewed the four World headings and the POSTERS header character by character, the nineteen threat-model rows, and the restored sentence against T-00's brief. |
+| [#61](https://github.com/RubenSousaDinis/legwork/pull/61) | T-07: packages/chain — clients, TxQueue, typed contracts, FakeChain | AI-Usage: Claude Code (Opus 5) drafted every file in `packages/chain`; human dispatched the task, granted the dependency request, and reviewed the check order, the lock boundary and the money math against T-01 §2. |
+| [#62](https://github.com/RubenSousaDinis/legwork/pull/62) | T-12 (1/2): TaskEscrow — the money path, in two PRs | AI-Usage: Claude Code (Opus 5) drafted the contract and the twelve §8 tests from the T-12 brief; human reviewed the check orders, the money math, the pause surface and the boundary assertions |
+| [#63](https://github.com/RubenSousaDinis/legwork/pull/63) | T-12 (2/2): TaskEscrow — settlement | AI-Usage: Claude Code (Opus 5) drafted the five settlement functions, the two new post guards and the eight §8 settlement tests; human reviewed the fee branches, the hook arguments, the effects-before-interactions order and the boundaries |
+| [#64](https://github.com/RubenSousaDinis/legwork/pull/64) | T-01b: interface freeze — TypeScript side | Claude Fable 5.1 drafted from the T-01 brief and 10-schemas; human reviewed and dispatched. |
+| [#65](https://github.com/RubenSousaDinis/legwork/pull/65) | T-10: Dashboard shell on DESIGN-SPEC — tokens, cards, present mode, data-floor | AI-Usage: Claude Code (Opus 5) drafted the components, tokens, demo adapter and tests; human reviewed the honesty rules, the money figures and the present-mode geometry. |
+| [#66](https://github.com/RubenSousaDinis/legwork/pull/66) | T-09: Subgraph mappings + packages/subgraph-client | AI-Usage: Claude Code (Opus 5) drafted the manifest, the four mappings, the matchstick tests, the client, its fixtures and its README; human reviewed every handler against the brief's §2, the frozen schema and the sixteen event signatures in `contracts/src/interfaces`. |
+| [#67](https://github.com/RubenSousaDinis/legwork/pull/67) | T-05: Mini-app scaffold + `/probe` page for the S2' spike | AI-Usage: Claude Code (claude-opus-5) drafted the shell, primitives, probe page, temporary `/idkit/*` handlers, msw fakes and the four acceptance tests from the T-05 brief; human reviewed the token values against `DESIGN-SPEC.md`, the response shapes against `packages/shared/src/api-contract.ts`, and the IDKit/MiniKit call shapes against the installed v4 type definitions. |
+| [#68](https://github.com/RubenSousaDinis/legwork/pull/68) | T-08: Task API skeleton — config, logging, DB, sessions, middleware, 501 stubs | AI-Usage: Claude Code (Opus 5) drafted the config, logger, error envelope, route wrapper, DB client, session model, the two live routes, the 35 stubs and the tests; human reviewed the check order in `POST /session`, the redaction list, the generated migration against the frozen schema and every deviation above. |
+| [#69](https://github.com/RubenSousaDinis/legwork/pull/69) | T-06: Screening gate, pipeline and the 56-row corpus (no model) | AI-Usage: Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
 | [#70](https://github.com/RubenSousaDinis/legwork/pull/70) | interface-change: catalog + lockfile for the Day-1 DEP REQUESTs (jsdom/RTL, chain/minikit, matchstick) | — |
 | [#71](https://github.com/RubenSousaDinis/legwork/pull/71) | interface-change: declare immutable: false on the five mutable subgraph entities | — |
 | [#72](https://github.com/RubenSousaDinis/legwork/pull/72) | interface-change: drop the .js extensions from packages/shared and packages/chain relative imports | — |
 | [#73](https://github.com/RubenSousaDinis/legwork/pull/73) | interface-change: post-wave-1 sync — contract, screening exports, extensionless imports, briefs | — |
-| [#74](https://github.com/RubenSousaDinis/legwork/pull/74) | T-17 (1/2): Worker routes — list, claim, submit, earnings | Claude Code (Opus 5) drafted the lifecycle service, the six worker routes and the test suite; human reviewed the brief-filtering boundary, the claim check order, the proof-ownership rule and the money fields. |
-| [#75](https://github.com/RubenSousaDinis/legwork/pull/75) | T-18: POST /proofs — hash raw bytes, strip EXIF, private store, signed URLs, rounding | Claude Code (Opus 5) drafted the four services, the three routes and the test suite; human reviewed the hash-before-strip order, the two-object layout, the constant-time signature check and the rounding vector. |
-| [#76](https://github.com/RubenSousaDinis/legwork/pull/76) | T-19: Buyer, public and admin routes — long-poll status, approve/dispute/refund, /public/*, /admin/* | Claude Code (Opus 5) drafted the two services, the fifteen route handlers and the three test files from the T-19 brief; human reviewed the constant-time comparisons, the poll bounds, the public allowlist and every §9 command's output. |
-| [#77](https://github.com/RubenSousaDinis/legwork/pull/77) | T-20: World ID v4 — /idkit/request, /idkit/verify, /register (EIP-712 attestation), /config/world | Claude Code (Opus 5) drafted the services, the four routes, the fixture and the acceptance tests; human reviewed the byte-for-byte forwarding, the EIP-712 type list and domain, the check order and revert allowlist in `/register`, and the derived-key scheme. |
-| [#78](https://github.com/RubenSousaDinis/legwork/pull/78) | T-21: Anthropic classifier with keyword fallback | Claude Code (Opus 5) drafted prompt.md, anthropic.ts, live.ts and the four test files; human reviewed the failure paths, the cap ordering and the mock's abort handling |
-| [#79](https://github.com/RubenSousaDinis/legwork/pull/79) | T-22: OSM extract and the PlaceIndex over it | Claude Code (Opus 5) drafted `buildExtract`, `placeIndex`, `scripts/osm-extract.ts`, the four acceptance tests and the README; human reviewed the determinism rules, the delegation to `JsonPlaceIndex`, the bounding boxes and the licence line. |
+| [#74](https://github.com/RubenSousaDinis/legwork/pull/74) | T-17 (1/2): Worker routes — list, claim, submit, earnings | AI-Usage: Claude Code (Opus 5) drafted the lifecycle service, the six worker routes and the test suite; human reviewed the brief-filtering boundary, the claim check order, the proof-ownership rule and the money fields. |
+| [#75](https://github.com/RubenSousaDinis/legwork/pull/75) | T-18: POST /proofs — hash raw bytes, strip EXIF, private store, signed URLs, rounding | AI-Usage: Claude Code (Opus 5) drafted the four services, the three routes and the test suite; human reviewed the hash-before-strip order, the two-object layout, the constant-time signature check and the rounding vector. |
+| [#76](https://github.com/RubenSousaDinis/legwork/pull/76) | T-19: Buyer, public and admin routes — long-poll status, approve/dispute/refund, /public/*, /admin/* | AI-Usage: Claude Code (Opus 5) drafted the two services, the fifteen route handlers and the three test files from the T-19 brief; human reviewed the constant-time comparisons, the poll bounds, the public allowlist and every §9 command's output. |
+| [#77](https://github.com/RubenSousaDinis/legwork/pull/77) | T-20: World ID v4 — /idkit/request, /idkit/verify, /register (EIP-712 attestation), /config/world | — |
+| [#78](https://github.com/RubenSousaDinis/legwork/pull/78) | T-21: Anthropic classifier with keyword fallback | AI-Usage: Claude Code (Opus 5) drafted prompt.md, anthropic.ts, live.ts and the four test files; human reviewed the failure paths, the cap ordering and the mock's abort handling |
+| [#79](https://github.com/RubenSousaDinis/legwork/pull/79) | T-22: OSM extract and the PlaceIndex over it | AI-Usage: Claude Code (Opus 5) drafted `buildExtract`, `placeIndex`, `scripts/osm-extract.ts`, the four acceptance tests and the README; human reviewed the determinism rules, the delegation to `JsonPlaceIndex`, the bounding boxes and the licence line. |
 | [#80](https://github.com/RubenSousaDinis/legwork/pull/80) | CI: path-ownership must match Next's [id] segments and {a,b} groups | — |
 | [#81](https://github.com/RubenSousaDinis/legwork/pull/81) | Schema: nullifiers.worker is null between /idkit/verify and /register | — |
 | [#82](https://github.com/RubenSousaDinis/legwork/pull/82) | Post-wave-2 sync: contract drift, FakeChain call log, 413/retry_after_s, wiring, briefs | — |
-| [#83](https://github.com/RubenSousaDinis/legwork/pull/83) | T-17 (2/2): Worker routes — submit-time checks and sweeper | Claude Code (Opus 5) drafted the two checks, the submit-then-dispute flow, the sweeper, reconcile, `POST /admin/sweep` and the suites; human reviewed the call order, the contract's comparison operators, the downgrade branch order and the secret comparison. |
+| [#83](https://github.com/RubenSousaDinis/legwork/pull/83) | T-17 (2/2): Worker routes — submit-time checks and sweeper | AI-Usage: Claude Code (Opus 5) drafted the two checks, the submit-then-dispute flow, the sweeper, reconcile, `POST /admin/sweep` and the suites; human reviewed the call order, the contract's comparison operators, the downgrade branch order and the secret comparison. |
 | [#84](https://github.com/RubenSousaDinis/legwork/pull/84) | Wire GET /tasks/:id to T-17's settleIfEligible; one eligibleAction; sweep result in the contract | — |
-| [#85](https://github.com/RubenSousaDinis/legwork/pull/85) | T-24: Mini-app auth — verify → session → payout key → register | — |
-| [#86](https://github.com/RubenSousaDinis/legwork/pull/86) | T-26: Dashboard live data — adapter, receipt, refusals, admin, poster stats | Claude Code (Opus 5) drafted the live adapter, the three routes, the poller, the subgraph agent read and the named tests; human reviewed the money arithmetic, the leak surface, the buyer-token path, the admin key handling and the round-2 fixes. |
-| [#87](https://github.com/RubenSousaDinis/legwork/pull/87) | T-27: MCP server core — hosted mount, read tools, preflight | Claude Code (Opus 5) drafted `packages/mcp` (six tools, preflight, token store, tests), the `/mcp` mount and the preflight service; human reviewed the untrusted-answer wrapping, the absence of a payment header, the median-source labelling and the token file permissions. |
-| [#88](https://github.com/RubenSousaDinis/legwork/pull/88) | T-35: OpenAPI document from api-contract + Bazantic import | Claude Code (Opus 5) drafted the generator, the route, the Day-9 checklist and the four acceptance tests; human reviewed the schema conversion, the security schemes, the money copy and the merged `POST /tasks` decision |
-| [#89](https://github.com/RubenSousaDinis/legwork/pull/89) | T-38: API hardening — limits, CORS, admin gate, log redaction | — |
-| [#90](https://github.com/RubenSousaDinis/legwork/pull/90) | T-40: Observations — record per completed task + verify-open delta | Claude Code (Opus 5) drafted the observations service, the public route and the four acceptance tests; human reviewed the confidence rule, the seeded exclusion and the public response shape |
+| [#85](https://github.com/RubenSousaDinis/legwork/pull/85) | T-24: Mini-app auth — verify → session → payout key → register | Claude Code (Opus 5) drafted the auth flow, the session and key modules, the mocks, the seven acceptance tests and the five round-2 changes; human reviewed the key handling, the verbatim copy, the `task_types` ruling and the geohash correction. |
+| [#86](https://github.com/RubenSousaDinis/legwork/pull/86) | T-26: Dashboard live data — adapter, receipt, refusals, admin, poster stats | AI-Usage: Claude Code (Opus 5) drafted the live adapter, the three routes, the poller, the subgraph agent read and the named tests; human reviewed the money arithmetic, the leak surface, the buyer-token path, the admin key handling and the round-2 fixes. |
+| [#87](https://github.com/RubenSousaDinis/legwork/pull/87) | T-27: MCP server core — hosted mount, read tools, preflight | AI-Usage: Claude Code (Opus 5) drafted `packages/mcp` (six tools, preflight, token store, tests), the `/mcp` mount and the preflight service; human reviewed the untrusted-answer wrapping, the absence of a payment header, the median-source labelling and the token file permissions. |
+| [#88](https://github.com/RubenSousaDinis/legwork/pull/88) | T-35: OpenAPI document from api-contract + Bazantic import | AI-Usage: Claude Code (Opus 5) drafted the generator, the route, the Day-9 checklist and the four acceptance tests; human reviewed the schema conversion, the security schemes, the money copy and the merged `POST /tasks` decision BLOCKED items resolved: none |
+| [#89](https://github.com/RubenSousaDinis/legwork/pull/89) | T-38: API hardening — limits, CORS, admin gate, log redaction | Claude Code (Opus 5) drafted the middleware, its tests and `SECURITY.md` from the T-38 brief; human reviewed the guard order, the constant-time comparison, the header allowlist and the disclosure claims. |
+| [#90](https://github.com/RubenSousaDinis/legwork/pull/90) | T-40: Observations — record per completed task + verify-open delta | AI-Usage: Claude Code (Opus 5) drafted the observations service, the public route and the four acceptance tests; human reviewed the confidence rule, the seeded exclusion and the public response shape |
 | [#91](https://github.com/RubenSousaDinis/legwork/pull/91) | Dashboard depends on @legwork/subgraph-client (T-26) | — |
 | [#92](https://github.com/RubenSousaDinis/legwork/pull/92) | Task API depends on @legwork/mcp, @legwork/subgraph-client and mcp-handler (T-27) | — |
-| [#93](https://github.com/RubenSousaDinis/legwork/pull/93) | T-31: SKILL.md + docs/mcp.md final — examples, prices, polling, limits, two install modes | Claude Code (Opus 5) drafted `SKILL.md` and `docs/mcp.md` from the T-31 brief and the frozen contracts; human reviewed every verbatim sentence, JSON example and field name. |
+| [#93](https://github.com/RubenSousaDinis/legwork/pull/93) | T-31: SKILL.md + docs/mcp.md final — examples, prices, polling, limits, two install modes | AI-Usage: Claude Code (Opus 5) drafted `SKILL.md` and `docs/mcp.md` from the T-31 brief and the frozen contracts; human reviewed every verbatim sentence, JSON example and field name. BLOCKED items resolved: none |
 | [#94](https://github.com/RubenSousaDinis/legwork/pull/94) | Lead sync after wave 3: proxy entry for the API guards, live dashboard wiring, contract widenings, brief amendments | — |
-| [#95](https://github.com/RubenSousaDinis/legwork/pull/95) | T-25: Mini-app task list + claim — 3 s poll, countdown, release-claim | Claude Code (Opus 5) drafted the components, the poll loop, the tests and the README; human reviewed the copy against §2, the poll path against the route on `main`, the request counts and the money figures. |
-| [#96](https://github.com/RubenSousaDinis/legwork/pull/96) | T-39: Legibility gate — Playwright measures present-mode floors and the 9:16 column | — |
+| [#95](https://github.com/RubenSousaDinis/legwork/pull/95) | T-25: Mini-app task list + claim — 3 s poll, countdown, release-claim | AI-Usage: Claude Code (Opus 5) drafted the components, the poll loop, the tests and the README; human reviewed the copy against §2, the poll path against the route on `main`, the request counts and the money figures. |
+| [#96](https://github.com/RubenSousaDinis/legwork/pull/96) | T-39: Legibility gate — Playwright measures present-mode floors and the 9:16 column | Claude Code (Opus 5) drafted the config, `lib/{floors,crop,downscale}.ts`, both `.e2e.ts` suites and the README from the T-39 brief; human reviewed the viewport and scale factor against §14, checked the band edges by hand, and walked each failure back to the markup with a separate probe before reporting it. |
 | [#97](https://github.com/RubenSousaDinis/legwork/pull/97) | Briefs after the T-25 and T-39 reviews: T-43 inherits the gate's four findings, T-25 polls /tasks/list, tests globs in front matter | — |
-| [#98](https://github.com/RubenSousaDinis/legwork/pull/98) | T-43: Present-mode polish — server clock, elapsed timer, one-shot meter, card cuts | Claude Code (Opus 5) drafted the components, CSS, tests and README; human reviewed every layout cut against the floors and the honesty rules and measured the result in Chromium. |
-| [#99](https://github.com/RubenSousaDinis/legwork/pull/99) | T-33: Mini-app proof flow + earnings — capture, GPS downgrade, submit, paid state | Claude Code (Opus 5) drafted `lib/gps.ts`, `app/proof/**`, `app/earnings/page.tsx` and `tests/proof/**`; human reviewed the downgrade invariant and the two-name photo hash against `packages/shared` and the API, found the `call-confirm` picker bug, and traced the multipart hang to jsdom's `Blob`. |
+| [#98](https://github.com/RubenSousaDinis/legwork/pull/98) | T-43: Present-mode polish — server clock, elapsed timer, one-shot meter, card cuts | AI-Usage: Claude Code (Opus 5) drafted the components, CSS, tests and README; human reviewed every layout cut against the floors and the honesty rules and measured the result in Chromium. |
+| [#99](https://github.com/RubenSousaDinis/legwork/pull/99) | T-33: Mini-app proof flow + earnings — capture, GPS downgrade, submit, paid state | AI-Usage: Claude Code (Opus 5) drafted `lib/gps.ts`, `app/proof/**`, `app/earnings/page.tsx` and `tests/proof/**`; human reviewed the downgrade invariant and the two-name photo hash against `packages/shared` and the API, found the `call-confirm` picker bug, and traced the multipart hang to jsdom's `Blob`. BLOCKED items resolved: none — nothing blocked. **Operator step pending (brief §11, last box):** on the phone after merge — one full capture → submit → release on a rehearsal task; note whether GPS resolved or the downgrade fired (→ `FEEDBACK-WORLD.md`) and the fresh-install → paid timing (→ `docs/spikes/RESULTS.md`). That is the operator's step, not this agent's. |
 | [#100](https://github.com/RubenSousaDinis/legwork/pull/100) | GET /tasks/:id/spec — the claimant reads the spec, minus the buyer's claims | — |
 | [#101](https://github.com/RubenSousaDinis/legwork/pull/101) | Wave-4 sync: e2e-dashboard CI job, brief records, LEAD-NOTES "Wave 4 landed" | — |
-| [#102](https://github.com/RubenSousaDinis/legwork/pull/102) | T-42: Mini-app optional — compare-two screen, Report task, unverified state | Claude Code (Opus 5) drafted the three screens, the banner, the four tests and the README; human reviewed the submit body, the release-before-report order, the DOM order of the receipt and every copy string against the brief. |
+| [#102](https://github.com/RubenSousaDinis/legwork/pull/102) | T-42: Mini-app optional — compare-two screen, Report task, unverified state | AI-Usage: Claude Code (Opus 5) drafted the three screens, the banner, the four tests and the README; human reviewed the submit body, the release-before-report order, the DOM order of the receipt and every copy string against the brief. BLOCKED items resolved: none — nothing was blocked. |
 | [#103](https://github.com/RubenSousaDinis/legwork/pull/103) | Mount T-42: the locked list on /tasks without a session, and Report task in the proof header | — |
 | [#104](https://github.com/RubenSousaDinis/legwork/pull/104) | Root devDependencies: @x402/core, @x402/evm, @x402/fetch, viem — the spike scripts run from the root | — |
-| [#105](https://github.com/RubenSousaDinis/legwork/pull/105) | T-03: Spike S3 — x402 seller and buyer round-trip on Base Sepolia | Claude Code (Opus 5) drafted the four scripts, the README and the `## S3` section; human reviewed the handler order against the frozen T-01 order, confirmed both settle receipts on chain, and ran all three round-trips live. |
+| [#105](https://github.com/RubenSousaDinis/legwork/pull/105) | T-03: Spike S3 — x402 seller and buyer round-trip on Base Sepolia | AI-Usage: Claude Code (Opus 5) drafted the four scripts, the README and the `## S3` section; human reviewed the handler order against the frozen T-01 order, confirmed both settle receipts on chain, and ran all three round-trips live. |
 | [#106](https://github.com/RubenSousaDinis/legwork/pull/106) | S3 landed: lock payment: x402, fix T-03's §9 grep, LEAD-NOTES | — |
-| [#107](https://github.com/RubenSousaDinis/legwork/pull/107) | T-15: packages/payments — PaymentGateway, X402Gateway, idempotency, FakeFacilitator | Claude Code (Opus 5) drafted the package — gateway seam, X402Gateway, idempotency stores, FakeFacilitator, test signer, tests and README — from the T-15 brief and the S3 spike findings; human reviewed the verify/settle ordering, the integer fee math and the `task_id = 0` sentinel against the frozen columns. |
-| [#108](https://github.com/RubenSousaDinis/legwork/pull/108) | T-16: POST /tasks and POST /check — verify, screen, cap, post, settle | Claude Code (Opus 5) drafted `hire.ts`, `caps.ts`, both routes and `hire.test.ts` from the T-16 brief against the T-15 gateway, the T-06 pipeline and the T-08 stubs; human reviewed the frozen order, the release-on-every-exit rule and that nothing but a six-class refusal can mark. |
+| [#107](https://github.com/RubenSousaDinis/legwork/pull/107) | T-15: packages/payments — PaymentGateway, X402Gateway, idempotency, FakeFacilitator | AI-Usage: Claude Code (Opus 5) drafted the package — gateway seam, X402Gateway, idempotency stores, FakeFacilitator, test signer, tests and README — from the T-15 brief and the S3 spike findings; human reviewed the verify/settle ordering, the integer fee math and the `task_id = 0` sentinel against the frozen columns. |
+| [#108](https://github.com/RubenSousaDinis/legwork/pull/108) | T-16: POST /tasks and POST /check — verify, screen, cap, post, settle | AI-Usage: Claude Code (Opus 5) drafted `hire.ts`, `caps.ts`, both routes and `hire.test.ts` from the T-16 brief against the T-15 gateway, the T-06 pipeline and the T-08 stubs; human reviewed the frozen order, the release-on-every-exit rule and that nothing but a six-class refusal can mark. |
 | [#109](https://github.com/RubenSousaDinis/legwork/pull/109) | apps/api declares @legwork/payments, @legwork/screening, @x402/core; payments drops .js suffixes; the 501-stub test goes | — |
 | [#110](https://github.com/RubenSousaDinis/legwork/pull/110) | packages/mcp gets @legwork/payments as a devDependency; .env.example names the agent-side variables | — |
-| [#111](https://github.com/RubenSousaDinis/legwork/pull/111) | T-28: MCP local mode — paying hire_human, stdio binary, README | Claude Code (Opus 5) drafted `hire.ts`, `bin/legwork-mcp.ts`, `hire.test.ts` and the |
+| [#111](https://github.com/RubenSousaDinis/legwork/pull/111) | T-28: MCP local mode — paying hire_human, stdio binary, README | AI-Usage: Claude Code (Opus 5) drafted `hire.ts`, `bin/legwork-mcp.ts`, `hire.test.ts` and the README against the brief and the pinned `@x402/fetch`/`@x402/evm` APIs; human reviewed the payment ordering, the refusal path, every money figure and the two reported gaps. BLOCKED items resolved: none — nothing was blocked. Two gaps outside my owned paths are reported above (`dist/` build, `server.ts` dropping `isError`) and neither was worked around. |
 | [#112](https://github.com/RubenSousaDinis/legwork/pull/112) | Post-T-16 sync: contract lists 409/503 on POST /tasks and X-Payer, @types/ngeohash, check route off the payments package | — |
 | [#113](https://github.com/RubenSousaDinis/legwork/pull/113) | Post-T-28 sync: isError on the local hire, caller windows forwarded, Posted admits the replay, LEAD-NOTES | — |
-| [#114](https://github.com/RubenSousaDinis/legwork/pull/114) | T-04: Spike S5 + S1 — ERC-8004 round-trip and World ID Router probe | Claude Code (Opus 5) drafted the spike scripts, the vendored ABI README and both RESULTS sections; human reviewed the interface comparison, the live transactions and the key handling. |
+| [#114](https://github.com/RubenSousaDinis/legwork/pull/114) | T-04: Spike S5 + S1 — ERC-8004 round-trip and World ID Router probe | AI-Usage: Claude Code (Opus 5) drafted the spike scripts, the vendored ABI README and both RESULTS sections; human reviewed the interface comparison, the live transactions and the key handling. |
 | [#115](https://github.com/RubenSousaDinis/legwork/pull/115) | S5 landed: lock ERC-8004: live registries, T-04 §15, LEAD-NOTES | — |
-| [#116](https://github.com/RubenSousaDinis/legwork/pull/116) | T-13: Reputation + AbuseMark — worker feedback, agent-side writer | Claude Code (Opus 5) drafted both contracts and their ten tests from the T-13 brief; human reviewed the mark check order, the eight giveFeedback arguments, the outcome mapping and the score adjustment on a slot update. |
-| [#117](https://github.com/RubenSousaDinis/legwork/pull/117) | T-30: AbuseMark wiring — identity, marks, screening log, posters | Claude Code (Opus 5) drafted the four services and their tests; human reviewed the marking order, the privacy guards and the T-16 compatibility overloads |
+| [#116](https://github.com/RubenSousaDinis/legwork/pull/116) | T-13: Reputation + AbuseMark — worker feedback, agent-side writer | AI-Usage: Claude Code (Opus 5) drafted both contracts and their ten tests from the T-13 brief; human reviewed the mark check order, the eight giveFeedback arguments, the outcome mapping and the score adjustment on a slot update. |
+| [#117](https://github.com/RubenSousaDinis/legwork/pull/117) | T-30: AbuseMark wiring — identity, marks, screening log, posters | AI-Usage: Claude Code (Opus 5) drafted the four services and their tests; human reviewed the marking order, the privacy guards and the T-16 compatibility overloads |
 | [#118](https://github.com/RubenSousaDinis/legwork/pull/118) | Lead: hand hire.ts and POST /check over to T-30's services | — |
-| [#119](https://github.com/RubenSousaDinis/legwork/pull/119) | T-14: Deploy + seed Base Sepolia — contracts, workers, lifecycles | — |
+| [#119](https://github.com/RubenSousaDinis/legwork/pull/119) | T-14: Deploy + seed Base Sepolia — contracts, workers, lifecycles | Claude Code (Opus 5) drafted `Env.s.sol`, `Deploy.s.sol`, `Seed.s.sol`, `scripts/deploy.sh` and the RESULTS `## Deploy` section from the brief, and ran the deploy; human reviewed the re-run guard, the record shape against `addresses.ts`, the money assertions, the treasury decision and the addresses against Basescan. |
 | [#120](https://github.com/RubenSousaDinis/legwork/pull/120) | Lead: regenerate the AbuseMark and Reputation ABIs from the T-13 implementations | — |
 | [#121](https://github.com/RubenSousaDinis/legwork/pull/121) | Lead: gitleaks fingerprint allowlist for T-14's renamed local | — |
 | [#122](https://github.com/RubenSousaDinis/legwork/pull/122) | Lead: post-T-14 sync — anvil self-funding, LEAD-NOTES, brief §15 | — |
-| [#123](https://github.com/RubenSousaDinis/legwork/pull/123) | T-37: README skeleton + threat model — every Day-10 section, verbatim blocks, test names | — |
-| [#124](https://github.com/RubenSousaDinis/legwork/pull/124) | T-32: Register the Task API's ERC-8004 identity + one live write | Claude Code (Opus 5) drafted `scripts/register-identity.ts` and the RESULTS `## Identity` section; human reviewed the step order, the money integers and every assertion against the brief, and checked every id, address and tx link in RESULTS against the run output and independent `cast` read-backs. |
+| [#123](https://github.com/RubenSousaDinis/legwork/pull/123) | T-37: README skeleton + threat model — every Day-10 section, verbatim blocks, test names | Claude Code (Opus 5) drafted the section prose and the tables from the T-37 brief; human reviewed the verbatim blocks and the addresses. |
+| [#124](https://github.com/RubenSousaDinis/legwork/pull/124) | T-32: Register the Task API's ERC-8004 identity + one live write | AI-Usage: Claude Code (Opus 5) drafted `scripts/register-identity.ts` and the RESULTS `## Identity` section; human reviewed the step order, the money integers and every assertion against the brief, and checked every id, address and tx link in RESULTS against the run output and independent `cast` read-backs. |
 | [#125](https://github.com/RubenSousaDinis/legwork/pull/125) | Lead: AbuseMark receives the ERC-721 the IdentityRegistry mints to it | — |
 | [#126](https://github.com/RubenSousaDinis/legwork/pull/126) | Lead: redeploy with the AbuseMark receiver — record, RESULTS, README, notes | — |
 | [#127](https://github.com/RubenSousaDinis/legwork/pull/127) | Lead: LEAD-NOTES — T-32 landed; brief §15 | — |
-| [#128](https://github.com/RubenSousaDinis/legwork/pull/128) | T-23: Deploy the subgraph to Studio and wire the query URL | Claude Code (Opus 5) drafted the eight manifest values, `subgraph/README.md` and the `#Graph` RESULTS entry; human reviewed the four addresses against `contracts/deployments/base-sepolia.json`, the three live query responses, and the open Discord question. |
+| [#128](https://github.com/RubenSousaDinis/legwork/pull/128) | T-23: Deploy the subgraph to Studio and wire the query URL | AI-Usage: Claude Code (Opus 5) drafted the eight manifest values, `subgraph/README.md` and the `#Graph` RESULTS entry; human reviewed the four addresses against `contracts/deployments/base-sepolia.json`, the three live query responses, and the open Discord question. |
 | [#129](https://github.com/RubenSousaDinis/legwork/pull/129) | Lead: LEAD-NOTES — hosting, subgraph and World action landed; T-23 §9 grep | — |
-| [#130](https://github.com/RubenSousaDinis/legwork/pull/130) | T-29: CLI worker + demo:run + demo:reset — the green headless loop on Base Sepolia | Claude Code (Opus 5) drafted the three scripts, the fixture, the tests and the RESULTS.md section; human reviewed every API and contract shape against `apps/api`, `packages/chain` and the live Base Sepolia deployment, ran the loop end to end, and re-read the release receipt off the chain independently of the script. |
-| [#131](https://github.com/RubenSousaDinis/legwork/pull/131) | T-46: Verify preflight_workers against the live subgraph | Claude Code (Opus 5) drafted the Playwright capture script and the `#Preflight` section from the captured command output; human reviewed the rendered card against the tool JSON and the diagnosis behind the short split. |
+| [#130](https://github.com/RubenSousaDinis/legwork/pull/130) | T-29: CLI worker + demo:run + demo:reset — the green headless loop on Base Sepolia | AI-Usage: Claude Code (Opus 5) drafted the three scripts, the fixture, the tests and the RESULTS.md section; human reviewed every API and contract shape against `apps/api`, `packages/chain` and the live Base Sepolia deployment, ran the loop end to end, and re-read the release receipt off the chain independently of the script. |
+| [#131](https://github.com/RubenSousaDinis/legwork/pull/131) | T-46: Verify preflight_workers against the live subgraph | AI-Usage: Claude Code (Opus 5) drafted the Playwright capture script and the `#Preflight` section from the captured command output; human reviewed the rendered card against the tool JSON and the diagnosis behind the short split. |
 | [#132](https://github.com/RubenSousaDinis/legwork/pull/132) | Lead: nullable nonce column, seeded-worker session path, scripts workspace package (T-29 requests) | — |
 | [#133](https://github.com/RubenSousaDinis/legwork/pull/133) | Lead: demo:run defaults to BUYER_AGENT_ID; LEAD-NOTES — T-29 landed, hosting fixes | — |
-| [#134](https://github.com/RubenSousaDinis/legwork/pull/134) | T-36: e2e on anvil — deploy, seed, API fakes, worker, asserts | Claude Code (Opus 5) drafted `run.sh`, `assert.ts` and the README; human reviewed the two guards, the key derivation, the assertion set and both reported defects against the merged `apps/api` and `scripts/demo-run.ts`. |
+| [#134](https://github.com/RubenSousaDinis/legwork/pull/134) | T-36: e2e on anvil — deploy, seed, API fakes, worker, asserts | AI-Usage: Claude Code (Opus 5) drafted `run.sh`, `assert.ts` and the README; human reviewed the two guards, the key derivation, the assertion set and both reported defects against the merged `apps/api` and `scripts/demo-run.ts`. |
 | [#135](https://github.com/RubenSousaDinis/legwork/pull/135) | Lead: the API and demo scripts on anvil — CHAIN_ID 31337, fake facilitator, pglite, record by chain (T-36 requests) | — |
 | [#136](https://github.com/RubenSousaDinis/legwork/pull/136) | Lead: seeded claims mark the row demo data; demo:run allows the record's USDC (T-36's two lines) | — |
 | [#137](https://github.com/RubenSousaDinis/legwork/pull/137) | Lead: e2e workflow on main (T-36's harness); LEAD-NOTES — T-36 landed | — |
 | [#138](https://github.com/RubenSousaDinis/legwork/pull/138) | Lead: T-34 on the Claude Agent SDK over the operator's Claude Code login (no API key) | — |
-| [#139](https://github.com/RubenSousaDinis/legwork/pull/139) | T-34: examples/agent.ts — Claude loop over the local MCP, prompt + real transcript committed | Claude Code (Opus 5) drafted examples/agent.ts, loop-rules.ts, prompt.md, prompt.test.ts, README.md and the fixtures, and the round-2 prompt rewrite; human ran every scene against the live API, read the runs that came back wrong and located each cause, and assembled the transcript from the real output. |
+| [#139](https://github.com/RubenSousaDinis/legwork/pull/139) | T-34: examples/agent.ts — Claude loop over the local MCP, prompt + real transcript committed | AI-Usage: Claude Code (Opus 5) drafted examples/agent.ts, loop-rules.ts, prompt.md, prompt.test.ts, README.md and the fixtures, and the round-2 prompt rewrite; human ran every scene against the live API, read the runs that came back wrong and located each cause, and assembled the transcript from the real output. |
 | [#140](https://github.com/RubenSousaDinis/legwork/pull/140) | Lead: demo:run --no-worker — post, then wait for the phone to claim and submit | — |
 | [#142](https://github.com/RubenSousaDinis/legwork/pull/142) | T-50 brief: mini-app design polish; lead notes on T-34 and the first phone run | — |
 | [#143](https://github.com/RubenSousaDinis/legwork/pull/143) | Mini-app: show the IDKit debug report under a failed World ID check | — |
-| [#144](https://github.com/RubenSousaDinis/legwork/pull/144) | T-50: Mini-app design polish — the paper screens as the design spec draws them | Claude Code (Opus 5) drafted the stylesheet, the markup moves and the tests; human reviewed every value against DESIGN-SPEC.md and every pinned string and data hook against the existing suite. |
+| [#144](https://github.com/RubenSousaDinis/legwork/pull/144) | T-50: Mini-app design polish — the paper screens as the design spec draws them | AI-Usage: Claude Code (Opus 5) drafted the stylesheet, the markup moves and the tests; human reviewed every value against DESIGN-SPEC.md and every pinned string and data hook against the existing suite. |
 | [#145](https://github.com/RubenSousaDinis/legwork/pull/145) | check_task: send the floor amount, report non-accepted bodies as tool errors; T-34 round-2 items | — |
 | [#146](https://github.com/RubenSousaDinis/legwork/pull/146) | Sync after T-50: claim-error line class check; lead notes (T-50, T-34 round 2, check_task, Vercel cap) | — |
 | [#147](https://github.com/RubenSousaDinis/legwork/pull/147) | check.test.ts: reword the comment the banned-words check rejects | — |
-| [#148](https://github.com/RubenSousaDinis/legwork/pull/148) | T-44: scripts/inserts.ts — the two three-line terminal inserts from real responses | Claude Code (Opus 5) drafted the extractor, validator, wrapper, printer and tests; human ruled on `--width` in the brief's §15 and reviewed the rendered cards against `examples/transcript.md` |
+| [#148](https://github.com/RubenSousaDinis/legwork/pull/148) | T-44: scripts/inserts.ts — the two three-line terminal inserts from real responses | AI-Usage: Claude Code (Opus 5) drafted the extractor, validator, wrapper, printer and tests; human ruled on `--width` in the brief's §15 and reviewed the rendered cards against `examples/transcript.md` |
 | [#149](https://github.com/RubenSousaDinis/legwork/pull/149) | Demo place → Pão Doce (ez1dn); scripts/seed-area.sh; the demo agent carries BUYER_AGENT_ID | — |
 | [#150](https://github.com/RubenSousaDinis/legwork/pull/150) | T-44: --width wraps rather than rejects; examples agent accepts pnpm's -- separator | — |
 | [#151](https://github.com/RubenSousaDinis/legwork/pull/151) | examples: scene 1 re-run end to end (task 23, released) | — |
 | [#152](https://github.com/RubenSousaDinis/legwork/pull/152) | T-41: pin pass-1 branch, point at the operator's material | — |
-| [#153](https://github.com/RubenSousaDinis/legwork/pull/153) | T-41: FEEDBACK-WORLD pass 1 | Claude Code (Opus 5) drafted the seven entries and the README from the operator's notes, issue #40 and RESULTS `## S1`; human reviewed the wording, the timestamps and the redactions. |
+| [#153](https://github.com/RubenSousaDinis/legwork/pull/153) | T-41: FEEDBACK-WORLD pass 1 | AI-Usage: Claude Code (Opus 5) drafted the seven entries and the README from the operator's notes, issue #40 and RESULTS `## S1`; human reviewed the wording, the timestamps and the redactions. |
 | [#154](https://github.com/RubenSousaDinis/legwork/pull/154) | FEEDBACK-WORLD: full app and RP ids; lead notes for T-44, T-41, the hire scene and the deployment cap | — |
 | [#155](https://github.com/RubenSousaDinis/legwork/pull/155) | Vercel: create deployments for main only | — |
 | [#156](https://github.com/RubenSousaDinis/legwork/pull/156) | LEAD-NOTES: what the Vercel quota actually counts | — |
@@ -160,46 +179,127 @@ the commits inside it still do, and they are in the next table.
 | [#164](https://github.com/RubenSousaDinis/legwork/pull/164) | T-51 brief: the dashboard's front door, the deck, and the refusal card | — |
 | [#165](https://github.com/RubenSousaDinis/legwork/pull/165) | T-51: Dashboard front door — landing, the two paths, and the refusal card | — |
 | [#166](https://github.com/RubenSousaDinis/legwork/pull/166) | Drop the two substitute tasks: neither spike failed | — |
-| [#167](https://github.com/RubenSousaDinis/legwork/pull/167) | T-51: Dashboard front door — landing, the two paths, and the refusal card | — |
+| [#167](https://github.com/RubenSousaDinis/legwork/pull/167) | T-51: Dashboard front door — landing, the two paths, and the refusal card | Cursor Grok 4.6 drafted the refusal adapter, public pages, deck and tests; human dispatched the task |
 | [#169](https://github.com/RubenSousaDinis/legwork/pull/169) | T-52 brief: the worker sign-in lockout, and a board that says where you are | — |
 | [#170](https://github.com/RubenSousaDinis/legwork/pull/170) | The screening log stops printing a label with nothing after it | — |
-| [#171](https://github.com/RubenSousaDinis/legwork/pull/171) | T-52: The worker can get back in, and the board says where they are (1/2 + 2/2) | — |
+| [#171](https://github.com/RubenSousaDinis/legwork/pull/171) | T-52: The worker can get back in, and the board says where they are (1/2 + 2/2) | Cursor Grok 4.6 drafted sign-in, distance, claim-radius and tests; human dispatched T-52 |
 | [#173](https://github.com/RubenSousaDinis/legwork/pull/173) | T-53 brief: inside World App the worker's address is the wallet | — |
 | [#174](https://github.com/RubenSousaDinis/legwork/pull/174) | Show the Legwork icon and hosted worker path on the dashboard landing | — |
 | [#176](https://github.com/RubenSousaDinis/legwork/pull/176) | T-54 brief: Selfie Check as the demo credential, with the claims that credential supports | — |
-| [#177](https://github.com/RubenSousaDinis/legwork/pull/177) | T-54: Selfie Check as the demo credential, with the claims that credential supports | — |
+| [#177](https://github.com/RubenSousaDinis/legwork/pull/177) | T-54: Selfie Check as the demo credential, with the claims that credential supports | Cursor Grok 4.6 drafted the four copy functions, surface substitutions, §8 tests, and README; human reviewed the brief |
 | [#178](https://github.com/RubenSousaDinis/legwork/pull/178) | Board: T-51 is merged | — |
-| [#179](https://github.com/RubenSousaDinis/legwork/pull/179) | T-54: Selfie Check as the demo credential, with the claims that credential supports | — |
+| [#179](https://github.com/RubenSousaDinis/legwork/pull/179) | T-54: Selfie Check as the demo credential, with the claims that credential supports | Cursor Grok 4.6 drafted the four copy functions, surface substitutions, §8 tests, and README; human reviewed the brief |
 | [#180](https://github.com/RubenSousaDinis/legwork/pull/180) | T-53 amended: the list is the front page too | — |
 | [#181](https://github.com/RubenSousaDinis/legwork/pull/181) | T-53 amended: the preview row names the errand once | — |
 | [#182](https://github.com/RubenSousaDinis/legwork/pull/182) | The landing's trust model follows the credential | — |
 | [#183](https://github.com/RubenSousaDinis/legwork/pull/183) | T-53: The worker gets in — the wallet is the address, and the list is the front page | Cursor Grok 4.6 drafted the wallet-address split, routing swap, preview-row titles and tests; human dispatched T-53 |
 | [#186](https://github.com/RubenSousaDinis/legwork/pull/186) | T-55 and T-56 briefs: the mini-app's shell and its board | — |
-| [#187](https://github.com/RubenSousaDinis/legwork/pull/187) | T-55: A navbar, a login modal, and a logout that actually logs you out | — |
+| [#187](https://github.com/RubenSousaDinis/legwork/pull/187) | T-55: A navbar, a login modal, and a logout that actually logs you out | Cursor Grok 4.6 drafted the modal, AuthFlow extraction, SiteNav, POST /session/logout, the TTL change, the first-paint mirror and the §8 tests; human dispatched T-55 BLOCKED items resolved: none — the two INTERFACE REQUEST lines above are for the frozen contract / unowned earnings route, not a stop. |
 | [#188](https://github.com/RubenSousaDinis/legwork/pull/188) | The session routes join the contract, and the probe asks a session route | — |
 | [#189](https://github.com/RubenSousaDinis/legwork/pull/189) | T-56: The board shows every task, searchable, on a map, with directions | Cursor Grok 4.6 drafted the rounded field, country schema, unresolvable-place refusal, board search, map tiles, directions and tests; human dispatched T-56 |
 | [#190](https://github.com/RubenSousaDinis/legwork/pull/190) | Make the worker miniapp usable on a phone | — |
-| [#191](https://github.com/RubenSousaDinis/legwork/pull/191) | The map fits the phone, its pins land on it, and a task says what it is | `, so `commit-trailers` fails. Adding it needs a history rewrite, which is |
+| [#191](https://github.com/RubenSousaDinis/legwork/pull/191) | The map fits the phone, its pins land on it, and a task says what it is | — |
 | [#192](https://github.com/RubenSousaDinis/legwork/pull/192) | A claim past its window keeps the button that hands it back | — |
 | [#194](https://github.com/RubenSousaDinis/legwork/pull/194) | Brief T-57: a worker withdraws without gas, and Legwork keeps 2 % | — |
-| [#195](https://github.com/RubenSousaDinis/legwork/pull/195) | T-57: A worker withdraws without gas, and Legwork keeps 2 % | Claude Code Opus 5 drafted the constants, `signWithdrawal`, the withdraw service and route, the `/earnings` form and every §8 test; Cursor Grok 4.6 ran §9, fixed the gitleaks hex-literal, and marked the PR ready; human dispatched T-57 |
+| [#195](https://github.com/RubenSousaDinis/legwork/pull/195) | T-57: A worker withdraws without gas, and Legwork keeps 2 % | — |
 | [#196](https://github.com/RubenSousaDinis/legwork/pull/196) | T-46 asked for a split no area produces; amend it to what the tool returns | — |
-| [#197](https://github.com/RubenSousaDinis/legwork/pull/197) | T-47: PNG check — read the composited 1280×720 frame at arm's length, cut cards | — |
-| [#198](https://github.com/RubenSousaDinis/legwork/pull/198) | The worker mini-app installs as a PWA, so a screenshot has no browser chrome | — |
-| [#199](https://github.com/RubenSousaDinis/legwork/pull/199) | A UI pass off the T-47 frames: the paid beat, and the Supply card | — |
+| [#197](https://github.com/RubenSousaDinis/legwork/pull/197) | T-47: PNG check — read the composited 1280×720 frame at arm's length, cut cards | Cursor Grok 4.6 drafted the composite and `## Legibility` table; human reviewed the phone frames and continued the read. |
+| [#198](https://github.com/RubenSousaDinis/legwork/pull/198) | The worker mini-app installs as a PWA, so a screenshot has no browser chrome | Cursor Grok 4.6 drafted the web-app manifest, Apple meta, icons, and tests; human requested the PWA for screenshot chrome. |
+| [#199](https://github.com/RubenSousaDinis/legwork/pull/199) | A UI pass off the T-47 frames: the paid beat, and the Supply card | Claude Code (Opus 5) drafted the CSS, the `PaidState` restructure, the credential-resolver fix, the `Waiting` component, the two `loading.tsx` files and this description, and measured every number above in a browser; a human requested a UI pass off the T-47 frames, supplied them, and then asked for loading states on the same PR. |
 | [#200](https://github.com/RubenSousaDinis/legwork/pull/200) | Ignore T-57's superseded anvil dev key so `secrets` can pass | — |
 | [#201](https://github.com/RubenSousaDinis/legwork/pull/201) | T-46 §9's first command cannot run; replace it with the call that can | — |
-| [#202](https://github.com/RubenSousaDinis/legwork/pull/202) | T-45: Docs final — threat model links, spike RESULTS filled, keys, ODbL, api/mcp re-check | Cursor Grok 4.6 drafted threat-model links, RESULTS outcomes, keys.md, docs/README.md, api.md handler order and mcp.md drift; human unreviewed |
-| [#203](https://github.com/RubenSousaDinis/legwork/pull/203) | T-48: docs/submission.md + README prize-qualification table (Day 9, docs only) | Cursor Grok 4.6 drafted docs/submission.md and the README prize-qualification table; human dispatched the task |
+| [#202](https://github.com/RubenSousaDinis/legwork/pull/202) | T-45: Docs final — threat model links, spike RESULTS filled, keys, ODbL, api/mcp re-check | AI-Usage: Cursor Grok 4.6 drafted threat-model links, RESULTS outcomes, keys.md, docs/README.md, api.md handler order and mcp.md drift; human unreviewed |
+| [#203](https://github.com/RubenSousaDinis/legwork/pull/203) | T-48: docs/submission.md + README prize-qualification table (Day 9, docs only) | AI-Usage: Cursor Grok 4.6 drafted docs/submission.md and the README prize-qualification table; human dispatched the task |
 | [#204](https://github.com/RubenSousaDinis/legwork/pull/204) | T-47 §4's owned-paths line cannot parse; use a `#` qualifier | — |
-| [#205](https://github.com/RubenSousaDinis/legwork/pull/205) | T-48: docs/submission.md + README prize-qualification table (Day 9, docs only) | Cursor Grok 4.6 drafted docs/submission.md and the README prize-qualification table; human dispatched the task |
+| [#205](https://github.com/RubenSousaDinis/legwork/pull/205) | T-48: docs/submission.md + README prize-qualification table (Day 9, docs only) | AI-Usage: Cursor Grok 4.6 drafted docs/submission.md and the README prize-qualification table; human dispatched the task |
+| [#206](https://github.com/RubenSousaDinis/legwork/pull/206) | T-49 part 1: addresses, endpoints, posters, docs index and the AI-usage record | — |
+| [#207](https://github.com/RubenSousaDinis/legwork/pull/207) | Cache the public reads at the CDN, and stop healthz saying ok when it isn't | — |
+| [#208](https://github.com/RubenSousaDinis/legwork/pull/208) | docs:gen emits the handler order it was deleting, and CI checks the generated docs | — |
+| [#211](https://github.com/RubenSousaDinis/legwork/pull/211) | Brief T-58 and T-59: the two Bazantic tracks we can honestly reach | — |
+| [#212](https://github.com/RubenSousaDinis/legwork/pull/212) | T-58: Bazantic gateway for the Task API, and a recipe that needs The Graph too | Cursor Grok 4.6 drafted the record, recipe, checklist and tests. Human imported the gateway on bazantic.com and pasted the URL. |
+| [#213](https://github.com/RubenSousaDinis/legwork/pull/213) | A public operation says `security: []` rather than leaving the key out | — |
+| [#214](https://github.com/RubenSousaDinis/legwork/pull/214) | T-59: Agentify Overpass on Bazantic, so a place resolves outside two cities | Cursor Grok 4.6 drafted the Overpass record, recipe and §8 tests; human dispatched T-59. |
+| [#215](https://github.com/RubenSousaDinis/legwork/pull/215) | Fix board map filters: near me and address search | Cursor Grok 4.6 drafted the checkbox, map-fit and Nominatim search; human reported the broken filters |
+| [#216](https://github.com/RubenSousaDinis/legwork/pull/216) | Brief T-60..T-66: international place resolution and a seeded world catalog | AI-Usage: Cursor + Claude drafted briefs T-60..T-66; human reviewed scope |
+| [#224](https://github.com/RubenSousaDinis/legwork/pull/224) | T-60: Interface change — ISO currency, place-lookup env vars, stale geohash comment | Cursor Grok 4.6 drafted the interface edits, tests, and regenerated docs/api.md; human dispatched T-60 |
+| [#225](https://github.com/RubenSousaDinis/legwork/pull/225) | Fix near me, city search zoom, and map pinch-to-zoom | Cursor Grok 4.6 drafted near-me button, Nominatim bounds and pinch zoom; human reported unclickable filter, street-level Lisboa and missing pinch Made with [Cursor](https://cursor.com) |
+| [#226](https://github.com/RubenSousaDinis/legwork/pull/226) | T-61: Live Overpass lookup and a layered PlaceIndex, so any OSM id can resolve | Cursor Composer drafted poiFromElement export, LayeredPlaceIndex, createOverpassLookup, tests and README; human reviewed phone rule, cache TTLs and verification |
+| [#227](https://github.com/RubenSousaDinis/legwork/pull/227) | T-62: The API resolves a place anywhere — live fallback in /check and /tasks | Cursor Composer drafted place-lookup wiring + tests; human reviewed scope |
+| [#228](https://github.com/RubenSousaDinis/legwork/pull/228) | Make board map filters feel instant | Cursor Composer drafted pin-focus, geocode cache and tile preload; human reported lag after search and near me Made with [Cursor](https://cursor.com) |
+| [#229](https://github.com/RubenSousaDinis/legwork/pull/229) | T-63: Seed catalog — 26 real errands in 10 cities, honest on every board | Cursor Composer drafted catalog, check script and honesty fixes; human reviewed places and swaps |
+| [#230](https://github.com/RubenSousaDinis/legwork/pull/230) | T-64: Mini-app — seeded rows say so, the board is not Leiria, a price in the place's currency | Cursor Auto drafted currency, area copy and §8 tests; human reviewed scope |
+| [#231](https://github.com/RubenSousaDinis/legwork/pull/231) | T-65: Dashboard — international copy, and the city on every live row | Cursor Auto drafted copy, toFeedRow locality and §8 tests; human reviewed scope |
+| [#233](https://github.com/RubenSousaDinis/legwork/pull/233) | Add an unlisted dashboard briefing at /overview | — |
+| [#234](https://github.com/RubenSousaDinis/legwork/pull/234) | Live-site fixes before the demo: honest meter over seeded rows, live pool count, API front page, posters ledger, demo script | Claude Code (claude-fable-5-1) reviewed the live sites, drafted every change and the demo script; a human reviews the diff and merges. 🤖 Generated with [Claude Code](https://claude.com/claude-code) https://claude.ai/code/session_014ZP9TtBjG6qArSJm57mpTS |
+| [#236](https://github.com/RubenSousaDinis/legwork/pull/236) | World ID login: fix the widget crash, register without a gate, and let a returning worker back in | — |
+| [#237](https://github.com/RubenSousaDinis/legwork/pull/237) | Flip the Bazantic prize rows on the recording, and commit the feedback | — |
 
 ## Per commit
 
-Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
+Every commit on `main` that carries an `AI-Usage:` line, newest first, the line copied whole including
+its wrapped continuation. Command: `git log --format='%h%x09%s%x09%B' origin/main`, keeping the
+paragraph that begins `AI-Usage:` (the brief's `%(trailers:key=AI-Usage,valueonly)` form drops the
+44 wrapped ones).
 
 | Commit | Subject | AI-Usage |
 | --- | --- | --- |
+| `08666d5` | Flip the Bazantic prize rows on the recording, and commit the feedback | Claude Code Opus 5 drafted the row edits and re-verified the gateway, /check and unpaid /tasks against the live services; human recorded the clip, wrote the feedback and reviewed. |
+| `1361e35` | Selfie Check is the credential, at login and at claim — and the docs now say so. | Claude Code (claude-opus-5) verified the credential against the chain and the session store, then swept the docs for claims the run had falsified; the operator ran the phone and chose the credential; human to review |
+| `51d5ddb` | Record the Bazantic recording, username and published recipe | Claude Code Opus 5 drafted the row edits from the operator's Loom link; human recorded the clip and supplied the link. |
+| `b846bcc` | Separate stacked cards on /about and /support. | Claude Code (claude-opus-5) measured the zero gap the operator reported and drafted the rule; human to review |
+| `8cbc4cb` | Give the mini-app a column on desktop, and pin the dashboard test environment. | Claude Code (claude-opus-5) measured the wrap points and drafted both fixes; the operator reported the /about and /support layout and reviewed the result; human to review the diff and merge |
+| `c262697` | World ID login: fix the widget crash, register without a gate, and let a returning worker back in. | Claude Code (claude-opus-5) diagnosed the IDKit WASM crash and drafted every change; the operator drove a live World ID login on a production phone at each step and chose the auth change; human to review the diff and merge |
+| `d9a76f8` | Live-site fixes before the demo: an honest meter over seeded rows, the live pool count, an API front page, the posters ledger, and the demo script. | Claude Code (claude-fable-5-1) drafted every change and the demo script after reviewing the live sites; human to review the diff and merge |
+| `5b7387a` | Add an unlisted dashboard briefing for product, flows and architecture. | Cursor Grok 4.6 drafted the /overview page, robots disallow and tests; human requested push |
+| `d26afd5` | T-65: international dashboard copy and locality on live rows. | Cursor Auto drafted copy, toFeedRow locality and §8 tests; human reviewed scope |
+| `c86cd21` | T-65: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T11:44:52Z | claim script; human dispatched the task |
+| `0147b6b` | T-64: currency from place country, Leiria-named registration default. | Cursor Auto drafted currency, area copy and §8 tests; human reviewed scope |
+| `232eb99` | T-64: pin the seeded card, the board's three countries and the 409's words | Cursor Composer (Claude Opus 5) drafted the tests; human reviewed the assertions |
+| `e5a095b` | T-64: a seeded row loses its CLAIM button and says why | Cursor Composer (Claude Opus 5) drafted the seeded branch and the claim wording; human reviewed the copy |
+| `d47b472` | T-64: put three seeded rows from three countries on the mock board | Cursor Composer (Claude Opus 5) drafted the fixtures; human reviewed the addresses and coordinates |
+| `73cd474` | T-64: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T11:23:09Z | claim script; human dispatched the task |
+| `103a588` | T-63: disclose Tokyo address composed from OSM quarter tags. | Cursor Composer drafted street composition; human reviewed fable nit |
+| `0a0f53a` | T-63: align Singapore and Tokyo names with OSM tags. | Cursor Composer drafted OSM name/id swaps; human reviewed gate match rules |
+| `7e2b293` | Document the seed catalog row shape and how to add a row | Cursor Composer + Fable drafted the seed README; human reviewed scope |
+| `b42268f` | T-63: ship 26-city seed catalog and honesty fixes. | Cursor Composer drafted catalog, check script and honesty fixes; human reviewed places and swaps |
+| `8f6d18f` | T-63: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T10:26:19Z | claim script; human dispatched the task |
+| `353c5ab` | Use ScreenOutcome retry_after_s on /check 503. | Cursor Composer drafted fable-review nits; human reviewed scope |
+| `cb82145` | Make board map filters feel instant | Cursor Composer drafted pin-focus, geocode cache and tile preload; human reported lag after search and near me |
+| `9d034eb` | Cover live place-lookup outcomes on /check and /tasks. | Cursor Composer drafted place-lookup tests; human reviewed scope |
+| `67d29c6` | Resolve out-of-extract places via Overpass before screening. | Cursor Composer drafted hire/check lookup wiring; human reviewed scope |
+| `25c26d3` | Add place-lookup config, 503 vocabulary and public locality fields. | Cursor Composer drafted config/errors/public/README; human reviewed scope |
+| `374505b` | T-62: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T09:45:46Z | claim script; human dispatched the task |
+| `7cf825b` | Export live lookup helpers and document packaged-first resolution | Cursor Composer drafted the index exports and README section; human reviewed the copy |
+| `c0acf98` | Add createOverpassLookup for a single-id Overpass fetch | Cursor Composer drafted overpassLookup and its fourteen tests; human reviewed the phone rule and cache TTLs |
+| `1b1679a` | Add LayeredPlaceIndex over the packaged PlaceIndex | Cursor Composer drafted LayeredPlaceIndex and its five tests; human reviewed the delegation |
+| `e89c5b8` | Export poiFromElement and rename the coverage reason | Cursor Composer (Claude Opus 5) drafted the rename and the reason-string updates; human reviewed the diff and the green suite |
+| `64cf54b` | T-61: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T09:23:42Z | claim script; human dispatched the task |
+| `a3f88e4` | Fix near me, city search zoom, and add pinch-to-zoom on the board map | Cursor Grok 4.6 drafted near-me button, Nominatim bounds and pinch zoom; human reported unclickable filter, street-level Lisboa and missing pinch |
+| `82fbd33` | Widen frozen interfaces for ISO currency and live place lookup | Cursor Grok 4.6 drafted the interface edits, tests, and regenerated docs/api.md; human dispatched T-60 |
+| `b423a8c` | Merge origin/main so T-60 sits on #215 | git merge of origin/main after fix/map-filters; human dispatched T-60 |
+| `20c8dd4` | T-60: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-11T08:55:27Z | claim script; human dispatched the task |
+| `d0b1c35` | Record issues #217-#223 for T-60..T-66 in ISSUES.txt and the dispatch prompts | Cursor + Claude drafted the issue numbers; human reviewed |
+| `e4d5d0f` | Add briefs T-60..T-66: international place resolution and a seeded world catalog | Cursor + Claude drafted briefs T-60..T-66; human reviewed scope |
+| `2fbbb1d` | Fix the board map filters so near me and address search actually work | Cursor Grok 4.6 drafted the checkbox, map-fit and Nominatim search; human reported the broken filters |
+| `8251a16` | Record that the Bazantic plan allows at least two gateways | Cursor Grok 4.6 drafted the plan-limit wording from the T-59 review; human reviewed T-59 |
+| `3d6287b` | Record the published worker-pool-then-quote recipe URL | Cursor Grok 4.6 drafted the recipe URL into the record after the operator pasted it; human published the recipe |
+| `84504ac` | Record the Overpass gateway URL and the POST that returned the Coimbra node | Cursor Grok 4.6 drafted the gateway URL into the record and recipe after the operator pasted it; human created the Overpass gateway |
+| `d27b4b7` | Prove the recipe place is absent from the packaged extract | Cursor Grok 4.6 drafted the T-59 §8 tests; human dispatched T-59 |
+| `0565c30` | Add the Overpass recipe and extend the Bazantic record | Cursor Grok 4.6 drafted the Overpass section and place-anywhere-then-quote recipe; human dispatched T-59 and ran the Overpass import for T-58 |
+| `8ebfc5e` | T-59: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-10T22:42:13Z | claim script; human dispatched the task |
+| `ccdf75a` | Record redocly 0 errors after the #213 redeploy | Cursor Grok 4.6 drafted the post-#213 redocly section; human merged #213 and reported it |
+| `2aa7fb9` | Record the live Bazantic gateway and the two dry runs | Cursor Grok 4.6 drafted the gateway evidence in docs/bazantic.md, the API checklist pointer and the recipe host line; human supplied the gateway URL and ran the import |
+| `f574cc3` | A public operation says `security: []` rather than leaving the key out | written by the lead session (Claude) answering T-58's INTERFACE REQUEST; the 17 errors were reproduced independently and the fix was verified by linting the rebuilt document. |
+| `c2c9b6b` | Add the four T-58 OpenAPI and recipe acceptance tests | Cursor Grok 4.6 drafted the §8 tests; human dispatched T-58 |
+| `66fb79d` | Record the Bazantic checklist run and commit the recipe | Cursor Grok 4.6 drafted docs/bazantic.md and the worker-pool-then-quote recipe; human dispatched T-58 |
+| `7825989` | Point the OpenAPI checklist at docs/bazantic.md | Cursor Grok 4.6 drafted the checklist redirect; human dispatched T-58 |
+| `659b5f0` | T-58: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-10T20:44:57Z | claim script; human dispatched the task |
+| `e568ef9` | Fold three findings into the Bazantic briefs before they are dispatched | written by the lead session (Claude) after a design pass over its own briefs; the attribution constant and the banned-words scope were checked in the repo before being relied on. |
+| `900624e` | Brief T-58 and T-59: the two Bazantic tracks we can honestly reach | written by the lead session (Claude); the qualification requirements were read off the live ETHGlobal prize page rather than the repo's paraphrase, and the Overpass claim was checked against the packaged extract. |
+| `6f424a0` | docs:gen emits the handler order it was deleting, and CI now checks the generated docs | written by the lead session (Claude) after finding the drift while running docs:gen for an unrelated change; the fix was verified by regenerating against an unmodified main both with and without it. |
+| `99d9a54` | The public reads are cached by the CDN, and healthz stops saying ok when it isn't | written by the lead session (Claude) after causing the outage it describes; the failure was read out of the deployed API's own logs and the healthz test was checked to fail without the fix. |
+| `fbe1c4e` | T-49: the worker was paid for real, separately | written by the lead session (Claude) on the operator's confirmation. |
+| `db2093c` | T-49 part 1: addresses, endpoints, posters, docs index and the AI-usage record | written by the lead session (Claude); every address, transaction, count and model figure was read out of the deployments file, the subgraph or the git trailers rather than recalled. |
 | `2068d64` | T-48: fill WorkerRegistered tx and move video timestamp to the form | Cursor Grok 4.6 drafted the prize-table edit from the review tx; human supplied the WorkerRegistered hash in review |
 | `4c44240` | T-48: write the submission pack and prize table | Cursor Grok 4.6 drafted docs/submission.md and the README prize-qualification table; human dispatched the task |
 | `08ff9ec` | T-47 §4's owned-paths line cannot parse; use a `#` qualifier | written by the lead session (Claude) while reviewing #197; the parse was reproduced by running the script's own sed over the two spellings. |
@@ -214,6 +314,8 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `b748d85` | T-57: a failed fee is forfeit, not something to chase | Cursor Grok 4.6 drafted the docstring correction; human reviewed T-57 and asked for option 2 |
 | `008bcde` | Ignore T-57's superseded anvil dev key so `secrets` can pass | written by the lead session (Claude) while reviewing #195; the fingerprints came from `gitleaks detect` over the PR range and the fix was verified by re-running it. |
 | `155d289` | T-47: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-09T13:45:08Z | claim script; human dispatched the task |
+| `6dbd0e6` | Loading states: one route line, both grounds | Claude Code (Opus 5) drafted the Waiting component, the two loading files, the board and claim states and this message; human asked for loading states on the same PR. |
+| `56800e2` | A UI pass off the T-47 frames: the paid beat, and the Supply card | Claude Code (Opus 5) drafted the CSS, the PaidState restructure, the credential resolver fix and this message; human requested a UI pass off the T-47 frames. |
 | `bdc4efd` | T-57: generate throwaway keys in the withdraw tests | Cursor Grok 4.6 drafted the gitleaks fix; human dispatched T-57 and the resume |
 | `de4eced` | T-57: a worker withdraws without gas, and Legwork keeps 2 % | Claude Code Opus 5 drafted the constants, signWithdrawal, the withdraw service and route, the /earnings form and every §8 test; human dispatched T-57 and reviewed the recipient provenance, the 403 ordering and the fee-leg failure path |
 | `52def63` | Ship the worker mini-app as a standalone PWA so phone screenshots have no browser chrome | Cursor Grok 4.6 drafted the web-app manifest, Apple meta, icons, and tests; human requested the PWA for screenshot chrome |
@@ -275,10 +377,12 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `ea60b0e` | FEEDBACK-WORLD: full app and RP ids; lead notes for T-44, T-41, the hire scene and the deployment cap | Claude Code (Opus 5) drafted the notes and applied the id ruling; human reviewed |
 | `9c287d2` | T-41: make docs/feedback-world real, with the naming and redaction rules | Claude Code (Opus 5) drafted the README; human reviewed |
 | `97c8120` | T-41 pass 1: the Day-1/2 entries — Portal, the S1 probe, verification_disabled | Claude Code (Opus 5) drafted the entries from the operator's notes; human reviewed the wording and the redactions |
+| `8ed90b2` | inserts.ts: --width wraps a long line instead of rejecting it | Claude Code (Opus 5) drafted the wrapper and its tests; human ruled on --width in the brief's §15 and reviewed the rendered cards |
 | `7552fb6` | T-41: claim by opus-high-t-41@MacBook-Pro-de-Ruben at 2026-09-08T08:20:22Z | claim script; human dispatched the task |
 | `d770bf5` | T-41: pin the branch for pass 1 and say where the operator's material is | Claude Code (Opus 5) drafted the dispatch note; human reviewed |
 | `19839ed` | examples: scene 1, re-run end to end now that the seeded worker is free | Claude Code (Opus 5) ran the scene and spliced the record; human resolved the escrow that unblocked it |
 | `37cdc5b` | T-44: --width wraps rather than rejects; the examples agent accepts pnpm's argument separator | Claude Code (Opus 5) drafted the ruling and the parser fix; human reviewed |
+| `aaf1bc4` | inserts.ts: read, validate and print the two terminal inserts | Claude Code (Opus 5) drafted the extractor, validator, printer and tests; human reviewed the insert text against examples/transcript.md |
 | `28db1e2` | The demo place is Pão Doce (ez1dn); seed-area.sh seeds a cell; the demo agent names its ERC-8004 id | Claude Code (Fable 5.1) drafted the script, the fixture move and the identity line; human chose the place and reviewed |
 | `f970d6c` | T-44: claim by opus-high-t-44@MacBook-Pro-de-Ruben at 2026-09-08T08:06:12Z | claim script; human dispatched the task |
 | `f1b281e` | check.test.ts: reword a comment the banned-words check rejects | Claude Code (Fable 5.1) drafted the reword; human reviewed |
@@ -378,6 +482,10 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `fd2c528` | T-04: claim by opus-high-t-04@MacBook-Pro-de-Ruben at 2026-09-07T05:54:48Z | claim script; human dispatched the task |
 | `39c3514` | Post-T-28 sync: isError hoisted on the local hire, caller windows forwarded, Posted admits the replay, LEAD-NOTES "Wave 5 landed" | written by the lead session (Claude) after reviewing T-28; verified with the shared, mcp and api typechecks, lints and tests and pnpm docs:gen. |
 | `d10c48e` | Keep the env grep clean: say "the environment", not the symbol | Claude Code (Opus 5) drafted the reword; human reviewed the grep. |
+| `7a6518e` | Document the package: both modes, the tokens file, the insert, the money | Claude Code (Opus 5) drafted the README from the brief; human reviewed every money figure and honesty line against the frozen wording. |
+| `d615d65` | Test the paid round trip against the real X402Gateway and FakeFacilitator | Claude Code (Opus 5) drafted the harness and the six named acceptance tests; human reviewed that each assertion reads the wire rather than the result. |
+| `82a94b7` | Add the legwork-mcp stdio binary: local and hosted modes, hire one-shot | Claude Code (Opus 5) drafted the argument parsing, the help text and the wiring; human reviewed the stdout/stderr split, the exit codes and the help text for anything key-shaped. |
+| `bf30e04` | Add the paying hire_human: createPayFetch and localHire | Claude Code (Opus 5) drafted hire.ts against the brief and the pinned @x402/fetch API; human reviewed the payment path, the refusal path and the insert arithmetic. |
 | `3d8b38d` | Post-T-16 sync: contract lists 409/503 on POST /tasks and the X-Payer hint, @types/ngeohash, the check route off the payments package, LEAD-NOTES | written by the lead session (Claude) after reviewing T-15 and T-16; verified with the shared, api, miniapp and mcp typechecks, lints and tests, and pnpm docs:gen. |
 | `be38f2f` | T-28: claim by opus-high-t-28@MacBook-Pro-de-Ruben at 2026-09-07T00:01:06Z | claim script; human dispatched the task |
 | `d740e3f` | packages/mcp gets @legwork/payments as a devDependency; .env.example names the three agent-side variables | written by the lead session (Claude) ahead of T-28's dispatch; verified with the mcp typecheck and tests (25/25) and an import of @legwork/payments from packages/mcp. |
@@ -407,11 +515,15 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `8e806e8` | T-42: claim by opus-high-t-42@MacBook-Pro-de-Ruben at 2026-09-06T19:12:35Z | claim script; human dispatched the task |
 | `ff3ca95` | Wave-4 sync: the e2e-dashboard CI job, T-43/T-42/T-33 brief records, LEAD-NOTES "Wave 4 landed" | written by the lead session (Claude) after the wave-4 reviews; docs plus one CI job that runs T-39's gate. |
 | `23b6a8e` | GET /tasks/:id/spec: the claimant reads the spec, minus the buyer's claims | written by the lead session (Claude) after the T-33 review; verified with the api typecheck, lint and the lifecycle suite (24/24). |
+| `c04094d` | Place the three columns in their tracks by name | Claude Code (Opus 5) drafted the fix; human found the case by measuring all seven query combinations in Chromium. |
+| `6560c6f` | The four named tests, and the present-mode README | Claude Code (Opus 5) drafted the tests and the README; human reviewed the assertions against every §8 clause and the honesty rules. |
 | `25b8742` | T-33: the call-confirm picker returns an id, not a question | Claude Code (Opus 5) drafted the TEMPLATE_BY_QUESTION lookup and clockTime; human found the bug by exercising the call-confirm branch and re-checked each proof shape against packages/shared |
 | `5f5e4a5` | T-33: the six acceptance tests, and app/proof/README.md | Claude Code (Opus 5) drafted tests/proof/** and app/proof/README.md; human reviewed the downgrade assertions and traced the FormData hang to jsdom's Blob |
+| `893a415` | Fit the canvas: T-39's four measurements answered | Claude Code (Opus 5) drafted the CSS from measured boxes; human reviewed each cut against the floors and the honesty rules. |
 | `0f2e6a1` | T-33: the proof flow, its route and the earnings page | Claude Code (Opus 5) drafted ProofFlow.tsx, upload.ts, app/proof/[id]/page.tsx and app/earnings/page.tsx; human reviewed the submit body against the proof schemas and the earned-only rule |
 | `e21c0e2` | T-33: the three proof-screen pieces — answer, downgrade, paid state | Claude Code (Opus 5) drafted AnswerToggle.tsx, Downgrade.tsx and PaidState.tsx; human reviewed the enums against packages/shared and the no-release-without-proof guard |
 | `0fc1ac7` | T-33: getPosition() with the 10 s options, and the canvas re-encode | Claude Code (Opus 5) drafted lib/gps.ts and app/proof/image.ts; human reviewed the error-code mapping and the 10 s options |
+| `79eb19a` | Present mode: server clock, one-shot meter, card cuts and the crop guide | Claude Code (Opus 5) drafted the components, CSS and page wiring; human reviewed the layout budget and the honesty rules against the brief. |
 | `99de601` | T-33: claim by opus-high-t-33@MacBook-Pro-de-Ruben at 2026-09-06T18:32:16Z | claim script; human dispatched the task |
 | `4148bc9` | Round 2: poll /tasks/list, and render the brief the row carries | Claude Code (Opus 5) drafted the path change, BriefDetail and the tests; human reviewed both against the route on main and the amended brief |
 | `2c3349e` | T-43: claim by opus-high-t-43@MacBook-Pro-de-Ruben at 2026-09-06T18:22:50Z | claim script; human dispatched the task |
@@ -431,6 +543,8 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `2dd136a` | Carry the credential level through the browser poll | Claude Code (Opus 5) drafted the level hand-off and both tests; human reviewed the chip behaviour across a tick. |
 | `a2d4014` | Read the agent card from the subgraph, not from the public API | Claude Code (Opus 5) drafted the subgraph agent read and its fixtures; human reviewed the class-id mapping and the blank-agent path. |
 | `e754248` | Read completed tasks only, and reconcile T-17's submit-time rows | Claude Code (Opus 5) drafted the completion filter, the joins and the reconciling sync; human reviewed the two round-2 items against T-17's writer |
+| `5f7a8d1` | Rewrite docs/mcp.md as the readable form of the MCP contract | Claude Code (Opus 5) drafted docs/mcp.md from mcp-contract.ts; human reviewed every field name against the frozen schemas. |
+| `086e9f9` | Write SKILL.md: two install modes, four types, prices, limits | Claude Code (Opus 5) drafted SKILL.md from the T-31 brief and the frozen contracts; human reviewed every verbatim sentence and JSON example. |
 | `e50ebdf` | Write SECURITY.md: the guards, and the limit that actually holds | Claude Code (Opus 5) drafted SECURITY.md from the T-38 brief, docs/keys.md and docs/threat-model.md; human reviewed the disclosure claims and the caps figures |
 | `b0e782b` | Re-run CI against the round-2 owned-paths block | Claude Code (Opus 5) drafted this empty re-trigger commit; human reviewed why the earlier run read a stale body |
 | `cc12992` | Test the five §8 cases against createMiddleware with an injected store and clock | Claude Code (Opus 5) drafted the five acceptance tests from T-38 §8; human reviewed the assertions and the streamed-body case |
@@ -497,9 +611,14 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `b35fb26` | Claim and release a claim through the relayer | Claude Code (Opus 5) drafted the routes; human reviewed the check order, the 409 bodies and the revert mapping |
 | `ae2f1eb` | Serve the worker board at GET /tasks/list | Claude Code (Opus 5) drafted the route; human reviewed the visibility rules, the seeded filter and the price field |
 | `b8c77bf` | Add the worker lifecycle service and the lazy-sweep seam | Claude Code (Opus 5) drafted the service; human reviewed the brief filtering, the state mapping and the mirror columns |
+| `cfb7c34` | T-18: say why sharp drops metadata without naming the call | Claude Code (Opus 5) drafted the comment rewrite; human reviewed that the grep is now silent and the reasoning survives. |
 | `f7bf2f9` | Add the extract script, the ODbL runbook and the Leiria+Lisbon fixture | Claude Code (Opus 5) drafted the extract script and the README; human reviewed the bounding boxes, the tag keep-list and the licence line. |
 | `044ce63` | Run rows 40-48 and the live spike through the real classifier | Claude Code (Opus 5) drafted the corpus and live tests; human reviewed the mock's abort handling and the row-to-id mapping |
 | `8d36eb3` | CI: match Next's [id] segments and {a,b} groups in owned-paths | Claude Code (Fable 5.1) drafted the fix and the harness; human dispatched, reviews and merges |
+| `5ee8bc9` | T-18: the /proofs unit test | Claude Code (Opus 5) drafted the suite; human reviewed the fixture orientation swap, the tamper cases and the rounding vector. |
+| `de37ec8` | T-18: the three proof routes | Claude Code (Opus 5) drafted the three handlers; human reviewed the hash-before-strip order, the GPS invariant and the public response shape. |
+| `2edd7fe` | T-18: private proof store, two objects per proof, request-time rehash | Claude Code (Opus 5) drafted the store and rehash; human reviewed the two-object layout and the absence of a public fallback. |
+| `38daee8` | T-18: geo rounding, signed proof URLs, EXIF stripping | Claude Code (Opus 5) drafted the three services; human reviewed the rounding vector, the constant-time compare and the sharp pipeline. |
 | `9fc4288` | Add the Anthropic classifier behind T-06's Classifier interface | Claude Code (Opus 5) drafted prompt.md, anthropic.ts, live.ts and the unit tests; human reviewed the failure paths and the delimiter sanitising |
 | `b406fd7` | Build a deterministic OSM extract and the PlaceIndex over it | Claude Code (Opus 5) drafted buildExtract, placeIndex and the four acceptance tests; human reviewed the determinism rules and the delegation to JsonPlaceIndex. |
 | `1f17374` | T-22: claim by opus-high-t-22@MacBook-Pro-de-Ruben at 2026-09-05T21:16:13Z | claim script; human dispatched the task |
@@ -507,6 +626,11 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `5e83402` | T-19: claim by opus-high-t-19@MacBook-Pro-de-Ruben at 2026-09-05T21:15:19Z | claim script; human dispatched the task |
 | `7a5aedb` | T-18: claim by opus-high-t-18@MacBook-Pro-de-Ruben at 2026-09-05T21:14:46Z | claim script; human dispatched the task |
 | `fcc081b` | T-17: claim by opus-high-t-17@MacBook-Pro-de-Ruben at 2026-09-05T21:14:26Z | claim script; human dispatched the task |
+| `463d56c` | Briefs: record what the wave-1 reviews settled | Claude Code (Fable 5.1) drafted the change as acting lead after reviewing the wave-1 PRs; human reviews the PR before merging. |
+| `f23bee8` | abi-gen writes an interface ABI for the subgraph while the implementation is missing; regenerate the stale TaskEscrow ABI | Claude Code (Fable 5.1) drafted the change as acting lead after reviewing the wave-1 PRs; human reviews the PR before merging. |
+| `e8f2abc` | Give caps_ledger.daily_units a SQL default so drizzle-kit needs no BigInt shim | Claude Code (Fable 5.1) drafted the change as acting lead after reviewing the wave-1 PRs; human reviews the PR before merging. |
+| `b60d05a` | Re-export the screening package and drop .js relative imports in the two new packages | Claude Code (Fable 5.1) drafted the change as acting lead after reviewing the wave-1 PRs; human reviews the PR before merging. |
+| `d1828c9` | interface-change: contract catches up with T-06 and T-08 | Claude Code (Fable 5.1) drafted the change as acting lead after reviewing the wave-1 PRs; human reviews the PR before merging. |
 | `0a867f5` | Round 2: empty meter, call-confirm disclosure, badge floor | Claude Code (Opus 5) drafted the three fixes and their assertions; human reviewed the round-2 items against the brief. |
 | `1a0b96b` | Add the six acceptance tests, the README and build fixes | Claude Code (Opus 5) drafted the tests and the README; human reviewed the acceptance names and the honesty assertions. |
 | `5943d92` | Build the dashboard shell: tokens, components, present canvas | Claude Code (Opus 5) drafted the components, tokens and demo adapter; human reviewed the honesty rules and the present-mode geometry. |
@@ -529,12 +653,15 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `9d16fb7` | T-08: parse the environment once, and log without leaking it | Claude Code (Opus 5) drafted config.ts, log.ts, errors.ts and their tests; human reviewed the redaction list and the parse-failure output. |
 | `a71f466` | T-08: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T23:38:27Z | claim script; human dispatched the task |
 | `eb8ddde` | T-10: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T23:38:21Z | claim script; human dispatched the task |
+| `028a325` | T-09: run graph codegen inside the subgraph build script | Claude Code (Fable 5.1) diagnosed the CI failure and drafted the one-line fix as acting lead; human reviews before merging. |
 | `0b15056` | Drop the BuyerResult wrapper from getOrCreateBuyer | Claude Code (Opus 5) drafted the simplification; human reviewed it against the §13 interim rule. |
 | `e44b74f` | Add packages/subgraph-client with recorded fixtures | Claude Code (Opus 5) drafted the client, helpers, fixtures, tests and README; human reviewed the reduction and the fixture arithmetic against the brief's §2 and §8. |
 | `b523c22` | Add the two matchstick mapping tests | Claude Code (Opus 5) drafted the two tests and the mock-event factories; human reviewed the assertions against the brief's §8. |
 | `7abc655` | Wire the four data sources and write the mappings | Claude Code (Opus 5) drafted the manifest and the four mapping files; human reviewed them against the brief's §2 and the frozen schema. |
 | `2f20039` | Refresh subgraph ABIs and add the two interface-only ones | Claude Code (Opus 5) drafted the ABI copy; human reviewed the event signatures against contracts/src/interfaces. |
 | `66b6122` | T-09: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T23:38:21Z | claim script; human dispatched the task |
+| `8d474a1` | Drop the .js extensions from packages/chain relative imports too | Claude Code (Fable 5.1) drafted the change as acting lead; human reviews the PR before merging. |
+| `e88f70d` | interface-change: drop the .js extensions from packages/shared relative imports | Claude Code (Fable 5.1) reproduced the failure and drafted the change as acting lead; human reviews the PR before merging. |
 | `1f9d095` | Document the pipeline, the rule-id families and the corpus | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
 | `bd7e2bd` | Add the corpus and gate tests | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
 | `4f1d009` | Add the 56-row screening corpus | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
@@ -543,16 +670,23 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `629e302` | Add the deterministic rules: denylist, person, six-class keywords | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
 | `b97288a` | Add the field-level schema checks | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
 | `78c288e` | Add the place index over a cached OSM extract | Claude Code (Opus 5) drafted the implementation from the T-06 brief; human reviewed the rule mapping, the corpus verdicts and the privacy of the log entry. |
+| `2443b73` | Add matchstick-as and pin assemblyscript for the subgraph tests | Claude Code (Fable 5.1) drafted the catalog and manifest change as acting lead; human reviews the PR before merging. |
+| `90e961c` | interface-change: declare immutable: false on the five mutable subgraph entities | Claude Code (Fable 5.1) drafted the schema change as acting lead; human reviews the PR before merging. |
+| `2d1268e` | interface-change: add jsdom and testing-library to the catalog; wire chain and minikit into apps/api | Claude Code (Fable 5.1) drafted the catalog and manifest changes as acting lead; human reviews the PR before merging. |
 | `98e976f` | T-06: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T23:38:44Z | claim script; human dispatched the task |
+| `b03986a` | Check claim reachability instead of a commit range | Claude Fable 5.1 wrote both; reported by the T-12 agent. |
+| `c4f414a` | T-01b: freeze the TypeScript-side interfaces | Claude Fable 5.1 drafted from the T-01 brief and 10-schemas; human reviewed and dispatched. |
 | `8c5eafc` | T-12 (2/2): cover the settlement half | Claude Code (Opus 5) drafted the eight settlement tests; human reviewed the deltas, the boundaries and the hook assertions |
 | `28d1cde` | T-12 (2/2): settle a submitted task | Claude Code (Opus 5) drafted the five functions from §2; human reviewed the fee branches, the hook arguments and the effects-before-interactions order |
 | `ae62a31` | T-12 (2/2): reject a zero buyer and an unbounded window | Claude Code (Opus 5) drafted the two guards and their tests; human reviewed the bounds and the check order |
 | `36d0181` | Close merged issues, and stop that depending on me remembering | Claude Opus 5 wrote both; human dispatched. |
+| `c145ef9` | Stop CI blaming a branch for commits main merged into it | Claude Opus 5 diagnosed from the failing run and wrote the fixes; reported by the T-07 agent. |
 | `e30966c` | T-07: run the chain test files one at a time | Claude Code (Opus 5) drafted the vitest config change; human reviewed the timing measurement |
 | `8312b3a` | T-07: drop an unused option from the TxQueue test harness | Claude Code (Opus 5) drafted the cleanup; human reviewed |
 | `b119f2e` | T-07: ChainAdapter, LiveChain and a FakeChain that reverts by name | Claude Code (Opus 5) drafted adapter.ts, live.ts, fake.ts, the lifecycle suite and the README; human reviewed the check order and the money math against T-01 §2 |
 | `097f8e0` | Fix two rules that contradicted themselves | Claude Opus 5 wrote the fixes; reported by the T-11 agent on #59. |
 | `7028cc5` | T-07: typed clients over the frozen ABIs, and one decoder for every event | Claude Code (Opus 5) drafted the contract clients, abi.ts and events.ts; human reviewed the role assignments against T-01 §2 |
+| `a3b7012` | Correct the recorded cause of the coverage failure | Claude Opus 5 verified the T-12 agent's bisect and corrected the note; human dispatched. |
 | `1739e57` | T-02: restore T-00's honesty sentence to the wording its brief specified | Claude Code (Opus 5) drafted the one-sentence restore from the reviewer's BLOCKING item; human reviewed the sentence against T-00's brief |
 | `8417fb5` | T-07: one sender for the relayer key — TxQueue over a Postgres advisory lock | Claude Code (Opus 5) drafted nonce-lock.ts, tx-queue.ts, the mock node and their tests; human reviewed the lock boundary and the resync path |
 | `2c00dde` | T-02: README stub sections in the order T-37, T-48 and T-49 fill them | Claude Code (Opus 5) drafted the stub sections from the brief's §2 order; human reviewed that T-00's two lines survived |
@@ -568,8 +702,33 @@ Every commit on `main` that carries an `AI-Usage:` trailer, newest first.
 | `708dc23` | T-11: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T21:34:41Z | claim script; human dispatched the task |
 | `483d0ed` | T-12 (1/2): time the tests off the recorded timestamps | Claude Code (Opus 5) drafted the timestamp change and the unpause assertion; human reviewed the boundaries against the brief's §8 |
 | `571d07b` | T-07: parse the chain environment and build the three wallets | Claude Code (Opus 5) drafted env.ts and clients.ts from the brief; human reviewed the schema against .env.example |
+| `7e94213` | interface-change: reject the sentinel values in WorkerRegistry | Claude Opus 5 found the sentinel collision while reviewing PR #59 and wrote the interface change; human dispatched. |
 | `f8fd93b` | T-12 (1/2): cover the PR-1 rows of the brief's §8 | Claude Code (Opus 5) drafted the twelve §8 tests and the shared fixture; human reviewed the boundaries and the delta assertions |
 | `a597081` | T-12 (1/2): post, claim, submit and expire the escrow | Claude Code (Opus 5) drafted the contract from the T-12 brief; human reviewed the check orders, the money math and the pause surface |
 | `ec8c472` | T-07: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T21:35:54Z | claim script; human dispatched the task |
+| `3907ea0` | Declare the dependencies the briefs actually name, in every package | Claude Opus 5 audited and fixed; human dispatched. Reported by the T-07 agent on PR #61. |
 | `9c2f7ab` | T-12: claim by Ruben Dinis@MacBook-Pro-de-Ruben at 2026-09-04T21:41:26Z | claim script; human dispatched the task |
+| `62e35be` | Split T-01 into 01a and 01b so the contract lane is not held behind zod | Claude Opus 5 found this when the merge did not unblock the lane; human reviewed and dispatched. |
+| `a1036a7` | Stop tracking tsbuildinfo, and re-run CI when a label lands | Claude Opus 5 diagnosed both from the failing run; human reviewed and dispatched. |
+| `bd2a4e3` | T-01a: freeze the contracts-side interfaces | Claude Opus 5 drafted the interfaces, mocks and freeze tests from the T-01 brief; human reviewed and dispatched. |
+| `bcee9c9` | Make the dependency gate able to see the interface freeze | Claude Opus 5 found both while checking whether the session could be handed off; human reviewed and dispatched. |
+| `fe90bb9` | Fix two CI gates that failed on the very first PR | Claude Opus 5 diagnosed both from the failing run and wrote the fixes; human reviewed and dispatched. |
+| `9be01c5` | Refuse an existing claim instead of guessing whether it is yours | Claude Opus 5 found the collision while writing the race test and wrote the fix; human reviewed and dispatched. |
+| `4f0f321` | Map task ids to issue numbers for the claim script | Claude Opus 5 generated the map from the created issues; human reviewed and dispatched. |
+| `b4c1365` | Scaffold the workspace, the guardrails and the disclosed plan | Claude Opus 5 drafted the scaffold from the pack's repo-seed drafts; human reviewed and dispatched. |
 | `be479b4` | Initial commit at 2026-09-04T17:18:30Z | Claude Opus 5 drafted the README; human reviewed and dispatched. |
+
+## Commits without a trailer
+
+5 non-merge commits on `main` carry no `AI-Usage:` line. Three were pushed to `main` directly, outside
+any pull request, so the `commit-trailers` job never saw them; two came in through pull request #191,
+whose `commit-trailers` check was red when it was merged with the maintainer bypass. All five are
+lead-session commits. They are listed so the record is complete rather than flattering.
+
+| Commit | Date | Subject | How it reached `main` |
+| --- | --- | --- | --- |
+| `220ec15` | 2026-09-09 | The map zooms to z16, so a neighbourhood of tasks is not a corner of one tile | merged through [#191](https://github.com/RubenSousaDinis/legwork/pull/191), check red |
+| `a6ae6db` | 2026-09-09 | The map fits the phone, its pins land on it, and a task says what it is | merged through [#191](https://github.com/RubenSousaDinis/legwork/pull/191), check red |
+| `e75b484` | 2026-09-08 | The World App listing gets a support page, a landing and the app's first icons | pushed to `main` directly |
+| `b700929` | 2026-09-05 | Note that a CI fix on main does not reach an open PR | pushed to `main` directly |
+| `e2baf2f` | 2026-09-05 | Flag an assigned private key, not every 64-hex literal | pushed to `main` directly |
