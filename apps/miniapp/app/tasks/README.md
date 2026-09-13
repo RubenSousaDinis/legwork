@@ -80,6 +80,12 @@ refusal colour on every Legwork surface, and losing a race for a task is not a r
 | `InCooldown` | `You released or let a claim expire recently. You can claim again within 15 min.` (`CLAIM_COOLDOWN_S`) |
 | `AlreadyClaimed` | `Someone claimed this task first.` — and an immediate re-poll, because the list is already wrong |
 | `SeededCannotClaimExternal` | `This account is a seeded demo worker; it can only claim operator-funded tasks.` |
+| `selfie_required` | `Selfie Check first — a live person has to be behind this claim.` |
+
+A CLAIM tap opens IDKit with `selfieCheckLegacy` (QR on desktop, deep link on a phone PWA,
+World App bridge inside the mini-app) against action `legwork-worker`. The API issues a
+short-lived `lw_selfie` cookie; `POST /tasks/:id/claim` spends it. Seeded `dev` sessions skip
+the camera. Uniqueness stays Orb, at registration.
 
 Mapped on the **error code**, not the status: `api-contract.ts` allows both 403 and 409 for
 this route, and T-24's mocks answer `SeededCannotClaimExternal` with 403.

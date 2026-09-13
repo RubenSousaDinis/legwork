@@ -6,6 +6,19 @@
  * appears nowhere in the product.
  */
 :root {
+  /*
+   * The column. This is a World App mini-app: its real viewport is a phone, and every
+   * screen was drawn at 390 px. On a desktop browser the shell had no measure at all, so a
+   * paragraph on /about ran the full 1700 px of the window — well past a readable line —
+   * and the cards sprawled with it. The phone is untouched: below 640 px this is wider than
+   * the screen and nothing changes.
+   *
+   * 38rem, not less: the header's own row — brand, four nav links and the widest button the
+   * app has ("LOGIN WITH WORLD ID", the signed-out state) — wraps onto two lines under it,
+   * and the nav then runs into the button. Measured, not guessed.
+   */
+  --lw-measure: 38rem;
+
   /* surfaces */
   --paper-50: #faf9f5; /* page */
   --paper-100: #f0eee7; /* tag fill */
@@ -110,6 +123,18 @@ body {
   border-bottom: 1px solid var(--paper-border);
 }
 
+/*
+ * The bar keeps its full-width background and rule; what sits inside it lines up with
+ * `.lw-main`'s column instead of hugging the window. Padding rather than a wrapper element,
+ * because the header's children are its own grid items.
+ */
+@media (min-width: 640px) {
+  .lw-header {
+    padding-left: max(var(--s-4), calc((100% - var(--lw-measure)) / 2));
+    padding-right: max(var(--s-4), calc((100% - var(--lw-measure)) / 2));
+  }
+}
+
 /* Row 1, left: the wordmark and the footprint glyph. */
 .lw-header__brand {
   display: inline-flex;
@@ -201,6 +226,8 @@ body {
 }
 
 .lw-main {
+  max-width: var(--lw-measure);
+  margin-inline: auto;
   padding: var(--s-4);
   padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
   padding-left: max(var(--s-4), env(safe-area-inset-left));

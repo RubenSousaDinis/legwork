@@ -41,6 +41,7 @@ describe('POST /session/logout', () => {
 
     expect(res.status).toBe(204);
     expect(setCookies(res).lw_worker).toBe('');
+    expect(setCookies(res).lw_selfie).toBe('');
     expect(res.headers.getSetCookie().some((cookie) => cookie.includes('Max-Age=0'))).toBe(true);
 
     const after = await fixture.rawQuery('SELECT id FROM sessions WHERE worker = $1', [WORKER]);

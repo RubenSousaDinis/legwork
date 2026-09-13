@@ -117,9 +117,9 @@ export default function EarningsPage() {
           </p>
         )}
 
-        {/* The key screen is T-24's, on `/`. It is the only copy of the key that exists. */}
+        {/* `/payout-key`. It is the only copy of the key that exists. */}
         <p className="lw-chips lw-chips--stacked-top">
-          <a className="lw-quiet-link" data-hit="44" data-link="backup" href="/">
+          <a className="lw-quiet-link" data-hit="44" data-link="backup" href="/payout-key">
             {BACK_UP_KEY}
           </a>
         </p>

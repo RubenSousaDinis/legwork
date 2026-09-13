@@ -5,6 +5,10 @@ import { recordRequests } from './requests';
 const replace = vi.fn();
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
+vi.mock('@worldcoin/idkit', async () => {
+  const { AutoIdkitRequestWidget } = await import('./autoCompleteIdkit');
+  return { IDKitRequestWidget: AutoIdkitRequestWidget };
+});
 
 const { CLAIM_RESPONSE, seededDemoRowClaim } = await import('../../mocks/handlers');
 const { server } = await import('../../mocks/server');
@@ -85,6 +89,9 @@ describe('claiming', () => {
       submit_deadline: CLAIM_RESPONSE.submit_deadline,
       tx: CLAIM_RESPONSE.tx,
     });
+
+    expect(requests.count('POST', '/api/idkit/request')).toBeGreaterThanOrEqual(1);
+    expect(requests.count('POST', '/api/idkit/verify')).toBeGreaterThanOrEqual(1);
   });
 
   it('releaseClaimCallsRoute', async () => {

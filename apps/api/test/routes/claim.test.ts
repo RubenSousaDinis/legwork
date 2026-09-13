@@ -21,7 +21,7 @@ import { setChainForTests } from '../../src/chain';
 import { resetConfigForTests } from '../../src/config';
 import { tasks } from '../../src/db/schema';
 import { dbState, secondsToDate } from '../../src/services/lifecycle';
-import { issueWorkerSession } from '../../src/session';
+import { issueSelfieSession, issueWorkerSession } from '../../src/session';
 import { resetSweepClockForTests } from '../../src/services/sweeper';
 import { call } from '../app';
 import { createTestDb, type TestDb } from '../db';
@@ -52,12 +52,20 @@ const SPEC = {
 let fixture: TestDb;
 let fake: FakeChain;
 
-async function sessionFor(worker: Address): Promise<string> {
-  const { token } = await issueWorkerSession({ worker, nullifier: NULLIFIER, mode: 'walletAuth' });
-  return token;
+async function sessionFor(
+  worker: Address,
+  mode: 'walletAuth' | 'dev' = 'walletAuth',
+): Promise<{ token: string; selfie: string }> {
+  const { token } = await issueWorkerSession({ worker, nullifier: NULLIFIER, mode });
+  const selfie = await issueSelfieSession({ worker, nullifier: '9001', level: 'face' });
+  return { token, selfie: selfie.token };
 }
 
 const auth = (token: string) => ({ authorization: `Bearer ${token}` });
+const withSelfie = (token: string, selfie: string) => ({
+  headers: auth(token),
+  cookies: { lw_selfie: selfie },
+});
 
 async function postOpenTask(): Promise<bigint> {
   const { taskId } = await fake.post({
@@ -113,7 +121,7 @@ afterEach(async () => {
 describe('POST /tasks/:id/claim radius', () => {
   it('claimRouteRefusesBeyondTheRadius', async () => {
     const taskId = await postOpenTask();
-    const token = await sessionFor(WORKER);
+    const { token, selfie } = await sessionFor(WORKER);
     const farLat = PLACE_LAT + (CLAIM_RADIUS_M + 50) * METRE_IN_DEGREES;
 
     const refused = await call(claimRoute, {
@@ -136,7 +144,7 @@ describe('POST /tasks/:id/claim radius', () => {
     const allowed = await call(claimRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
-      headers: auth(token),
+      ...withSelfie(token, selfie),
     });
     expect(allowed.status).toBe(200);
     expect((await allowed.json()) as { tx: string }).toHaveProperty('tx');
@@ -175,7 +183,7 @@ describe('POST /tasks/:id/claim on a seeded demo row', () => {
       exactLon: String(PLACE_LON),
     });
 
-    const token = await sessionFor(WORKER);
+    const { token } = await sessionFor(WORKER);
     const res = await call(claimRoute, {
       method: 'POST',
       params: { id: seededId.toString() },
@@ -192,5 +200,54 @@ describe('POST /tasks/:id/claim on a seeded demo row', () => {
     // The row moved nowhere: still open, still nobody's, still no money behind it.
     const [row] = await fixture.db.select().from(tasks).where(eq(tasks.taskId, seededId));
     expect(row).toMatchObject({ state: 'open', worker: null, seeded: true, buyer: ZERO_ADDRESS });
+  });
+});
+
+describe('POST /tasks/:id/claim Selfie Check', () => {
+  it('claimWithoutSelfieIs403', async () => {
+    const taskId = await postOpenTask();
+    const { token } = await sessionFor(WORKER);
+    const res = await call(claimRoute, {
+      method: 'POST',
+      params: { id: taskId.toString() },
+      headers: auth(token),
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'selfie_required' });
+    expect(fake.calls.map((c) => c.fn)).not.toContain('claimFor');
+  });
+
+  it('claimWithSelfieThenSpendsIt', async () => {
+    const first = await postOpenTask();
+    const { token, selfie } = await sessionFor(WORKER);
+    const ok = await call(claimRoute, {
+      method: 'POST',
+      params: { id: first.toString() },
+      ...withSelfie(token, selfie),
+    });
+    expect(ok.status).toBe(200);
+
+    await fake.releaseClaimFor(first, WORKER);
+
+    const second = await postOpenTask();
+    const again = await call(claimRoute, {
+      method: 'POST',
+      params: { id: second.toString() },
+      ...withSelfie(token, selfie),
+    });
+    expect(again.status).toBe(403);
+    expect(await again.json()).toEqual({ error: 'selfie_required' });
+  });
+
+  it('devSessionSkipsSelfieCheck', async () => {
+    const taskId = await postOpenTask();
+    const { token } = await sessionFor(WORKER, 'dev');
+    const res = await call(claimRoute, {
+      method: 'POST',
+      params: { id: taskId.toString() },
+      headers: auth(token),
+    });
+    expect(res.status).toBe(200);
+    expect(fake.calls.map((c) => c.fn)).toContain('claimFor');
   });
 });

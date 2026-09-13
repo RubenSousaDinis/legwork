@@ -33,6 +33,27 @@ export function allowedOrigins(env: MiddlewareEnv): string[] {
   );
 }
 
+/**
+ * Local `next dev` serves the mini-app on loopback or a LAN IP, and the rewrite forwards
+ * that `Origin` to the API. Production allowlist stays `MINIAPP_URL` / `DASHBOARD_URL`.
+ */
+function isLocalDevOrigin(origin: string, env: MiddlewareEnv): boolean {
+  if (env.NODE_ENV === 'production') return false;
+  try {
+    const { protocol, hostname } = new URL(origin);
+    if (protocol !== 'http:' && protocol !== 'https:') return false;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1') {
+      return true;
+    }
+    if (/^10(?:\.\d{1,3}){3}$/.test(hostname)) return true;
+    if (/^192\.168(?:\.\d{1,3}){2}$/.test(hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}$/.test(hostname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export type CorsVerdict =
   /** No `Origin` header: not a browser's cross-origin request, so no CORS applies. */
   | { kind: 'absent' }
@@ -46,7 +67,7 @@ export function evaluateCors(req: Request, env: MiddlewareEnv): CorsVerdict {
   if (origin === null) return { kind: 'absent' };
   // `null` is what a sandboxed iframe, a `file://` page and a redirected form send. It is not
   // an origin anyone can be allowlisted as, so it is refused with the rest.
-  if (!allowedOrigins(env).includes(origin)) return { kind: 'refused' };
+  if (!allowedOrigins(env).includes(origin) && !isLocalDevOrigin(origin, env)) return { kind: 'refused' };
 
   return {
     kind: 'allowed',

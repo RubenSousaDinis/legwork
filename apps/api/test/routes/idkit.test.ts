@@ -28,11 +28,12 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { POST as idkitRequestRoute } from '../../app/idkit/request/route';
 import { POST as idkitVerifyRoute } from '../../app/idkit/verify/route';
 import { POST as registerRoute } from '../../app/register/route';
+import { POST as sessionRoute } from '../../app/session/route';
 import { GET as configWorldRoute } from '../../app/config/world/route';
 import { setChainForTests } from '../../src/chain';
 import { resetConfigForTests } from '../../src/config';
 import { resetRateLimitForTests } from '../../src/http/rateLimit';
-import { issueIdkitSession } from '../../src/session';
+import { issueIdkitSession, issueWorkerSession } from '../../src/session';
 import {
   ATTESTATION_TYPES,
   ATTESTATION_PRIMARY_TYPE,
@@ -67,6 +68,8 @@ const REGISTRY = '0x1111111111111111111111111111111111111111' as Address;
 const CHAIN_ID = 84532;
 
 const WORKER_LOWER = '0x2222222222222222222222222222222222222222';
+/** A registered worker this nullifier is *not* bound to. */
+const OTHER_WORKER = getAddress('0x3333333333333333333333333333333333333333');
 const WORKER = getAddress(WORKER_LOWER);
 const AREA = 'ez5ku';
 /** 4102444800 is 2100-01-01; a fixture deadline must never expire. */
@@ -208,6 +211,7 @@ interface CapturedRequest {
   body: string;
   rpId: string;
   contentType: string | null;
+  host: 'production' | 'staging';
 }
 
 let captured: CapturedRequest | undefined;
@@ -232,9 +236,22 @@ beforeAll(() => {
         body: await request.text(),
         rpId: String(params.rp_id),
         contentType: request.headers.get('content-type'),
+        host: 'production',
       };
       return worldReply();
     }),
+    http.post(
+      `https://staging-developer.worldcoin.org/api/v4/verify/:rp_id`,
+      async ({ request, params }) => {
+        captured = {
+          body: await request.text(),
+          rpId: String(params.rp_id),
+          contentType: request.headers.get('content-type'),
+          host: 'staging',
+        };
+        return worldReply();
+      },
+    ),
   );
   server.listen({ onUnhandledRequest: 'error' });
 });
@@ -298,11 +315,22 @@ async function postRegister(nullifier: string, body: unknown): Promise<Response>
   });
 }
 
-async function postVerify(body: string): Promise<Response> {
+/** `POST /session` in idkit mode, carrying the cookie a 409 verify handed back. */
+async function postSession(lwIdkit: string, worker: string): Promise<Response> {
+  return call(sessionRoute, {
+    method: 'POST',
+    url: 'http://localhost/session',
+    cookies: { lw_idkit: lwIdkit },
+    body: { mode: 'idkit', worker_address: worker },
+  });
+}
+
+async function postVerify(body: string, cookies?: Record<string, string>): Promise<Response> {
   return call(idkitVerifyRoute, {
     method: 'POST',
     url: 'http://localhost/idkit/verify',
     body,
+    cookies,
   });
 }
 
@@ -369,16 +397,41 @@ describe('registerBindsNullifierToWorker', () => {
 });
 
 describe('duplicateNullifierIs409', () => {
-  it('refuses a session for a nullifier that is already bound', async () => {
+  it('refuses to re-register a bound nullifier, and signs that human back in', async () => {
     const nullifier = nullifierToNumeric('0x1f');
     await seedBound(nullifier, WORKER);
     worldReply = worldSuccess('0x1f', { verification_level: CREDENTIAL_LEVEL });
 
     const res = await postVerify(JSON.stringify({ action: ACTION, proof: '0xabc' }));
 
+    // Still 409 and still the same name: this proof does not make a second worker account.
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'nullifier_already_registered' });
-    expect(setCookies(res).lw_idkit).toBeUndefined();
+    expect(await res.json()).toEqual({ error: 'nullifier_already_registered', worker: WORKER });
+
+    // But the human behind it is this worker, and just proved it. The cookie is what lets
+    // `POST /session` mint for them — outside World App there is no wallet to fall back to,
+    // and without this a registered worker on the web could never sign in again.
+    expect(setCookies(res).lw_idkit).toBeDefined();
+  });
+
+  it('mints a session for the bound worker with the cookie that 409 issued, and no other', async () => {
+    const nullifier = nullifierToNumeric('0x1f');
+    await seedBound(nullifier, WORKER);
+    // The registry is the record `POST /session` checks, not the row.
+    chain.setWorker(WORKER, { nullifier: BigInt(nullifier), seeded: false, area: AREA, taskTypes: 1 });
+    worldReply = worldSuccess('0x1f', { verification_level: CREDENTIAL_LEVEL });
+
+    const conflict = await postVerify(JSON.stringify({ action: ACTION, proof: '0xabc' }));
+    const cookie = setCookies(conflict).lw_idkit;
+    expect(cookie).toBeDefined();
+
+    // The cookie is scoped to the nullifier, so it opens exactly one address: the bound one.
+    const mine = await postSession(cookie as string, WORKER);
+    expect(mine.status).toBe(200);
+
+    const someoneElse = await postSession(cookie as string, OTHER_WORKER);
+    expect(someoneElse.status).toBe(403);
+    expect(await someoneElse.json()).toMatchObject({ reason: 'not_registered' });
   });
 
   it('refuses /register for a bound nullifier without touching the chain', async () => {
@@ -488,6 +541,31 @@ describe('verifyForwardsPayloadAsIs', () => {
     expect(await workerOf(BigInt(nullifierHex).toString(10))).toBeNull();
   });
 
+  it('reads a Selfie Check nullifier off World s results row when the top level has none', async () => {
+    const nullifierHex = `0x2f${'c'.repeat(62)}`;
+    worldReply = () =>
+      HttpResponse.json({
+        success: true,
+        results: [{ identifier: 'selfie', success: true, nullifier: nullifierHex }],
+      }) as unknown as Response;
+
+    const res = await postVerify(
+      JSON.stringify({
+        action: ACTION,
+        protocol_version: '3.0',
+        responses: [{ identifier: 'selfie', nullifier: nullifierHex, proof: '0x', merkle_root: '0x' }],
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      verified: true,
+      nullifier: nullifierHex,
+      level: 'selfie',
+    });
+    expect(setCookies(res).lw_idkit).toBeTruthy();
+  });
+
   it('turns a refusal from World into a 400 carrying World s code and stores nothing', async () => {
     const nullifierHex = `0x1f${'a'.repeat(62)}`;
     worldReply = () =>
@@ -508,6 +586,57 @@ describe('verifyForwardsPayloadAsIs', () => {
       BigInt(nullifierHex).toString(10),
     ]);
     expect(rows).toHaveLength(0);
+  });
+
+  it('uses the nested World result code and detail when the envelope is all_verifications_failed', async () => {
+    worldReply = () =>
+      HttpResponse.json(
+        {
+          success: false,
+          code: 'all_verifications_failed',
+          detail: 'All proof verifications failed.',
+          results: [
+            {
+              identifier: 'selfie',
+              success: false,
+              code: 'environment_mismatch',
+              detail: 'Proof environment does not match this RP.',
+            },
+          ],
+        },
+        { status: 400 },
+      ) as unknown as Response;
+
+    const res = await postVerify(
+      JSON.stringify({
+        action: ACTION,
+        environment: 'sandbox',
+        protocol_version: '4.0',
+        responses: [{ identifier: 'selfie' }],
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: 'invalid_request',
+      field: 'proof',
+      reason: 'environment_mismatch',
+      detail: 'Proof environment does not match this RP.',
+    });
+    expect(captured?.host).toBe('production');
+  });
+
+  it('sends staging proofs to the staging verify host', async () => {
+    const nullifierHex = `0x3f${'d'.repeat(62)}`;
+    worldReply = worldSuccess(nullifierHex, { verification_level: 'orb' });
+
+    const res = await postVerify(
+      JSON.stringify({ action: ACTION, environment: 'staging', verification_level: 'orb' }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(captured?.host).toBe('staging');
+    expect(captured?.body).toContain('"environment":"staging"');
   });
 });
 
@@ -574,6 +703,68 @@ describe('configNeverLeaksSigningKey', () => {
       field: 'action',
       reason: 'unknown_action',
     });
+  });
+});
+
+describe('verifySelfieAtClaimDoesNotBindAWorker', () => {
+  it('issues a selfie cookie for a logged-in worker and does not 409 on a second check', async () => {
+    chain.setWorker(WORKER, { nullifier: 1n, seeded: false, area: AREA, taskTypes: 15 });
+    const issued = await issueWorkerSession({
+      worker: WORKER,
+      nullifier: '1',
+      mode: 'walletAuth',
+    });
+    const nullifierHex = `0x2f${'b'.repeat(62)}`;
+    worldReply = worldSuccess(nullifierHex, { verification_level: 'face' });
+    const raw = JSON.stringify({ action: ACTION, proof: '0xface', verification_level: 'face' });
+
+    const first = await postVerify(raw, { lw_worker: issued.token });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({
+      verified: true,
+      nullifier: nullifierHex,
+      level: 'face',
+    });
+    expect(setCookies(first).lw_selfie).toBeTruthy();
+    expect(setCookies(first).lw_idkit).toBeUndefined();
+    expect(await workerOf(BigInt(nullifierHex).toString(10))).toBeUndefined();
+
+    const second = await postVerify(raw, { lw_worker: issued.token });
+    expect(second.status).toBe(200);
+    expect(setCookies(second).lw_selfie).toBeTruthy();
+  });
+
+  it('refuses an Orb proof when a worker is claiming, and accepts Selfie Check at login', async () => {
+    chain.setWorker(WORKER, { nullifier: 1n, seeded: false, area: AREA, taskTypes: 15 });
+    const issued = await issueWorkerSession({
+      worker: WORKER,
+      nullifier: '1',
+      mode: 'walletAuth',
+    });
+    worldReply = worldSuccess('0x1f', { verification_level: 'orb' });
+
+    const asClaim = await postVerify(
+      JSON.stringify({ action: ACTION, proof: '0xorb', verification_level: 'orb' }),
+      { lw_worker: issued.token },
+    );
+    expect(asClaim.status).toBe(400);
+    expect(await asClaim.json()).toEqual({
+      error: 'invalid_request',
+      field: 'proof',
+      reason: 'selfie_required',
+    });
+
+    worldReply = worldSuccess('0x2f', { verification_level: 'face' });
+    const asLogin = await postVerify(
+      JSON.stringify({ action: ACTION, proof: '0xface', verification_level: 'face' }),
+    );
+    expect(asLogin.status).toBe(200);
+    expect(await asLogin.json()).toEqual({
+      verified: true,
+      nullifier: '0x2f',
+      level: 'face',
+    });
+    expect(setCookies(asLogin).lw_idkit).toBeTruthy();
   });
 });
 

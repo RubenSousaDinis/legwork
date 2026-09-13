@@ -60,7 +60,9 @@ The allowlist is exactly `MINIAPP_URL` and `DASHBOARD_URL`, reduced to scheme, h
 An allowlisted `Origin` is echoed back with `Access-Control-Allow-Credentials: true` and
 `Vary: Origin`; `OPTIONS` gets `204` with the methods, headers and a 600-second max age. Any
 other `Origin`, including the literal `null` a sandboxed frame sends, gets
-`403 {"error":"origin_not_allowed"}` and no CORS headers at all.
+`403 {"error":"origin_not_allowed"}` and no CORS headers at all. Outside `NODE_ENV=production`,
+loopback and private-LAN origins are also allowed so a local mini-app rewrite (`localhost:3003`,
+`192.168.x.x`) is not refused when it forwards its `Origin` to the API.
 
 **A request with no `Origin` header passes through untouched.** Agents, the local MCP server
 and curl send no `Origin`, and CORS was never a control over them — it is a control the

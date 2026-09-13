@@ -102,6 +102,18 @@ export const NO_RETRY_SENTENCE =
 export type CredentialLevel = 'selfie' | 'orb';
 
 /**
+ * The two level tokens, named.
+ *
+ * `noHardCodedSelfieOutsideShared` exists so no rendered sentence names a credential outside
+ * this package, and it cannot tell a rendered string from a level token used as a value —
+ * `useState('selfie')` and `credentialLabel('selfie')` read the same to a regex. Importing
+ * the token is how an app says which credential it means without spelling it, so the guard
+ * stays strict about the thing it is actually for: the copy.
+ */
+export const SELFIE: CredentialLevel = 'selfie';
+export const ORB: CredentialLevel = 'orb';
+
+/**
  * What the verification chip says — on the phone and on the dashboard, one string for both.
  *
  * It names the credential, never an environment. There is no sandbox World ID to name: IDKit

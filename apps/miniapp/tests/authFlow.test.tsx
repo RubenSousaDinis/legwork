@@ -86,6 +86,7 @@ let originalFetch: typeof globalThis.fetch;
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   resetSessionForTests();
   replace.mockClear();
   vi.mocked(MiniKit.isInstalled).mockReturnValue(false);
@@ -107,7 +108,11 @@ afterEach(() => {
   cleanup();
 });
 
-/** Landing → IDKit → sign-in, stopping on the payout-key screen. */
+/**
+ * Landing → IDKit → registered. There is no button in between: a first-time worker had
+ * nothing to decide on the old payout screen, so `onVerified` goes straight to the chain
+ * write. The key controls live on `/payout-key` and the conflict path still has its own.
+ */
 async function verifyAndSignIn() {
   render(<AuthPage />);
   fireEvent.click(await screen.findByText(CTA));
@@ -129,14 +134,6 @@ describe('auth flow', () => {
     mockWalletAuth();
 
     await verifyAndSignIn();
-    await screen.findByText('Your World App wallet is your payout address');
-
-    // No session has been minted yet, and nothing signed. The method matters now: `GET
-    // /api/session` is the restore probe every mount makes, and only `POST` mints one.
-    expect(calls.some(mintsASession)).toBe(false);
-    expect(vi.mocked(MiniKit.walletAuth)).not.toHaveBeenCalled();
-
-    fireEvent.click(await screen.findByText('Register as a worker'));
     await waitFor(() => expect(sessionRequests()).toHaveLength(1));
 
     const registerCall = calls.findIndex((call) => call.url.endsWith('/api/register'));
@@ -170,10 +167,6 @@ describe('auth flow', () => {
     MiniKit.user = {};
 
     await verifyAndSignIn();
-    await screen.findByText('Your payout address');
-    expect(calls.some(mintsASession)).toBe(false);
-
-    fireEvent.click(await screen.findByText('Register as a worker'));
 
     const address = loadOrCreatePayoutKey().address;
     expect(address).not.toBeNull();
@@ -189,7 +182,6 @@ describe('auth flow', () => {
     expect(navigator.geolocation).toBeUndefined();
 
     await verifyAndSignIn();
-    fireEvent.click(await screen.findByText('Register as a worker'));
 
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
     expect(registerRequests()[0]).toEqual({
@@ -239,24 +231,25 @@ describe('auth flow', () => {
   it('nullifierConflictSignsInWithTheHeldKey', async () => {
     const { bindRegisteredWorker, NULLIFIER } = await import('../mocks/handlers');
 
-    // --- outside World App: a 409 never issued the idkit cookie, so there is no sign-in.
+    // --- outside World App: the 409 carries the bound worker and the idkit cookie, so the
+    // returning human is signed straight in. This is the whole point of the conflict now:
+    // `POST /idkit/verify` refusing to re-register is not a refusal to let them in, and on
+    // the web there is no wallet to fall back to — before this they had no way back at all.
     const held = loadOrCreatePayoutKey();
     bindRegisteredWorker({ worker: held.address, nullifier: NULLIFIER });
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
-    expect(
-      await screen.findByText(
-        'Open this in World App to sign in with the key this phone holds, or paste the key you exported.',
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText('Sign in with this key')).toBeNull();
-    expect(screen.queryByText('Sign in with your World App wallet')).toBeNull();
-    expect(sessionRequests()).toHaveLength(0);
-    expect(registerRequests()).toHaveLength(0);
-    expect(replace).not.toHaveBeenCalledWith('/tasks');
 
-    // --- inside World App: walletAuth, still never /register.
+    await waitFor(() =>
+      expect(sessionRequests().at(-1)).toEqual({ mode: 'idkit', worker_address: held.address }),
+    );
+    // Signed in, not re-registered: the registry already has this human.
+    expect(registerRequests()).toHaveLength(0);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/tasks'));
+    expect(screen.queryByText(/Open this in World App to sign in/)).toBeNull();
+
+    // --- inside World App: the wallet signs, and still never /register.
     cleanup();
     localStorage.clear();
     resetSessionForTests();
@@ -269,12 +262,6 @@ describe('auth flow', () => {
     setScenario({ idkitVerify: 'nullifier_already_registered' });
 
     await verifyAndSignIn();
-    expect(
-      await screen.findByText(
-        'This World ID already has a worker account. Sign in with your World App wallet to continue.',
-      ),
-    ).toBeTruthy();
-    fireEvent.click(await screen.findByText('Sign in with your World App wallet'));
 
     await waitFor(() => expect(sessionRequests().at(-1)).toMatchObject({ mode: 'walletAuth' }));
     expect(registerRequests()).toHaveLength(0);
@@ -300,17 +287,11 @@ describe('auth flow', () => {
   it('registerStepShowsTheAreaAndItsSource', async () => {
     expect(navigator.geolocation).toBeUndefined();
 
+    // The cell is written on chain and no route changes it afterwards, so the confirmation
+    // has to name it — and say when it was the default rather than a real fix.
     await verifyAndSignIn();
-    expect(await screen.findByText('You will be registered in ez1dp')).toBeTruthy();
+    expect(await screen.findByText('Registered in ez1dp')).toBeTruthy();
     expect(screen.getByText(/default cell — Leiria, Portugal \(ez1dp\)/)).toBeTruthy();
-    expect(screen.getByText('Use my location')).toBeTruthy();
-
-    const { stubGeolocation, geolocationAt } = await import('./proof/harness');
-    stubGeolocation(geolocationAt(39.744, -8.807, 10));
-    fireEvent.click(screen.getByText('Use my location'));
-
-    expect(await screen.findByText("from this phone's location")).toBeTruthy();
-    expect(screen.queryByText('Use my location')).toBeNull();
   });
 
   it('registrationDefaultNamesLeiria', async () => {
@@ -320,12 +301,10 @@ describe('auth flow', () => {
     const line = await screen.findByText(/Leiria, Portugal/);
     expect(line.textContent).toContain('ez1dp');
     expect(line.textContent).toContain('Leiria, Portugal');
-    expect(screen.getByText('Use my location')).toBeTruthy();
   });
 
   it('payoutKeyNeverLeavesTheDevice', async () => {
     await verifyAndSignIn();
-    fireEvent.click(await screen.findByText('Register as a worker'));
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
 
     const secret = localStorage.getItem('legwork.payoutKey.v1');
@@ -342,7 +321,6 @@ describe('auth flow', () => {
     mockWalletAuth();
 
     await verifyAndSignIn();
-    fireEvent.click(await screen.findByText('Register as a worker'));
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
 
     const generated = loadOrCreatePayoutKey().address;
@@ -355,13 +333,13 @@ describe('auth flow', () => {
 
   it('webPathStillUsesTheGeneratedKey', async () => {
     await verifyAndSignIn();
-    await screen.findByText('Your payout address');
-    expect(screen.getByText('Reveal and copy private key')).toBeTruthy();
-    expect(screen.getByText('Import an existing payout key')).toBeTruthy();
-
-    fireEvent.click(await screen.findByText('Register as a worker'));
     await waitFor(() => expect(registerRequests()).toHaveLength(1));
     expect(registerRequests()[0]).toMatchObject({ worker_address: loadOrCreatePayoutKey().address });
+
+    // The custody warning is no longer a gate, but the web worker is still told once: the
+    // key in this browser is the only copy of it that exists.
+    expect(await screen.findByText('Your payout address')).toBeTruthy();
+    expect(document.querySelector('[data-warning="payout-key"]')).not.toBeNull();
   });
 
   it('worldAppShowsNoPayoutKeyToLose', async () => {
@@ -369,8 +347,9 @@ describe('auth flow', () => {
     mockWalletAuth();
 
     await verifyAndSignIn();
-    expect(await screen.findByText('Your World App wallet is your payout address')).toBeTruthy();
-    expect(screen.getByText(WALLET_AUTH_DATA.address)).toBeTruthy();
+    await waitFor(() => expect(registerRequests()).toHaveLength(1));
+
+    // Inside World App the wallet is the address: no key, so no warning and nothing to back up.
     expect(screen.queryByText('Reveal and copy private key')).toBeNull();
     expect(screen.queryByText('Import an existing payout key')).toBeNull();
     expect(screen.queryByText(/If you clear site data you lose access/)).toBeNull();
