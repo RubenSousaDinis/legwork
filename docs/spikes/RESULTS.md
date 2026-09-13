@@ -20,9 +20,9 @@ decision: no architecture change. `WorkerRegistry` ships one cloud-verified `ATT
 
 _IDKit 4.x verify end to end + webview probe (S2')_
 
-S2: PASS on Orb · REFUSED on Selfie Check
+S2: PASS on Orb · PASS on Selfie Check (2026-09-13, after the Beta grant)
 
-outcome: DOWNGRADED
+outcome: PASS
 
 IDKit 4.x verifies end to end against the live API. A real human, Orb-verified, opened the
 mini-app in a mobile browser, tapped `Verify with World ID`, and World App presented the request as
@@ -39,13 +39,25 @@ report is rendered, and `POST /session` refuses a freshly verified human — `40
 {reason: 'not_registered'}` — because a worker session requires the registry binding that
 `POST /register` creates.
 
+**Resolved 2026-09-13.** The Beta flag was granted on 2026-09-08 (`FEEDBACK-WORLD.md` E10) and the
+credential was re-run on a production phone: `selfieCheckLegacy` against production World App, the
+camera completed, `POST /idkit/verify` answered **200**, and `WorkerRegistered` tx
+`0x203f2851b267a13e61cf1195e54087cc77f60bd6ab5325ac3313074693d7f425` bound worker
+`0x869b94343b8506d441603fb8edebbb35065c0d67` in area `ez19y`. `verification_disabled` did not
+reappear. The credential is World's own and not the config fallback: the API's
+`WORLD_CREDENTIAL_LEVEL` is `orb`, so the `selfie` written to `idkit_sessions.level` can only have
+come from World's response. Login and claim both present Selfie Check; `orbLegacy` remains the
+fallback for a World ID with no face credential. The `403 forbidden {reason: 'not_registered'}`
+finding above also recurred as a *timing* failure — the registry read lagging its own receipt
+immediately after `POST /register` — and the session mint now retries that code alone.
+
 evidence: the run of Sept 8, 11:02–11:03 UTC, from a local production build behind an https tunnel with
 the API run locally so the tunnel origin could be listed in `MINIAPP_URL` (the deployed API refuses any
 other origin, by design). API log: `POST /idkit/request 200`, `POST /idkit/verify 200` in 2.6 s,
 `POST /session 403`. The refusal payload and the debug report are quoted in `FEEDBACK-WORLD.md` entries
 E5, E6 and E8; the uniqueness reading is E9.
 
-decision: the demo ships **Orb** — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are
+decision (2026-09-08, superseded 2026-09-13 — see the follow-ups below): the demo ships **Orb** — `WORLD_CREDENTIAL_LEVEL` and `NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` are
 `orb`, `pickPreset` sends `orbLegacy`. It is the credential the product's "one account per person" claim
 always needed: Selfie Check is "a medium-assurance biometric credential" that does not guarantee
 "strict one-person-one-account uniqueness like Orb verification". The prize track allows it — "Uses
@@ -58,8 +70,11 @@ value and a deploy. The session ordering was fixed in the mini-app the same day.
 
 Sandbox access with Selfie Check enabled arrived on 2026-09-08 (Firebase App Distribution,
 `org.world.id.sandbox`, `murph.finnicum@toolsforhumanity.com` — see `FEEDBACK-WORLD.md` E10).
-The product decision is **not** to swap Orb for Selfie Check. Registration stays Orb
-(uniqueness). Claim requires a Selfie Check (live-person / abuse-prevention). The claim widget
+The product decision *at the time* was **not** to swap Orb for Selfie Check — registration stays Orb
+(uniqueness), claim requires a Selfie Check (live-person / abuse-prevention). **That was reversed on
+2026-09-13**, once the credential was confirmed working: Selfie Check is now presented at login as well
+as at claim, and Orb is the fallback rather than the registration credential. The uniqueness claim was
+dropped with it — see the resolution note above. The claim widget
 sends `selfieCheckLegacy` with IDKit `environment: sandbox`. Live phone confirmation on
 2026-09-13: the Sandbox camera completes and World then returns `environment_mismatch` at
 production verify (FEEDBACK-WORLD E12). S2's original `verification_disabled` refusal is
@@ -227,7 +242,10 @@ on Rua do Cruzeiro in Leiria, photographed the door and its hours sign, and was 
 The release transaction carries the two USDC `Transfer` logs the escrow promises —
 `3_000_000` to the worker and `450_000` to the treasury — and the worker is
 `0xaed0c1102e45b7f528224eacb9309a0925015810`, `seeded: false`, `completed: 1` in the index. It is
-the first non-seeded completion the subgraph has ever held.
+the first non-seeded completion the subgraph has ever held. (That address was unbound from its
+nullifier on 2026-09-13 by `WorkerRegistry.resetWorker` so the same human could register again on
+camera for the Selfie Check run above; the completion and its release transaction stand, but the
+address is no longer the human's current worker.)
 
 **The seven-day window: every counted timestamp is inside it.**
 `{ workers(where:{seeded:true}){ id seeded lastCompletedAt } }`, checked against `now − 604800`

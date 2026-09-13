@@ -49,13 +49,22 @@ on a phone that was handed a half-filled Vercel environment.
 
 ## Which credentials the worker presents
 
-Login and claim are **Selfie Check**, with IDKit `environment: sandbox`, so World ID Sandbox
-on a phone can complete the camera. World's own page says Selfie Check does not guarantee
-one-person-one-account; the banner therefore reads "a live person, camera-checked", not
-"one account per person".
+Login and claim are both **Selfie Check**, against **production World App** — IDKit
+`environment: production` is the default (`DEFAULT_IDKIT_ENVIRONMENT`). World ID Sandbox is
+still reachable for the prize-track test path: a remembered choice, or `startVerify({
+environment: 'sandbox' })`.
 
-A second Selfie Check still sits in front of CLAIM (spent-once `lw_selfie`). Reverting the
-login widget to Orb is a code change, not an env flip.
+World's own page says Selfie Check does not guarantee one-person-one-account, so the banner
+reads "a live person, camera-checked", not "one account per person". That sub-line follows
+`NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL` — **set it to `selfie`**, or the static copy on `/about`
+keeps claiming Orb's uniqueness while login presents a face credential.
+
+A World ID with no face credential falls back to `orbLegacy` at login on its own
+(`credential_unavailable`, `world_id_4_not_available`). `verification_disabled` deliberately
+does not: that one is the app's Portal configuration, so it keeps its sentence and offers the
+switch as a tap.
+
+A second Selfie Check still sits in front of CLAIM (spent-once `lw_selfie`).
 
 ```
 WORLD_CREDENTIAL_LEVEL=orb
@@ -136,13 +145,14 @@ from the Portal-registered production URL.
 2. **Run IDKit verify.** The page fetches `rp_context`, mounts the widget with the preset the
    credential level selects, forwards the result as-is to `/api/idkit/verify`, and shows the
    preset name, the nonce and expiry, the raw widget result and the API response. The run of
-   Sept 8 settled which preset works: `orbLegacy` verifies end to end, `selfieCheckLegacy`
-   completes the check on the device. Registration is Orb (`orbLegacy`); claim is Selfie
-   Check (`selfieCheckLegacy`, IDKit `environment: sandbox`) so World ID Sandbox on the
-   phone is the camera. The Sept 8 run returned `verification_disabled` because the Beta
-   flag was off; the grant arrived 2026-09-08 (see `FEEDBACK-WORLD.md` E10). Live
-   confirmation that the claim-time camera no longer returns that code is the next pass —
-   `docs/spikes/RESULTS.md` `## S2`.
+   Sept 8 settled which preset works *then*: `orbLegacy` verified end to end and
+   `selfieCheckLegacy` returned `verification_disabled`, because the Beta flag was off. The
+   grant arrived 2026-09-08 (`FEEDBACK-WORLD.md` E10) and **Selfie Check was confirmed live on
+   2026-09-13** (E13): login presents `selfieCheckLegacy` against production World App, the
+   camera completed, `POST /idkit/verify` answered 200, and `WorkerRegistered` tx
+   `0x203f2851b267a13e61cf1195e54087cc77f60bd6ab5325ac3313074693d7f425`
+   bound worker `0x869B94343b8506d441603Fb8edEBBB35065C0d67` in area `ez19y`. Registration and
+   claim are both Selfie Check — `docs/spikes/RESULTS.md` `## S2`.
 3. **Take a photo.** A native `<input type="file" accept="image/*" capture="environment">`.
    Tick the checkbox if the camera opened directly rather than the gallery — that is the
    answer the spike wants.
@@ -242,4 +252,4 @@ Supporting classes carry the same rules where a screen needs them: `lw-card--tig
 
 The worker's verification state sits in the sticky header on every route — the compact pill
 beside the wordmark and the full `Verified human ✓` banner under it, whose sub-line follows
-the credential (`· World ID · one account per person` at orb) — so it is always above the fold.
+the credential (`· World ID · a live person, camera-checked` at selfie) — so it is always above the fold.
