@@ -7,7 +7,7 @@ ground, one accent. Status-quo red appears only on `/deck` board 2.
 
 | Route | What it is | Public |
 |---|---|---|
-| `/` | Landing: tagline, two paths (human / agent), trust model. Static — no live data load. | yes |
+| `/` | Landing: tagline, two paths (human / agent), trust model. Static copy; the pool chip is the subgraph's count in live mode (`lib/data/pool.ts`). | yes |
 | `/?present=1` | The sparse present canvas on the same route, for filming. The CI gate navigates here. | yes |
 | `/present` | The same canvas with no query to remember on set. | yes |
 | `/live` | Mission control: feed left, escrow + agent centre, pool / screening / preflight / posters right. Min-width 1280, single column below. | yes |
