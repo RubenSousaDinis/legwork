@@ -22,12 +22,13 @@ did not: the unpaid post returned 402, and no `PAYMENT-SIGNATURE` was sent.
 | Marketplace | Unpublished |
 | Recipe in this repo | `examples/recipes/worker-pool-then-quote.md` |
 | Recipe in Bazantic's UI | https://bazantic.com/dashboard/recipes/worker-pool-then-quote — operator pasted 2026-09-11; dashboard path, login-walled |
-| Bazantic account username | TODO(operator) |
-| Screen-recording link | TODO(operator) |
+| Bazantic account username | RubenSousaDinis |
+| Screen-recording link | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 | Gateways the plan allows | at least two, demonstrated 2026-09-10 (`nf26bnkznrbc3cg5rbq2hmej5q` Legwork, `vz23lkwccfa6hfawpnzw5ohzyy` Overpass). Exact plan cap: TODO(operator) |
 
-The prize rows in `README.md` and `docs/submission.md` stay as they are until the username and
-the recording exist. That edit is the lead's.
+Both now exist — the username above, and the recording the operator made on 2026-09-13. Flipping
+the prize rows in `README.md` and `docs/submission.md` on that evidence is the lead's edit, not
+this task's.
 
 ## Who produced what
 
@@ -41,8 +42,8 @@ the recording exist. That edit is the lead's.
 | Six operation ids in the gateway-served document | agent, through the gateway | `GET https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com/openapi.json` |
 | `postCheck` through the gateway | agent, through the gateway | step (e) |
 | unpaid `postTasks` through the gateway | agent, through the gateway | step (f) |
-| Bazantic account username | operator | TODO(operator) |
-| Screen-recording link | operator | TODO(operator) |
+| Bazantic account username | operator | RubenSousaDinis |
+| Screen-recording link | operator | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 | Gateways the plan allows | operator | at least two, demonstrated 2026-09-10 (both hosts answer). Exact plan cap: TODO(operator) — asked on issue #209 before any gateway was created |
 
 ## Plan limit — asked before anything was created
@@ -132,8 +133,8 @@ The 402 is the point of step (f).
 | Text in this repo | `examples/recipes/worker-pool-then-quote.md` |
 | Live copy in Bazantic's UI | https://bazantic.com/dashboard/recipes/worker-pool-then-quote — operator pasted 2026-09-11; dashboard path, login-walled |
 | Second service | The Graph — Subgraph Studio query URL `https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4` |
-| Bazantic account username | TODO(operator) |
-| Screen-recording link | TODO(operator) |
+| Bazantic account username | RubenSousaDinis |
+| Screen-recording link | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 
 ## Overpass gateway — T-59
 
@@ -147,8 +148,8 @@ an agent can resolve a place outside the two cities the product ships.
 | Bazantic-side price | must be 0 — do not put pricing in front of the public instance |
 | Recipe name | `place-anywhere-then-quote` |
 | Recipe text in this repo | `examples/recipes/place-anywhere-then-quote.md` |
-| Live copy in Bazantic's UI | TODO(operator) |
-| Screen-recording link | TODO(operator) |
+| Live copy in Bazantic's UI | published by the operator on 2026-09-11 (`place-anywhere-then-quote`); the dashboard path is login-walled, so no public URL |
+| Screen-recording link | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 | Worked example | Farmácia Adriana, Coimbra — `node/536546148` |
 | In the packaged index | no |
 
