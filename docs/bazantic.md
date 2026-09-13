@@ -161,13 +161,21 @@ The prize wants a service that was not on Bazantic and is not an API from anothe
 this hackathon. The sponsor list is The Graph, Hedera, Arc, World, 1inch, ENS,
 Uniswap Foundation, Ledger, Privy, Chainlink and Bazantic. OpenStreetMap is not among them.
 
-### The shipped limit
+### The shipped limit — and where it moved on Day 8
 
-Runtime place lookup reads `packages/screening/fixtures/osm/leiria-lisbon.json.gz` through
-`OsmPlaceIndex`. That file is a cached extract of Leiria and Lisbon business POIs, not
+Until Day 8: runtime place lookup reads `packages/screening/fixtures/osm/leiria-lisbon.json.gz`
+through `OsmPlaceIndex`. That file is a cached extract of Leiria and Lisbon business POIs, not
 OpenStreetMap. The shipped index covers Leiria and Lisbon only. A `place_id` outside it does
-not resolve; `placeOf` returns null and the task cannot be posted. The gateway widens what an
-agent can resolve and quote. It does not change what the deployed product accepts.
+not resolve; `placeOf` returns null and the task cannot be posted.
+
+From Day 8 (T-61, T-62): the packaged extract still answers first and offline for Leiria and
+Lisbon. A `place_id` outside it is looked up live: one Overpass request for that id, no search,
+no loop (a found id is cached for 24 hours, a miss for 10 minutes). If Overpass knows a business
+there, the gate screens it by the same rules. If Overpass says nothing is there, the answer is
+still **400** `unresolvable place_id`. If Overpass does not answer, the API returns **503**
+`place_lookup_unavailable` with `retry_after_s: 30`, and nothing is posted, charged or marked.
+The gateway is still how an agent *finds* an id from a name; the product now *accepts* the id it
+finds.
 
 © OpenStreetMap contributors, ODbL.
 
@@ -193,6 +201,21 @@ Same query through the Overpass gateway, **POST**
 test GET with no `User-Agent` is **406** from Overpass; that probe is not the recipe.
 
 the gateway lists the API; paying is still the agent's own x402 call.
+
+### Worked example — re-run after T-62, agent-run on 2026-09-13
+
+Same envelope as the recipe's step 2 (`verify-open`, `node/536546148`, `amount_usdc: 3.00`),
+`POST https://legwork-api.vercel.app/check`, one call, no `PAYMENT-SIGNATURE`:
+
+| Field | Value |
+|---|---|
+| Run at | 2026-09-13T15:42:14Z |
+| Expected | `200`, `accepted: true`, `price_usdc: 3.45` |
+| Live `POST /check` | **200** `{"accepted":true,"spec_hash":"0xb58fe0d14798f522c4e021e437a661729c7b1b51b19f22e8ddc3512d857196a8","price_usdc":3.45}` |
+| Unpaid `POST /tasks` | not re-sent by this task; the operator's 2026-09-13 run (`README.md`, prize table) answered **402**, nothing posted |
+
+The 2026-09-10 record above is unchanged: it was true on the day, and the 400 it shows is what
+moved.
 
 ## (g) Outcome
 

@@ -160,12 +160,16 @@ describe('T-59 packaged extract coverage', () => {
     expect(recipeMd).toMatch(/\bpostCheck\b/);
     expect(recipeMd).toContain(ATTRIBUTION);
     expect(recipeMd).toContain('the gateway lists the API; paying is still the agent\'s own x402 call');
+    expect(recipeMd).toMatch(/place_lookup_unavailable/);
+    expect(recipeMd).not.toMatch(/still cannot be posted today/);
   });
 
-  it('bazanticRecordStatesThePlaceIndexLimit', () => {
+  it('bazanticRecordStatesWhereThePlaceIndexLimitMoved', () => {
     expect(bazanticMd).toContain('packages/screening/fixtures/osm/leiria-lisbon.json.gz');
-    expect(bazanticMd).toMatch(/covers Leiria and Lisbon only/);
+    expect(bazanticMd).toMatch(/place_lookup_unavailable/);
+    expect(bazanticMd).toMatch(/503/);
     expect(bazanticMd).toContain(ATTRIBUTION);
+    expect(bazanticMd).not.toMatch(/does not change what the deployed product accepts/);
   });
 
   it('overpassIsNotASponsorApi', () => {

@@ -137,7 +137,7 @@ One photo of one named subject at one place. The proof is the photo.
 
 ### `call-confirm`
 
-A short phone call in Portuguese, asking one question from a closed template list.
+A short phone call in the place's own language, asking one question from a closed template list.
 
 `spec`: `place` (as above), `phone` (E.164, and it must match the phone the OpenStreetMap
 object carries), `template_id` (one of `open_now` · `have_item` · `price_of` ·
@@ -330,7 +330,7 @@ from the request.
 
 ## Honest limits
 
-`verify-open` and `photo-of` are fulfilled in Leiria only during the event; `call-confirm` (Portuguese) and `compare-two` can be done from anywhere; workers are online `<hours>` UTC.
+`verify-open`, `photo-of` and `call-confirm` need a real business with an OpenStreetMap id: Leiria and Lisbon resolve from a packaged index, anywhere else resolves live with one Overpass request, and a 503 `place_lookup_unavailable` means retry once after `retry_after_s`; `compare-two` needs no place; a `call-confirm` is in whatever language the place answers the phone in; workers are online `<hours>` UTC.
 
 Settlement is Base Sepolia testnet; mainnet payouts are roadmap.
 
