@@ -17,6 +17,7 @@ import {
   USDC,
 } from '@legwork/shared';
 import { Chip } from '../../components/Chip';
+import { PoolChip, PoolHeadline } from '../../components/PoolChip';
 import { Footprint } from '../../components/Footprint';
 import { MonoTag } from '../../components/MonoTag';
 import { SiteHeader } from '../../components/SiteHeader';
@@ -247,7 +248,7 @@ export function Overview() {
         <Chip tone="neutral">operator-attested</Chip>
         <Chip tone="neutral">relayed claim · gas paid by Legwork</Chip>
         <Chip tone="neutral">testnet USDC — not spendable</Chip>
-        <Chip tone="seeded">1 real · +20 seeded (demo data)</Chip>
+        <PoolChip />
       </div>
 
       <section id="product" className="overview-chapter">
@@ -286,7 +287,9 @@ export function Overview() {
         <h3 className="overview-subhead">What is live and what is seeded</h3>
         <ul className="landing-facts">
           <li>One real registration: the demo worker&apos;s phone.</li>
-          <li>The pool reads 1 real · +20 seeded (demo data). Never a combined total.</li>
+          <li>
+            The pool reads <PoolHeadline />. Never a combined total.
+          </li>
           <li>Seeded workers cannot produce a verified registration and cannot claim an external task.</li>
           <li>Settlement is Base Sepolia testnet. Mainnet payouts are roadmap.</li>
           <li>

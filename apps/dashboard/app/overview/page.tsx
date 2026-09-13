@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+/** The pool count is the subgraph's in live mode; five minutes is as stale as it gets. */
+export const revalidate = 300;
+
 export default function OverviewPage() {
   return <Overview />;
 }

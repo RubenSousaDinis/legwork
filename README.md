@@ -22,7 +22,7 @@ claimed; the UI is re-typed from `DESIGN-SPEC.md`, not copied.
 ## Try it
 
 ```bash
-claude mcp add --transport http legwork https://<host>/mcp
+claude mcp add --transport http legwork https://legwork-api.vercel.app/mcp
 ```
 
 Then ask your agent:
@@ -48,18 +48,17 @@ Bot-proof, not fraud-proof.
 
 - **Live, not ours:** World ID (Developer Portal, IDKit 4.x, Orb credentials), ERC-8004 identity and reputation registries on Base Sepolia, the x402 reference facilitator, USDC.
 - **Deployed by us on Base Sepolia:** WorkerRegistry, TaskEscrow, Reputation, AbuseMark, the subgraph (Studio), the Task API + MCP server, the mini-app, the dashboard.
-- **Seeded and labelled:** ~20 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show — their medians are labelled `seeded` or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it actually earned. Never claim the seeded workers are people.
+- **Seeded and labelled:** 23 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show — their medians are labelled `seeded` or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it actually earned. Never claim the seeded workers are people.
 
 | Live, not ours | Ours, deployed on Base Sepolia | Seeded and disclosed |
 | --- | --- | --- |
-| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry [`0xc33d229046507f4C2E664cbf974542c92eEAbAf4`](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
-| ERC-8004 IdentityRegistry [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | TaskEscrow [`0x641B56dfA3A033D84a75588c18579347A0DE3c6B`](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | `<N>` seeded task lifecycles |
+| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry [`0xc33d229046507f4C2E664cbf974542c92eEAbAf4`](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | 23 worker rows via `seedWorker()` (cannot produce a verified registration) |
+| ERC-8004 IdentityRegistry [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | TaskEscrow [`0x641B56dfA3A033D84a75588c18579347A0DE3c6B`](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | 20 seeded onchain lifecycles (operator-funded, worked by seeded workers) plus 29 seeded board rows that never touched the chain |
 | ERC-8004 ReputationRegistry [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) | Reputation [`0x2f731B56D02080190fa2ef7813887B2743551E43`](https://sepolia.basescan.org/address/0x2f731B56D02080190fa2ef7813887B2743551E43) | one real registration (the demo phone) |
 | x402 reference facilitator | AbuseMark [`0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608`](https://sepolia.basescan.org/address/0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608) | marks operator-attested |
-| USDC [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | Subgraph (Studio) `<studio url>` | relayed claims, gas paid by Legwork |
-| — | Task API + MCP server, mini-app, dashboard `<host>` | operator powers: seed, reset, resolve |
+| USDC [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | Subgraph (Studio) [public query URL](https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4) | relayed claims, gas paid by Legwork |
+| — | [Task API + MCP server](https://legwork-api.vercel.app), [mini-app](https://legwork-miniapp.vercel.app), [dashboard](https://legwork-dashboard.vercel.app) | operator powers: seed, reset, resolve |
 
-Plain addresses now; T-49 turns them into Basescan links on Day 10.
 
 ## How the loop works
 
