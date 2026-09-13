@@ -13,6 +13,7 @@ export const ERROR_CODES = {
   payload_too_large: 413,
   rate_limited: 429,
   not_implemented: 501,
+  unavailable: 503,
   internal: 500,
 } as const;
 

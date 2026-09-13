@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { Chip } from '../../components/Chip';
+import { PoolChip } from '../../components/PoolChip';
 import { SiteHeader } from '../../components/SiteHeader';
 import { Wordmark } from '../../components/Wordmark';
 import { TAGLINE, TRUST_MODEL_CLOSER, claimSentence, resolvedCredentialLevel, trustModelSentence } from '../copy';
@@ -9,6 +10,9 @@ import { apiUrl, dashboardUrl } from '../../lib/urls';
 export const metadata: Metadata = {
   title: 'Legwork · deck',
 };
+
+/** Board 10's pool chip is the subgraph's in live mode; five minutes is as stale as it gets. */
+export const revalidate = 300;
 
 const PRIOR_ART: {
   project: string;
@@ -361,7 +365,7 @@ export default function DeckPage() {
           </div>
           <div className="deck-disclosed landing-chips">
             <Chip tone="verified">World ID · Orb</Chip>
-            <Chip tone="seeded">1 real · +20 seeded (demo data)</Chip>
+            <PoolChip />
             <Chip tone="neutral">testnet USDC — not spendable</Chip>
             <Chip tone="neutral">operator-attested</Chip>
           </div>

@@ -14,7 +14,10 @@ export type OsmExtract = {
   not_indexed: Poi[];
 };
 
-/** Leiria and Lisbon are the whole covered region; anything else is `region not covered`. */
+/**
+ * Leiria and Lisbon are the whole packaged region; an id outside it is `place_id not found in
+ * OpenStreetMap` unless the API resolves it live through `overpassLookup.ts`.
+ */
 export const REGION = 'leiria+lisbon';
 
 /** Required wherever this data appears. Removing it is a licence failure, not a style choice. */
@@ -86,7 +89,12 @@ function keepTags(raw: unknown): Record<string, string> {
 const hasBusinessTag = (tags: Record<string, string>): boolean =>
   BUSINESS_TAG_KEYS.some((k) => typeof tags[k] === 'string');
 
-function toPoi(element: unknown): Poi | undefined {
+/**
+ * One Overpass element in, one `Poi` or `undefined` out: keep-listed tags only, a business tag
+ * required, `center` for a way or a relation. `buildExtract` runs it over a whole response and
+ * `overpassLookup.ts` over a single element, so both judge a place by the same rules.
+ */
+export function poiFromElement(element: unknown): Poi | undefined {
   if (!isRecord(element)) return undefined;
 
   const type = str(element['type']);
@@ -145,7 +153,7 @@ export function buildExtract(response: SourceResponse): OsmExtract {
   const pois: Poi[] = [];
 
   for (const element of response.elements) {
-    const poi = toPoi(element);
+    const poi = poiFromElement(element);
     if (!poi || seen.has(poi.id)) continue;
     seen.add(poi.id);
     pois.push(poi);

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import { PoolHeadline } from '../../components/PoolChip';
 import { SiteHeader } from '../../components/SiteHeader';
 import { GITHUB_REPO, miniappUrl } from '../../lib/urls';
 
@@ -6,7 +8,10 @@ export const metadata: Metadata = {
   title: 'Legwork · support',
 };
 
-const PAIRS = [
+/** The pool count is the subgraph's in live mode; five minutes is as stale as it gets. */
+export const revalidate = 300;
+
+const PAIRS: readonly { q: string; a: ReactNode }[] = [
   {
     q: 'What is a task?',
     a: 'A small, checkable errand in the physical world. An agent posts one of four typed things, the money is locked before anyone can claim, and a verified person nearby does it and submits proof.',
@@ -17,9 +22,14 @@ const PAIRS = [
   },
   {
     q: 'What does seeded mean on a row?',
-    a: 'Demo data, labelled as such. Seeded workers are synthetic and cannot claim an external task. The pool reads 1 real · +20 seeded (demo data).',
+    a: (
+      <>
+        Demo data, labelled as such. Seeded workers are synthetic and cannot claim an external
+        task. The pool reads <PoolHeadline />.
+      </>
+    ),
   },
-] as const;
+];
 
 export default function SupportPage() {
   return (

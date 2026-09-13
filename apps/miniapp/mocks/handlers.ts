@@ -139,6 +139,7 @@ export const TASKS_TWO_ROWS = {
           name: 'Padaria Central',
           street_address: 'Rua de Alcobaça 12',
           locality: 'Leiria',
+          country: 'PT',
         },
         question: 'Is it open right now?',
       },
@@ -156,12 +157,79 @@ export const TASKS_TWO_ROWS = {
           name: 'Mercado Municipal',
           street_address: 'Largo 5 de Outubro',
           locality: 'Leiria',
+          country: 'PT',
         },
         subject: 'the opening-hours sign at the main entrance',
       },
     },
   ],
 };
+
+/**
+ * The demo catalog beyond Leiria (T-63). Three cities on three continents, every one of them
+ * `seeded` and so backed by no escrow: the board a stranger opens is not one town's board,
+ * and the card says which rows nobody can claim. `country` is what `AnswerToggle` reads to
+ * label a price in the currency the worker will actually be quoted.
+ */
+export const SEEDED_WORLD_ROWS = [
+  {
+    task_id: '1101',
+    task_type: 'verify-open' as const,
+    title: 'Curry 36 · Mehringdamm 36, Berlin',
+    price_usdc: 3.0,
+    state: 'open' as const,
+    seeded: true,
+    brief: {
+      place: {
+        name: 'Curry 36',
+        street_address: 'Mehringdamm 36',
+        locality: 'Berlin',
+        country: 'DE',
+      },
+      question: 'Is it open right now?',
+    },
+    coordinate_rounded: { lat: 52.494, lon: 13.387 },
+  },
+  {
+    task_id: '1102',
+    task_type: 'photo-of' as const,
+    title: 'Strand Book Store · 828 Broadway, New York',
+    price_usdc: 3.0,
+    state: 'open' as const,
+    seeded: true,
+    brief: {
+      place: {
+        name: 'Strand Book Store',
+        street_address: '828 Broadway',
+        locality: 'New York',
+        country: 'US',
+      },
+      subject: 'the opening-hours sign at the Broadway entrance',
+    },
+    coordinate_rounded: { lat: 40.733, lon: -73.991 },
+  },
+  {
+    task_id: '1103',
+    task_type: 'call-confirm' as const,
+    title: 'Tian Tian Hainanese Chicken Rice · 1 Kadayanallur St, Singapore',
+    price_usdc: 3.0,
+    state: 'open' as const,
+    seeded: true,
+    brief: {
+      place: {
+        name: 'Tian Tian Hainanese Chicken Rice',
+        street_address: '1 Kadayanallur St',
+        locality: 'Singapore',
+        country: 'SG',
+      },
+      template_question: 'What is the price of <item>?',
+    },
+    coordinate_rounded: { lat: 1.28, lon: 103.845 },
+  },
+];
+
+/** What `GET /tasks/list` answers: the Leiria pair, then the seeded rows from three countries. */
+export const TASKS_BOARD = { tasks: [...TASKS_TWO_ROWS.tasks, ...SEEDED_WORLD_ROWS] };
 
 export const TASKS_EMPTY = { tasks: [] };
 
@@ -209,6 +277,15 @@ export const CLAIM_RESPONSE = {
 export const IN_COOLDOWN = { error: 'InCooldown' as const, cooldown_until: COOLDOWN_UNTIL };
 export const ALREADY_CLAIMED = { error: 'AlreadyClaimed' as const, active_task_id: '1024' };
 export const SEEDED_CANNOT_CLAIM = { error: 'SeededCannotClaimExternal' as const };
+
+/**
+ * A claim on one of the seeded demo rows. The API answers it before any chain call (T-63):
+ * there is no escrow behind the row, so there is nothing to claim.
+ *
+ * It is not in `RESPONSE_FIXTURES` because `GenericError` in the frozen contract does not
+ * carry the literal yet — `fixturesMatchContract` would reject the very body the API sends.
+ */
+export const SEEDED_DEMO_ROW = { error: 'SeededDemoRow' as const };
 export const NULLIFIER_ALREADY_REGISTERED = { error: 'nullifier_already_registered' as const };
 export const UNAUTHORIZED = { error: 'unauthorized' as const };
 
@@ -353,8 +430,14 @@ export const handlers = [
   http.post('*/api/idkit/verify', async ({ request }) => {
     lastVerifyText = await request.text();
     if (scenario().idkitVerify === 'nullifier_already_registered') {
-      idkitCookieIssued = false;
-      return json(NULLIFIER_ALREADY_REGISTERED, { status: 409 });
+      // The API issues the idkit cookie here too, and names the worker the nullifier is
+      // bound to: a returning human signs in with the proof they just gave.
+      idkitCookieIssued = true;
+      const bound = registry.find((entry) => entry.nullifier === NULLIFIER);
+      return json(
+        { ...NULLIFIER_ALREADY_REGISTERED, ...(bound ? { worker: bound.worker } : {}) },
+        { status: 409 },
+      );
     }
     idkitCookieIssued = true;
     return json(VERIFY_RESPONSE);
@@ -434,6 +517,10 @@ export const handlers = [
 
   http.get('*/api/public/feed', () => json(PUBLIC_FEED)),
 
+  // Nominatim: tests never hit the live geocoder. A search that needs a real result
+  // overrides this handler; the default is "nothing found".
+  http.get('https://nominatim.openstreetmap.org/search', () => HttpResponse.json([])),
+
   // `/tasks/list` is the contract's path and `/tasks` is the one T-24 §2 and T-25 §2 call;
   // both are answered so neither task's tests hang on the spelling. See the PR body.
   http.get('*/api/tasks/list', ({ request }) => {
@@ -444,7 +531,7 @@ export const handlers = [
       lat !== null && lon !== null && lat !== '' && lon !== ''
         ? { lat: Number(lat), lon: Number(lon) }
         : null;
-    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_TWO_ROWS.tasks;
+    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_BOARD.tasks;
     return json({ tasks: withDistance(rows, from) });
   }),
   http.get('*/api/tasks', ({ request }) => {
@@ -455,7 +542,7 @@ export const handlers = [
       lat !== null && lon !== null && lat !== '' && lon !== ''
         ? { lat: Number(lat), lon: Number(lon) }
         : null;
-    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_TWO_ROWS.tasks;
+    const rows = scenario().tasks === 'empty' ? TASKS_EMPTY.tasks : TASKS_BOARD.tasks;
     return json({ tasks: withDistance(rows, from) });
   }),
 
@@ -510,6 +597,15 @@ export const nullifierAlreadyRegistered = http.post('*/api/idkit/verify', async 
 });
 
 /**
+ * The seeded-row 409 as a standalone override: `server.use(seededDemoRowClaim)` for a test
+ * that taps CLAIM on a row no escrow stands behind. `mocks/scenarios.ts` belongs to another
+ * task, so this branch is a handler rather than a scenario key.
+ */
+export const seededDemoRowClaim = http.post('*/api/tasks/:id/claim', () =>
+  json(SEEDED_DEMO_ROW, { status: 409 }),
+);
+
+/**
  * Every fixture above, tagged with the contract route and status it answers.
  * `fixturesMatchContract` walks this table; a new handler belongs here too.
  */
@@ -523,6 +619,7 @@ export const RESPONSE_FIXTURES = [
   { route: 'register', status: 200, body: REGISTER_RESPONSE },
   { route: 'publicFeed', status: 200, body: PUBLIC_FEED },
   { route: 'listTasks', status: 200, body: TASKS_TWO_ROWS },
+  { route: 'listTasks', status: 200, body: TASKS_BOARD },
   { route: 'listTasks', status: 200, body: TASKS_EMPTY },
   { route: 'claim', status: 200, body: CLAIM_RESPONSE },
   { route: 'claim', status: 409, body: IN_COOLDOWN },

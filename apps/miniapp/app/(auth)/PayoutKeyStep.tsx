@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import type { AreaSource } from '../../lib/area';
+import { DEFAULT_AREA, DEFAULT_AREA_LABEL } from '../../lib/area';
 import { exportPrivateKey, importPrivateKey } from '../../lib/workerKey';
 
 const BASESCAN = 'https://sepolia.basescan.org/address/';
@@ -30,6 +31,12 @@ export type PayoutKeyStepProps = {
    * The web path keeps the generated key and the controls that go with it.
    */
   wallet?: boolean;
+  /**
+   * Standalone, outside the sign-up flow: the reveal and import controls with no registration
+   * CTA and no area line. `/payout-key` is where a worker who is already registered comes to
+   * back the key up, which is the only copy of it that exists.
+   */
+  manage?: boolean;
 };
 
 /**
@@ -49,6 +56,7 @@ export function PayoutKeyStep({
   areaSource = 'default',
   onRetryLocation,
   wallet = false,
+  manage = false,
 }: PayoutKeyStepProps) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -164,6 +172,7 @@ export function PayoutKeyStep({
         </>
       )}
 
+      {manage ? null : (
       <div className="lw-actions lw-actions--top">
         {conflict ? (
           onSignIn ? (
@@ -181,7 +190,7 @@ export function PayoutKeyStep({
                 <p className="lw-meta" data-area-source={areaSource}>
                   {areaSource === 'gps'
                     ? "from this phone's location"
-                    : 'default — this phone gave no location fix'}
+                    : `default cell — ${DEFAULT_AREA_LABEL} (${DEFAULT_AREA}). This phone gave no location fix; use "Use my location" to register where you are.`}
                 </p>
                 {areaSource === 'default' ? (
                   <Button variant="ghost" full onClick={onRetryLocation}>
@@ -196,6 +205,7 @@ export function PayoutKeyStep({
           </>
         )}
       </div>
+      )}
     </section>
   );
 }

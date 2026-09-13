@@ -50,6 +50,29 @@ export const POST = route(async (req) => {
   const logDecision = (entry: object) =>
     logger.info({ route: '/check', task_type: taskType, spec_hash: verdict.spec_hash, ...entry });
 
+  if (verdict.kind === 'unavailable') {
+    await logScreening(
+      {
+        task_type: taskType,
+        class: null,
+        reason: 'place lookup unavailable',
+        rule_id: 'lookup.unavailable',
+        spec_hash: verdict.spec_hash,
+        marked: false,
+        mark_tx: null,
+        agent_id: null,
+        payer: null,
+      },
+      log,
+    );
+    logDecision({ decision: 'unavailable' });
+    const retry = verdict.retry_after_s;
+    return Response.json(
+      { error: 'place_lookup_unavailable', retry_after_s: retry },
+      { status: 503, headers: { 'retry-after': String(retry) } },
+    );
+  }
+
   if (verdict.kind === 'invalid') {
     // A schema failure is a plain 4xx with the field named, here as on the paid route.
     await logScreening(

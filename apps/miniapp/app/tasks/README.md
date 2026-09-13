@@ -26,9 +26,14 @@ T-16 and T-17 never share a file, so the worker's board is a route of its own; `
 - Empty list: `No open tasks right now. The list refreshes every 3 s.` A search (or the 10 km
   filter) that matches nothing is a different sentence: `No tasks match this search.`
 - Search is client-side over `title`, `brief.place.{name, street_address, locality}` and
-  `task_type`, case- and accent-insensitive. It does not touch the poll.
-- `within 10 km` keeps rows with `distance_m <= 10_000`. Without a fix the checkbox is
-  disabled and says why.
+  `task_type`, case- and accent-insensitive. It does not touch the poll. Matching pins
+  reframe the map in the same frame; Nominatim only runs when nothing matched (cached).
+  Tile swaps keep the previous OSM images until the next set has loaded, so near-me and
+  search do not blank the map.
+- The map pinches with two fingers and pans with one (`touch-action: none` on the map so
+  the page's `manipulation` rule does not swallow the gesture). Wheel zoom works on desktop.
+- `near me` is a button (`role="checkbox"`) that keeps rows with `distance_m <= 10_000`.
+  Without a GPS fix it is disabled and says why.
 - No fix: cards read `distance unavailable` (never `—`) and the header carries
   `GPS unavailable in webview — disclosed`.
 - The interval returns early while `document.hidden`, and a `visibilitychange` or `focus`
@@ -75,6 +80,12 @@ refusal colour on every Legwork surface, and losing a race for a task is not a r
 | `InCooldown` | `You released or let a claim expire recently. You can claim again within 15 min.` (`CLAIM_COOLDOWN_S`) |
 | `AlreadyClaimed` | `Someone claimed this task first.` — and an immediate re-poll, because the list is already wrong |
 | `SeededCannotClaimExternal` | `This account is a seeded demo worker; it can only claim operator-funded tasks.` |
+| `selfie_required` | `Selfie Check first — a live person has to be behind this claim.` |
+
+A CLAIM tap opens IDKit with `selfieCheckLegacy` (QR on desktop, deep link on a phone PWA,
+World App bridge inside the mini-app) against action `legwork-worker`. The API issues a
+short-lived `lw_selfie` cookie; `POST /tasks/:id/claim` spends it. Seeded `dev` sessions skip
+the camera. Uniqueness stays Orb, at registration.
 
 Mapped on the **error code**, not the status: `api-contract.ts` allows both 403 and 409 for
 this route, and T-24's mocks answer `SeededCannotClaimExternal` with 403.

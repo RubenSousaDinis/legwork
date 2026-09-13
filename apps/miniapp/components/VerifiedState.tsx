@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession } from '../lib/session';
+import { ORB, SELFIE } from '@legwork/shared';
 import { VerifiedChip } from './ui/VerifiedChip';
 
 /**
@@ -20,7 +21,8 @@ import { VerifiedChip } from './ui/VerifiedChip';
 export function VerifiedState() {
   const state = useSession();
   const verified = state.status === 'verified';
-  const level = verified && state.level === 'selfie' ? 'selfie' : 'orb';
+  const raw = verified ? state.level.toLowerCase() : '';
+  const level = raw.includes('face') || raw.includes(SELFIE) ? SELFIE : ORB;
 
   return (
     <>

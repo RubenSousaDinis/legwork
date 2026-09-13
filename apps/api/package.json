@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "db:push": "drizzle-kit push",
     "drizzle:generate": "drizzle-kit generate",
-    "drizzle:migrate": "tsx src/db/migrate.ts"
+    "drizzle:migrate": "tsx src/db/migrate.ts",
+    "seed:check-catalog": "tsx src/seed/check-catalog.ts"
   },
   "dependencies": {
     "@legwork/chain": "workspace:*",

@@ -158,6 +158,8 @@ export const GenericError = z.discriminatedUnion('error', [
   z.object({ error: z.literal('conflict'), reason: z.string().optional(), retry_after_s: z.number().int().optional() }),
   /** `POST /tasks`: `TaskEscrow.post` failed after verify, so nothing was charged and the same authorization can be sent again. */
   z.object({ error: z.literal('escrow_post_failed') }),
+  /** `POST /check` and `POST /tasks`: the live place lookup did not answer (Overpass timeout, 429 or 5xx). Nothing was posted or charged; retry after `retry_after_s`. */
+  z.object({ error: z.literal('place_lookup_unavailable'), retry_after_s: z.number().int() }),
   z.object({ error: z.literal('bad_state'), status: Status }),
   z.object({ error: z.literal('not_eligible'), status: Status, eligible_at: Iso.nullable() }),
   z.object({ error: z.literal('dispute_window_closed') }),
@@ -197,10 +199,12 @@ export const PublicTaskView = z.object({
   answer: z.string().optional(), proof: PublicProofView.optional(),
   /** Task place, 3 decimals (~100 m). The exact coordinate never leaves the private row. */
   coordinate_rounded: CoordinateRounded.optional(),
+  /** The agent's own words for where the place is (`spec.place.locality` / `country`). Text, never a coordinate; absent on a row posted before T-62. */
+  locality: z.string().max(80).optional(), country: z.string().regex(/^[A-Z]{2}$/).optional(),
   tx: TxSet, links: LinkSet, dashboard_url: z.url(),
 });
 
-const BriefPlace = z.object({ name: z.string(), street_address: z.string(), locality: z.string() });
+const BriefPlace = z.object({ name: z.string(), street_address: z.string(), locality: z.string(), country: z.string().regex(/^[A-Z]{2}$/).optional() });
 /** Place and question fields only — never `claimed_*` or `source` (T-17 `workerBrief`). */
 export const WorkerBrief = z.object({
   place: BriefPlace.optional(), question: z.string().optional(), subject: z.string().optional(),
@@ -236,7 +240,7 @@ export const API_ROUTES = {
     request: z.object({ reason: z.string().min(1).max(300) }), responses: { 200: TxResult, 400: InvalidRequest, 401: GenericError, 409: GenericError, 503: GenericError } },
   refund: { method: 'POST', path: '/tasks/:id/refund', auth: 'buyer-token', summary: 'Expire and refund if eligible (409 not_eligible carries eligible_at); never gated by pause', responses: { 200: TxResult, 401: GenericError, 409: GenericError, 503: GenericError } },
   check: { method: 'POST', path: '/check', auth: 'public', summary: 'Dry-run screening; never posts, never marks',
-    request: Envelope, responses: { 200: z.object({ accepted: z.literal(true), spec_hash: TxHash, price_usdc: z.number() }), 422: RefusalPayload, 400: InvalidRequest } },
+    request: Envelope, responses: { 200: z.object({ accepted: z.literal(true), spec_hash: TxHash, price_usdc: z.number() }), 422: RefusalPayload, 400: InvalidRequest, 503: GenericError } },
   idkitRequest: { method: 'POST', path: '/idkit/request', auth: 'public', summary: 'RP-signed rp_context for IDKit v4',
     request: z.object({ action: z.string() }),
     responses: { 200: z.object({ rp_context: z.object({ rp_id: z.string(), nonce: z.string(), created_at: z.number(), expires_at: z.number(), signature: z.string() }) }) } },

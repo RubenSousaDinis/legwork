@@ -40,7 +40,9 @@ export function Landing({ busy, onVerify, level = CREDENTIAL_LEVEL }: LandingPro
       <p className="lw-landing-title">{LANDING_TITLE}</p>
 
       <div data-floor="20">
-        <Button variant="primary" size="lg" full disabled={busy} onClick={onVerify}>
+        {/* `() => onVerify()`, not `onVerify`: the handler's first argument is the click
+            event, and the caller's first parameter is the IDKit environment. */}
+        <Button variant="primary" size="lg" full disabled={busy} onClick={() => onVerify()}>
           {VERIFY_BUTTON}
         </Button>
       </div>

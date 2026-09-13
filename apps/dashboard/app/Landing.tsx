@@ -1,4 +1,5 @@
 import { Chip } from '../components/Chip';
+import { PoolChip } from '../components/PoolChip';
 import { Footprint } from '../components/Footprint';
 import { LogoMark } from '../components/LogoMark';
 import { SiteHeader } from '../components/SiteHeader';
@@ -64,7 +65,7 @@ export function Landing() {
 
       <div className="landing-chips">
         <Chip tone="neutral">testnet USDC — not spendable</Chip>
-        <Chip tone="seeded">1 real · +20 seeded (demo data)</Chip>
+        <PoolChip />
         <Chip tone="neutral">operator-attested</Chip>
       </div>
 

@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const replace = vi.fn();
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
+vi.mock('@worldcoin/idkit', async () => {
+  const { AutoIdkitRequestWidget } = await import('./autoCompleteIdkit');
+  return { IDKitRequestWidget: AutoIdkitRequestWidget };
+});
 
 const { ALREADY_CLAIMED } = await import('../../mocks/handlers');
 const { setScenario } = await import('../../mocks/scenarios');

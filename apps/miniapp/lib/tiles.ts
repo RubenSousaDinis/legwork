@@ -36,7 +36,7 @@ const MIN_ZOOM = 10;
  */
 const MAX_ZOOM = 16;
 
-export function gridFor(points: LatLon[]): TileGrid | null {
+export function gridFor(points: LatLon[], options?: { minSpanDeg?: number }): TileGrid | null {
   if (points.length === 0) return null;
 
   let minLat = points[0]!.lat;
@@ -48,6 +48,20 @@ export function gridFor(points: LatLon[]): TileGrid | null {
     if (point.lat > maxLat) maxLat = point.lat;
     if (point.lon < minLon) minLon = point.lon;
     if (point.lon > maxLon) maxLon = point.lon;
+  }
+
+  const pad = options?.minSpanDeg;
+  if (typeof pad === 'number' && pad > 0) {
+    if (maxLat - minLat < pad) {
+      const mid = (minLat + maxLat) / 2;
+      minLat = mid - pad / 2;
+      maxLat = mid + pad / 2;
+    }
+    if (maxLon - minLon < pad) {
+      const mid = (minLon + maxLon) / 2;
+      minLon = mid - pad / 2;
+      maxLon = mid + pad / 2;
+    }
   }
 
   /*
@@ -90,5 +104,84 @@ export function pinPercent(point: LatLon, grid: TileGrid): { left: number; top: 
   return {
     left: ((x - grid.x0) / grid.cols) * 100,
     top: ((y - grid.y0) / grid.rows) * 100,
+  };
+}
+
+/** Inverse of `tileX`. */
+export function lonFromTileX(x: number, z: number): number {
+  return (x / 2 ** z) * 360 - 180;
+}
+
+/** Inverse of `tileY`. */
+export function latFromTileY(y: number, z: number): number {
+  const n = Math.PI - (2 * Math.PI * y) / 2 ** z;
+  return (180 / Math.PI) * Math.atan(Math.sinh(n));
+}
+
+export function pointFromPercent(
+  percent: { left: number; top: number },
+  grid: TileGrid,
+): LatLon {
+  const x = grid.x0 + (percent.left / 100) * grid.cols;
+  const y = grid.y0 + (percent.top / 100) * grid.rows;
+  return { lat: latFromTileY(y, grid.z), lon: lonFromTileX(x, grid.z) };
+}
+
+export function gridCenter(grid: TileGrid): LatLon {
+  return pointFromPercent({ left: 50, top: 50 }, grid);
+}
+
+/** Pinch / wheel may go further than auto-fit: a city on the way in, a street on the way out. */
+export const USER_MIN_ZOOM = 8;
+export const USER_MAX_ZOOM = 18;
+export const USER_GRID_SIDE = 3;
+
+export function clampUserZoom(z: number): number {
+  return Math.max(USER_MIN_ZOOM, Math.min(USER_MAX_ZOOM, Math.round(z)));
+}
+
+/** One doubling of the finger span is one zoom step. */
+export function zoomFromPinch(startZ: number, scale: number): number {
+  if (!Number.isFinite(scale) || scale <= 0) return clampUserZoom(startZ);
+  return clampUserZoom(startZ + Math.round(Math.log2(scale)));
+}
+
+export function gridAround(center: LatLon, z: number, side: number = USER_GRID_SIDE): TileGrid {
+  const size = Math.max(1, Math.min(MAX_TILES, Math.round(side)));
+  return squareAround(center.lat, center.lon, clampUserZoom(z), size);
+}
+
+/**
+ * New centre so `focal` stays under the same screen percent after a zoom change.
+ * Pinching on a street keeps that street under the fingers.
+ */
+export function centerKeepingFocus(
+  focal: LatLon,
+  percent: { left: number; top: number },
+  z: number,
+  side: number = USER_GRID_SIDE,
+): LatLon {
+  const size = Math.max(1, Math.min(MAX_TILES, Math.round(side)));
+  const zoom = clampUserZoom(z);
+  const cx = tileX(focal.lon, zoom) - (percent.left / 100 - 0.5) * size;
+  const cy = tileY(focal.lat, zoom) - (percent.top / 100 - 0.5) * size;
+  return { lat: latFromTileY(cy, zoom), lon: lonFromTileX(cx, zoom) };
+}
+
+/** Finger moved right: the map follows, centre shifts west. */
+export function panCenter(
+  center: LatLon,
+  grid: TileGrid,
+  dxPx: number,
+  dyPx: number,
+  widthPx: number,
+  heightPx: number,
+): LatLon {
+  if (widthPx <= 0 || heightPx <= 0) return center;
+  const dxTiles = -(dxPx / widthPx) * grid.cols;
+  const dyTiles = -(dyPx / heightPx) * grid.rows;
+  return {
+    lat: latFromTileY(tileY(center.lat, grid.z) + dyTiles, grid.z),
+    lon: lonFromTileX(tileX(center.lon, grid.z) + dxTiles, grid.z),
   };
 }

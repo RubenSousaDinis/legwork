@@ -4,8 +4,10 @@
  * The interesting assertions are the negative ones: an unset key means the whole group is a
  * 404, a wrong key writes no audit row, and no audit row ever contains the key itself.
  */
+import ngeohash from 'ngeohash';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FakeChain, type ChainAdapter } from '@legwork/chain';
+import { ZERO_ADDRESS, priceWithFee, toUsdcUnits } from '@legwork/shared';
 import { POST as pause } from '../../app/admin/pause/route';
 import { POST as unpause } from '../../app/admin/unpause/route';
 import { POST as resolve } from '../../app/admin/resolve/route';
@@ -17,6 +19,7 @@ import { setChainForTests } from '../../src/chain';
 import { resetRateLimitForTests } from '../../src/http/rateLimit';
 import { nullifiers, tasks } from '../../src/db/schema';
 import { hashBuyerToken } from '../../src/services/buyerToken';
+import { loadCatalog } from '../../src/seed/catalog';
 import { call } from '../app';
 import { createTestDb, type TestDb } from '../db';
 
@@ -111,6 +114,81 @@ async function seedDisputedTask(): Promise<void> {
 }
 
 const withKey = { 'x-admin-key': ADMIN_KEY };
+
+/** Three legacy `demo-data.json` rows plus one per catalog entry. */
+const LEGACY_SEEDED = 3;
+const CATALOG_SEEDED = 26;
+const CATALOG_ID_BASE = 9_000_100;
+
+interface SeededRow {
+  task_id: string;
+  seeded: boolean;
+  buyer: string;
+  payer: string;
+  state: string;
+  area: string;
+  tx_post: string;
+  exact_lat: string | null;
+  exact_lon: string | null;
+  price_units: string;
+  amount_units: string;
+}
+
+/**
+ * §8 `seedDemoInsertsTheCatalogOnce`: the first call inserts every row, the second none, and
+ * every row that landed is a seeded, buyerless, open row — a row that moves no money.
+ */
+async function seedDemoInsertsTheCatalogOnce(): Promise<void> {
+  const catalog = loadCatalog();
+  expect(catalog).toHaveLength(CATALOG_SEEDED);
+
+  const first = await call(seedDemo, { method: 'POST', headers: withKey });
+  expect(await first.json()).toEqual({ ok: true, inserted: LEGACY_SEEDED + CATALOG_SEEDED });
+  const second = await call(seedDemo, { method: 'POST', headers: withKey });
+  expect(await second.json()).toEqual({ ok: true, inserted: 0 });
+
+  const rows = (await fixture.rawQuery(
+    'SELECT task_id::text, seeded, buyer, payer, state, area, tx_post, exact_lat, exact_lon, ' +
+      'price_units::text, amount_units::text FROM tasks ORDER BY task_id',
+  )) as unknown as SeededRow[];
+  expect(rows).toHaveLength(LEGACY_SEEDED + CATALOG_SEEDED);
+  for (const row of rows) {
+    expect(row.seeded, row.task_id).toBe(true);
+    expect(row.buyer, row.task_id).toBe(ZERO_ADDRESS);
+    expect(row.payer, row.task_id).toBe(ZERO_ADDRESS);
+    expect(row.tx_post, row.task_id).toBe('0x8f2a…c41d');
+    expect(row.area.length, row.task_id).toBeGreaterThan(0);
+  }
+
+  // The three legacy rows keep the `demo-data.json` states they always had (T-19's filmed
+  // story). Every catalog row is `open` and nothing else.
+  const byId = new Map(rows.map((r) => [r.task_id, r]));
+  const legacyStates = rows.filter((r) => Number(r.task_id) <= CATALOG_ID_BASE).map((r) => r.state);
+  expect(legacyStates).toEqual(['released', 'submitted', 'open']);
+
+  // A catalog row's `area` is the geohash-5 of its exact coordinate, kept in the private
+  // columns; a compare-two row has no place and sits in `any`.
+  for (const [index, entry] of catalog.entries()) {
+    const row = byId.get(String(CATALOG_ID_BASE + index + 1));
+    expect(row, entry.id).toBeDefined();
+    if (!row) continue;
+    expect(row.state, entry.id).toBe('open');
+    if (entry.exact) {
+      expect(row.area, entry.id).toBe(ngeohash.encode(entry.exact.lat, entry.exact.lon, 5));
+      expect(Number(row.exact_lat), entry.id).toBe(entry.exact.lat);
+      expect(Number(row.exact_lon), entry.id).toBe(entry.exact.lon);
+    } else {
+      expect(entry.task_type).toBe('compare-two');
+      expect(row.area, entry.id).toBe('any');
+      expect(row.exact_lat, entry.id).toBeNull();
+      expect(row.exact_lon, entry.id).toBeNull();
+    }
+    // Computed with the shared helpers, never typed: 3.00 to the worker, 3.45 in escrow.
+    const amount = toUsdcUnits(entry.amount_usdc);
+    expect(row.amount_units, entry.id).toBe(amount.toString());
+    expect(row.price_units, entry.id).toBe(priceWithFee(amount).toString());
+  }
+}
 
 beforeEach(async () => {
   resetConfigForTests({ ADMIN_API_KEY: ADMIN_KEY, DASHBOARD_URL: 'https://dashboard.legwork.test' });
@@ -236,15 +314,11 @@ describe('/admin/*', () => {
     expect(kept?.n).toBe(1);
     expect((await audit()).length).toBeGreaterThan(0);
 
-    const first = await call(seedDemo, { method: 'POST', headers: withKey });
-    expect(await first.json()).toEqual({ ok: true, inserted: 3 });
-    const second = await call(seedDemo, { method: 'POST', headers: withKey });
-    expect(await second.json()).toEqual({ ok: true, inserted: 0 });
+    await seedDemoInsertsTheCatalogOnce();
+  });
 
-    const seeded = await fixture.rawQuery('SELECT seeded, tx_post FROM tasks ORDER BY task_id');
-    expect(seeded).toHaveLength(3);
-    expect(seeded.every((r) => r.seeded === true)).toBe(true);
-    expect(seeded.every((r) => r.tx_post === '0x8f2a…c41d')).toBe(true);
+  it('seedDemoInsertsTheCatalogOnce', async () => {
+    await seedDemoInsertsTheCatalogOnce();
   });
 
   it('reset-worker drops the binding after the registry call, not before', async () => {

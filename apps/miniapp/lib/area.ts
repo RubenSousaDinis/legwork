@@ -8,9 +8,13 @@ import ngeohash from 'ngeohash';
 
 /**
  * Leiria — the demo's home cell, and the answer whenever the phone will not give a fix.
+ * Registration only: the board itself is global and never sends `area`.
  * `ngeohash.encode(39.744, -8.807, 5)`; the `ez5ku` the briefs carry is 300 km inland.
  */
 export const DEFAULT_AREA = 'ez1dp';
+
+/** Human name for `DEFAULT_AREA`, so the registration screen can say where the fallback is. */
+export const DEFAULT_AREA_LABEL = 'Leiria, Portugal';
 
 /** `Geohash5` in the API contract: five characters, base32 without a, i, l or o. */
 const GEOHASH_PRECISION = 5;
@@ -62,8 +66,8 @@ export function resetAreaForTests(): void {
 }
 
 /**
- * One attempt at `getCurrentPosition`, then the default. A worker who declines the permission
- * prompt still gets a task list — they just get the Leiria cell instead of their own.
+ * One attempt at `getCurrentPosition`, then the default. Affects registration only; the board
+ * is global. A worker who declines the permission prompt still registers — in the Leiria cell.
  */
 export function resolveArea(timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<string> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {

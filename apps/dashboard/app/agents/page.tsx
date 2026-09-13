@@ -36,7 +36,7 @@ const TOOLS: { name: string; clause: string }[] = [
 const TYPE_LINES: Record<(typeof TASK_TYPES)[number], string> = {
   'verify-open': 'Walk past a place and say if it is open.',
   'photo-of': 'One photo of one named subject at one place.',
-  'call-confirm': 'A short phone call in Portuguese from a closed template.',
+  'call-confirm': "A short phone call in the place's own language, from a closed template.",
   'compare-two': 'Two items, one closed criterion, one answer.',
 };
 
@@ -156,10 +156,15 @@ export default function AgentsPage() {
       <section className="agents-block">
         <h2 className="landing-section-title">Honest limits</h2>
         <p className="landing-prose" data-floor="24">
-          <span className="mono">verify-open</span> and <span className="mono">photo-of</span> are
-          Leiria-only during the event; <span className="mono">call-confirm</span> (Portuguese) and{' '}
-          <span className="mono">compare-two</span> can be done from anywhere; answers come back in
-          minutes, not milliseconds; settlement is Base Sepolia testnet.
+          <span className="mono">verify-open</span>, <span className="mono">photo-of</span> and{' '}
+          <span className="mono">call-confirm</span> need a real business with an OpenStreetMap id:
+          Leiria and Lisbon resolve from a packaged index, anywhere else resolves live — one request to
+          Overpass, and a 503 rather than a guess when it does not answer. <span className="mono">
+            compare-two
+          </span>{' '}
+          needs no place. A <span className="mono">call-confirm</span> is in whatever language the
+          place answers the phone in. Answers come back in minutes, not milliseconds; settlement is
+          Base Sepolia testnet.
         </p>
       </section>
 

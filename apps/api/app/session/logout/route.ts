@@ -1,5 +1,10 @@
 import { route, preflight } from '@/src/http/route';
-import { requireWorkerSession, revokeWorkerSession } from '@/src/session';
+import {
+  SELFIE_COOKIE,
+  clearCookie,
+  requireWorkerSession,
+  revokeWorkerSession,
+} from '@/src/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,8 +15,11 @@ export const dynamic = 'force-dynamic';
  */
 export const POST = route(async (req) => {
   const session = await requireWorkerSession(req);
-  const cookie = await revokeWorkerSession(session);
-  return new Response(null, { status: 204, headers: { 'set-cookie': cookie } });
+  const workerCookie = await revokeWorkerSession(session);
+  const headers = new Headers();
+  headers.append('set-cookie', workerCookie);
+  headers.append('set-cookie', clearCookie(SELFIE_COOKIE));
+  return new Response(null, { status: 204, headers });
 });
 
 export const OPTIONS = preflight;

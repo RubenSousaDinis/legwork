@@ -15,12 +15,16 @@ import { and, eq, lt, ne } from 'drizzle-orm';
 import { getConfig } from './config';
 import { getDb } from './db/client';
 import { idkitSessions, sessions } from './db/schema';
-import { ApiError } from './errors';
+import { ApiError, ERROR_CODES } from './errors';
 
 export const IDKIT_COOKIE = 'lw_idkit';
 export const WORKER_COOKIE = 'lw_worker';
+/** Fresh Selfie Check at claim. Not the uniqueness cookie — that is `lw_idkit`. */
+export const SELFIE_COOKIE = 'lw_selfie';
 export const IDKIT_TTL_S = 15 * 60;
 export const WORKER_TTL_S = 30 * 86_400;
+/** Long enough to finish the claim tap after the camera check, short enough that it is still live. */
+export const SELFIE_TTL_S = 10 * 60;
 /** Long enough for a wallet round trip, short enough that a stolen one is stale. */
 export const NONCE_TTL_S = 10 * 60;
 
@@ -30,6 +34,11 @@ export const NONCE_TTL_S = 10 * 60;
  * nonce deletes the row. See the INTERFACE REQUEST on the T-08 PR and `README.md`.
  */
 export const NONCE_MODE = 'nonce';
+/**
+ * A spent-once Selfie Check, stored on the frozen `sessions` table the same way a SIWE
+ * nonce is: `mode` carries the kind because there is no `kind` column.
+ */
+export const SELFIE_MODE = 'selfie';
 const NONCE_SENTINEL_WORKER = '';
 const NONCE_SENTINEL_NULLIFIER = '0';
 
@@ -45,6 +54,12 @@ export interface WorkerSession {
   worker: string;
   nullifier: string;
   mode: SessionMode;
+}
+
+export interface SelfieSession {
+  worker: string;
+  nullifier: string;
+  level: string;
 }
 
 export interface IssuedSession<T> {
@@ -233,7 +248,13 @@ export async function refreshWorkerSession(claims: WorkerSession): Promise<strin
   await getDb()
     .update(sessions)
     .set({ expiresAt: new Date(Date.now() + WORKER_TTL_S * 1000) })
-    .where(and(eq(sessions.worker, claims.worker), ne(sessions.mode, NONCE_MODE)));
+    .where(
+      and(
+        eq(sessions.worker, claims.worker),
+        ne(sessions.mode, NONCE_MODE),
+        ne(sessions.mode, SELFIE_MODE),
+      ),
+    );
   return serialiseCookie(WORKER_COOKIE, token, WORKER_TTL_S);
 }
 
@@ -243,4 +264,126 @@ export async function revokeWorkerSession(claims: WorkerSession): Promise<string
     .delete(sessions)
     .where(and(eq(sessions.worker, claims.worker), ne(sessions.mode, NONCE_MODE)));
   return clearCookie(WORKER_COOKIE);
+}
+
+/** A 403 whose `error` name the mini-app maps, not the generic `forbidden`. */
+export function selfieRequired(): ApiError {
+  return new ApiError(ERROR_CODES.forbidden, 'forbidden', { error: 'selfie_required' });
+}
+
+/**
+ * A worker-session if one is present and valid, otherwise `undefined`.
+ *
+ * Claim-time Selfie Check reuses `POST /idkit/verify`: the same route issues an idkit-session
+ * for a new human and a selfie-session for a logged-in worker. A missing or stale cookie
+ * must not 401 the registration path.
+ */
+export async function optionalWorkerSession(req: Request): Promise<WorkerSession | undefined> {
+  const token = readCookie(req, WORKER_COOKIE) ?? bearer(req);
+  if (!token) return undefined;
+  try {
+    const payload = await verify(token);
+    if (payload.kind !== 'worker') return undefined;
+    const { sub, nullifier, mode } = payload as Record<string, unknown>;
+    if (typeof sub !== 'string' || typeof nullifier !== 'string' || typeof mode !== 'string') {
+      return undefined;
+    }
+    return { worker: sub, nullifier, mode: mode as SessionMode };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Records that this worker just completed a Selfie Check. The row is the spend-once proof;
+ * the cookie is how the phone presents it on the following `POST /tasks/:id/claim`.
+ */
+export async function issueSelfieSession(
+  claims: SelfieSession,
+): Promise<IssuedSession<SelfieSession>> {
+  const id = randomBytes(16).toString('hex');
+  const now = new Date();
+  await getDb().insert(sessions).values({
+    id,
+    worker: claims.worker,
+    nullifier: claims.nullifier,
+    mode: SELFIE_MODE,
+    createdAt: now,
+    expiresAt: new Date(now.getTime() + SELFIE_TTL_S * 1000),
+  });
+  const token = await sign(
+    {
+      sub: claims.worker,
+      nullifier: claims.nullifier,
+      level: claims.level,
+      sid: id,
+      kind: 'selfie',
+    },
+    SELFIE_TTL_S,
+  );
+  return { claims, token, cookie: serialiseCookie(SELFIE_COOKIE, token, SELFIE_TTL_S) };
+}
+
+/**
+ * A live Selfie Check for this worker, or 403 `selfie_required`. Seeded `dev` sessions skip
+ * the camera: they are the CLI and the e2e harness, not a human at a phone.
+ */
+export async function requireSelfieSession(req: Request, worker: string): Promise<SelfieSession> {
+  const session = await optionalWorkerSession(req);
+  if (session?.mode === 'dev' && session.worker.toLowerCase() === worker.toLowerCase()) {
+    return { worker: session.worker, nullifier: session.nullifier, level: 'dev' };
+  }
+
+  const token = readCookie(req, SELFIE_COOKIE);
+  if (!token) throw selfieRequired();
+
+  let payload: JWTPayload;
+  try {
+    payload = await verify(token);
+  } catch {
+    throw selfieRequired();
+  }
+  if (payload.kind !== 'selfie') throw selfieRequired();
+  const { sub, nullifier, level, sid } = payload as Record<string, unknown>;
+  if (
+    typeof sub !== 'string' ||
+    typeof nullifier !== 'string' ||
+    typeof level !== 'string' ||
+    typeof sid !== 'string'
+  ) {
+    throw selfieRequired();
+  }
+  if (sub.toLowerCase() !== worker.toLowerCase()) throw selfieRequired();
+
+  const rows = await getDb()
+    .select({ id: sessions.id, expiresAt: sessions.expiresAt, mode: sessions.mode })
+    .from(sessions)
+    .where(eq(sessions.id, sid))
+    .limit(1);
+  const row = rows[0];
+  if (!row || row.mode !== SELFIE_MODE || row.expiresAt.getTime() <= Date.now()) {
+    throw selfieRequired();
+  }
+  return { worker: sub, nullifier, level };
+}
+
+/** Spends the Selfie Check so the next claim has to take a new one. */
+export async function consumeSelfieSession(req: Request, worker: string): Promise<void> {
+  const session = await optionalWorkerSession(req);
+  if (session?.mode === 'dev' && session.worker.toLowerCase() === worker.toLowerCase()) return;
+
+  const token = readCookie(req, SELFIE_COOKIE);
+  if (!token) return;
+  try {
+    const payload = await verify(token);
+    if (payload.kind !== 'selfie') return;
+    const { sid, sub } = payload as Record<string, unknown>;
+    if (typeof sid !== 'string' || typeof sub !== 'string') return;
+    if (sub.toLowerCase() !== worker.toLowerCase()) return;
+    await getDb()
+      .delete(sessions)
+      .where(and(eq(sessions.id, sid), eq(sessions.mode, SELFIE_MODE)));
+  } catch {
+    // A spent or unreadable cookie is not a reason to fail a claim that already landed.
+  }
 }

@@ -47,7 +47,7 @@ export type PhotoOfProof = z.infer<typeof PhotoOfProof>;
 export const CallConfirmProof = z.object({
   template_id: z.enum(Object.keys(CALL_CONFIRM_TEMPLATES) as [keyof typeof CALL_CONFIRM_TEMPLATES, ...(keyof typeof CALL_CONFIRM_TEMPLATES)[]]),
   answer: z.string().max(40),
-  price: z.object({ amount: z.number().nonnegative(), currency: z.literal('EUR') }).optional(),
+  price: z.object({ amount: z.number().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/, 'ISO-4217 code') }).optional(),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   called_at: z.iso.datetime(),
   note: Note,

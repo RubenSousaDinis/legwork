@@ -64,6 +64,7 @@ import {
   Envelope,
   EnvelopeCommon,
   NO_RETRY_SENTENCE,
+  OSM_PLACE_ID,
   TASK_TYPES,
   TASK_TYPE_BIT,
   fromUsdcUnits,
@@ -84,10 +85,13 @@ import {
 } from '@legwork/payments'
 import {
   KeywordFallbackClassifier,
+  LayeredPlaceIndex,
   createLiveClassifier,
+  createOverpassLookup,
   getPlaceIndex,
   screen,
   type Classifier,
+  type OverpassLookup,
   type PlaceIndex,
 } from '@legwork/screening';
 import ngeohash from 'ngeohash';
@@ -152,6 +156,12 @@ export type ScreenOutcome =
       reason: string;
       allowed_task_types?: TaskType[];
       suggested_task_type?: TaskType;
+    }
+  | {
+      kind: 'unavailable';
+      spec_hash: Hex;
+      field: 'spec.place.place_id';
+      retry_after_s: number;
     };
 
 /** Private. It reaches `tasks.exact_lat/lon` and the area, and no public surface. */
@@ -235,7 +245,43 @@ export function geohash5(lat: number, lon: number): string {
 export interface ScreenEnvelopeDeps {
   places: PlaceIndex;
   classifier: Classifier;
+  /** Live fallback for a place_id outside the packaged extract. Absent in `packaged` mode. */
+  lookup?: OverpassLookup;
   now?: () => Date;
+}
+
+const PLACE_LOOKUP_RETRY_S = 30;
+
+/**
+ * Packaged-first place resolution: if the id is already in the extract, keep that index; if
+ * not and a lookup is wired, ask Overpass once and layer the answer for every later read.
+ */
+async function resolvePlaces(
+  body: unknown,
+  deps: ScreenEnvelopeDeps,
+): Promise<{ places: PlaceIndex } | { unavailable: true }> {
+  const placeId = placeIdFromBody(body);
+  if (
+    placeId !== undefined &&
+    OSM_PLACE_ID.test(placeId) &&
+    taskTypeOfBody(body) !== 'compare-two' &&
+    deps.places.resolve(placeId) === undefined &&
+    deps.lookup
+  ) {
+    const result = await deps.lookup(placeId);
+    if (result.kind === 'found') {
+      return { places: new LayeredPlaceIndex(deps.places, [result.poi]) };
+    }
+    if (result.kind === 'unavailable') {
+      return { unavailable: true };
+    }
+  }
+  return { places: deps.places };
+}
+
+function taskTypeOfBody(body: unknown): string | undefined {
+  const type = asRecord(body)['task_type'];
+  return typeof type === 'string' ? type : undefined;
 }
 
 /**
@@ -251,7 +297,21 @@ export async function screenEnvelope(
   deps: ScreenEnvelopeDeps,
 ): Promise<ScreenOutcome> {
   const hash = specHash(body);
-  const verdict = await screen(body, { places: deps.places, classifier: deps.classifier, ...(deps.now ? { now: deps.now } : {}) });
+  const resolved = await resolvePlaces(body, deps);
+  if ('unavailable' in resolved) {
+    return {
+      kind: 'unavailable',
+      spec_hash: hash,
+      field: 'spec.place.place_id',
+      retry_after_s: PLACE_LOOKUP_RETRY_S,
+    };
+  }
+  const places = resolved.places;
+  const verdict = await screen(body, {
+    places,
+    classifier: deps.classifier,
+    ...(deps.now ? { now: deps.now } : {}),
+  });
 
   if (!verdict.ok && verdict.kind === 'refusal') {
     const payload = verdict.payload;
@@ -269,7 +329,7 @@ export async function screenEnvelope(
     const unresolvable =
       verdict.field === 'spec.place.place_id' &&
       placeId !== undefined &&
-      deps.places.resolve(placeId) === undefined;
+      places.resolve(placeId) === undefined;
     return {
       kind: 'invalid',
       spec_hash: hash,
@@ -293,7 +353,7 @@ export async function screenEnvelope(
     };
   }
 
-  const place = placeOf(parsed.data, deps.places);
+  const place = placeOf(parsed.data, places);
   if (parsed.data.task_type !== 'compare-two' && place === null) {
     return {
       kind: 'invalid',
@@ -366,9 +426,32 @@ export async function hire(req: Request, deps: HireDeps): Promise<Response> {
     return replay(deps, reservation.task_id);
   }
 
-  // 4. Screening. A refusal marks; a schema error never does.
+  // 4. Screening. A refusal marks; a schema error never does; a lookup outage never does.
   const verdict = await deps.screen(body);
   const common = { task_type: taskType, spec_hash: verdict.spec_hash, payer, price_units: quote.price_units.toString() };
+
+  if (verdict.kind === 'unavailable') {
+    await deps.idem.release(nonce);
+    await logScreening(
+      {
+        task_type: taskType,
+        class: null,
+        reason: 'place lookup unavailable',
+        rule_id: 'lookup.unavailable',
+        spec_hash: verdict.spec_hash,
+        marked: false,
+        mark_tx: null,
+        agent_id: null,
+        payer,
+      },
+      serviceDeps(deps),
+    );
+    logDecision({ ...common, decision: 'unavailable' });
+    return Response.json(
+      { error: 'place_lookup_unavailable', retry_after_s: PLACE_LOOKUP_RETRY_S },
+      { status: 503, headers: { 'retry-after': String(PLACE_LOOKUP_RETRY_S) } },
+    );
+  }
 
   if (verdict.kind === 'invalid') {
     await deps.idem.release(nonce);
@@ -659,6 +742,9 @@ function serviceDeps(deps: Pick<HireDeps, 'chain' | 'db' | 'clock'>) {
 // --------------------------------------------------------------- the wiring
 
 let cachedClassifier: Classifier | undefined;
+let cachedLookup: OverpassLookup | undefined;
+/** Vitest only — lets `/check` tests inject a fake lookup without opening a socket. */
+let screenDepsForTests: ScreenEnvelopeDeps | undefined;
 
 /**
  * The live classifier when there is a key, the deterministic keyword fallback when there is
@@ -676,9 +762,46 @@ export function classifier(): Classifier {
   return cachedClassifier;
 }
 
-/** The screening seam both routes share, bound to the packaged OSM extract. */
+/** One Overpass client per process, same lifetime as the classifier. */
+function getLookup(): OverpassLookup {
+  if (!cachedLookup) {
+    const config = getConfig();
+    cachedLookup = createOverpassLookup({
+      endpoint: config.OVERPASS_URL,
+      userAgent:
+        'legwork-api/1.0 (place lookup; +https://github.com/RubenSousaDinis/legwork)',
+    });
+  }
+  return cachedLookup;
+}
+
+function buildScreenerDeps(): ScreenEnvelopeDeps {
+  const deps: ScreenEnvelopeDeps = { places: getPlaceIndex(), classifier: classifier() };
+  if (getConfig().PLACE_LOOKUP === 'overpass') {
+    deps.lookup = getLookup();
+  }
+  return deps;
+}
+
+/** Vitest: the deps `screener()` would bind, so a test can assert `lookup` is absent. */
+export function screenerDepsForTests(): ScreenEnvelopeDeps {
+  return buildScreenerDeps();
+}
+
+/** Vitest: replace the deps `/check` and `screener()` bind for one test. */
+export function setScreenEnvelopeDepsForTests(deps: ScreenEnvelopeDeps | undefined): void {
+  screenDepsForTests = deps;
+}
+
+/** Vitest: drop the Overpass singleton so a later config change rebuilds it. */
+export function resetLookupForTests(): void {
+  cachedLookup = undefined;
+  screenDepsForTests = undefined;
+}
+
+/** The screening seam both routes share, bound to the packaged OSM extract (± live lookup). */
 export function screener(): (body: unknown) => Promise<ScreenOutcome> {
-  return (body) => screenEnvelope(body, { places: getPlaceIndex(), classifier: classifier() });
+  return (body) => screenEnvelope(body, screenDepsForTests ?? buildScreenerDeps());
 }
 
 /** The network this seller accepts follows `CHAIN_ID`: Base Sepolia, or anvil for the harness. */

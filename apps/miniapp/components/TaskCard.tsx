@@ -28,7 +28,8 @@ import { Waiting } from './ui/Waiting';
  * type-derived copy on its own.
  */
 export type TaskBrief = {
-  place?: { name: string; street_address: string; locality: string };
+  /** `country` is the agent's own ISO-3166-1 alpha-2 code; the proof screen prices in it. */
+  place?: { name: string; street_address: string; locality: string; country?: string };
   question?: string;
   subject?: string;
   subject_detail?: string;
@@ -68,6 +69,8 @@ export type TaskCardProps = {
   onClaim: () => void;
   /** This row's claim is in flight: the relay has the transaction and has not answered. */
   claiming?: boolean;
+  /** Overrides `CLAIMING_LINE` while a Selfie Check is open. */
+  claimingLine?: string;
   claim?: TaskCardClaim;
   onRelease: () => void;
   error?: string;
@@ -80,11 +83,27 @@ export const PAID_FOR_THE_PROOF = 'you are paid for the proof, not the answer';
 export const CLAIM_EXPIRED = 'claim expired — it returned to the pool';
 
 /**
+ * A seeded row shows what an agent asks for. No escrow stands behind it, so the API answers a
+ * claim on one with 409 `SeededDemoRow` before it reaches the chain — and a CLAIM button that
+ * can only fail is a lie the card tells before the worker ever taps it. The button is gone and
+ * this line stands in its place.
+ */
+export const SEEDED_NOT_CLAIMABLE =
+  'Seeded demo row — shows what an agent asks for. Not claimable; no escrow behind it.';
+
+/**
  * A claim is a relayed transaction, so there are seconds between the tap and the answer.
  * The button keeps its name and stops accepting taps — a second tap used to send a second
  * claim — and the line under it says what those seconds are.
  */
 export const CLAIMING_LINE = 'Claiming this task…';
+
+/**
+ * Claim-time Selfie Check sits in front of the relay. The button keeps the name CLAIM;
+ * this line is what says the camera check is running.
+ */
+export const SELFIE_BEFORE_CLAIM =
+  'Selfie Check first — a live person has to be behind this claim.';
 
 /**
  * The claim window closing does not hand the task back: `TaskEscrow.expire` is what moves the
@@ -176,6 +195,7 @@ export function TaskCard({
   onToggle,
   onClaim,
   claiming = false,
+  claimingLine = CLAIMING_LINE,
   claim,
   onRelease,
   error,
@@ -284,8 +304,19 @@ export function TaskCard({
                 taskId={row.task_id}
               />
             </div>
+          ) : row.seeded ? (
+            <div data-floor="20" data-row="claim">
+              <p className="lw-body" data-claim="seeded" data-floor="20">
+                {SEEDED_NOT_CLAIMABLE}
+              </p>
+            </div>
           ) : (
-            <ClaimButton claiming={claiming} onClaim={onClaim} row={row} />
+            <ClaimButton
+              claiming={claiming}
+              claimingLine={claimingLine}
+              onClaim={onClaim}
+              row={row}
+            />
           )}
 
           <p className="lw-chips lw-chips--centred" data-row="relayed">
@@ -322,10 +353,12 @@ function ClaimButton({
   row,
   onClaim,
   claiming,
+  claimingLine,
 }: {
   row: TaskRow;
   onClaim: () => void;
   claiming: boolean;
+  claimingLine: string;
 }) {
   const tooFar =
     row.distance_m !== undefined &&
@@ -339,16 +372,21 @@ function ClaimButton({
           {tooFarToClaimReason(row.distance_m as number)}
         </p>
       ) : (
-        <p className="lw-body" data-claim="confirm" data-floor="20">
-          {claimConfirmation(row)}
-        </p>
+        <>
+          <p className="lw-body" data-claim="confirm" data-floor="20">
+            {claimConfirmation(row)}
+          </p>
+          <p className="lw-note" data-claim="selfie" data-floor="20">
+            {SELFIE_BEFORE_CLAIM}
+          </p>
+        </>
       )}
       {/* The label does not change: an action keeps its name through the whole flow, and
           the waiting line under it is what says the flow is running. */}
       <Button disabled={tooFar || claiming} full onClick={onClaim} size="lg" variant="primary">
         CLAIM
       </Button>
-      {claiming ? <Waiting step="claim">{CLAIMING_LINE}</Waiting> : null}
+      {claiming ? <Waiting step="claim">{claimingLine}</Waiting> : null}
     </div>
   );
 }

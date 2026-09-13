@@ -47,4 +47,11 @@ describe('about and support trust model', () => {
       cleanup();
     }
   });
+
+  it('aboutPageNamesTheWiderClaim', async () => {
+    const about = await renderAbout('orb');
+    const text = about.container.textContent ?? '';
+    expect(text).toContain('anywhere OpenStreetMap knows it');
+    expect(text).toContain('Rua de Alcobaça');
+  });
 });

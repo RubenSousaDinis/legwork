@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: 
 
 const { VerifiedState } = await import('../../components/VerifiedState');
 const { resetSessionForTests, setSessionState } = await import('../../lib/session');
-const { LANDING_FACTS, VERIFY_BUTTON, VERIFY_CAPTION } = await import('../../app/(auth)/Landing');
+const { LANDING_FACTS, VERIFY_BUTTON } = await import('../../app/(auth)/Landing');
 const AuthPage = (await import('../../app/(auth)/verify/page')).default;
 
 /**
@@ -51,9 +51,7 @@ describe('the landing card', () => {
     // What the label used to carry is the caption directly under it, in the same card.
     const caption = container.querySelector('[data-cta-caption]') as HTMLElement;
     expect(caption).not.toBeNull();
-    expect(caption.textContent).toBe(VERIFY_CAPTION);
-    // orb — the bundle default. The uniqueness clause is orb-only; see landingCaptionFollowsTheCredential.
-    expect(caption.textContent).toBe('about 30 seconds · one account per person');
+    expect(caption.textContent).toBe('about 30 seconds · a live person, camera-checked');
     expect(cta.closest('[data-step="landing"]')).toBe(caption.closest('[data-step="landing"]'));
 
     // The three facts, each on its own line, in the words the design gives them.

@@ -6,7 +6,7 @@
  * | Route | Auth | Body / query | 200 | Other |
  * |---|---|---|---|---|
  * | `GET /tasks/list?area=&lat=&lon=` | worker-session | — | `{tasks: WorkerTaskRow[]}` | — |
- * | `POST /tasks/:id/claim` | worker-session | optional `{lat, lon}` | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}`; 422 `{error: 'too_far_to_claim', distance_m, radius_m}` |
+ * | `POST /tasks/:id/claim` | worker-session | optional `{lat, lon}` | `{tx, claim_expires_at, submit_deadline}` | 403 `forbidden`; 409 `{error: 'InCooldown', cooldown_until}` / `{error: 'AlreadyClaimed', active_task_id?}` / `{error: 'SeededCannotClaimExternal'}` / `{error: 'SeededDemoRow'}`; 422 `{error: 'too_far_to_claim', distance_m, radius_m}` |
  * | `POST /tasks/:id/release-claim` | worker-session | — | `{tx}` | 409 `conflict` |
  * | `POST /tasks/:id/submit` | worker-session | `{proofHash?, …per-type proof}` | `{tx, status: 'submitted'}` | 400 `invalid_request`; 409 `conflict` |
  * | `POST /tasks/:id/report` | worker-session | `{class}` | `{recorded: true}` | 404 |
@@ -179,7 +179,7 @@ export async function mirrorFromChain(
 // ---------------------------------------------------------------- claimability
 
 export interface ClaimBlock {
-  error: 'InCooldown' | 'AlreadyClaimed' | 'SeededCannotClaimExternal';
+  error: 'InCooldown' | 'AlreadyClaimed' | 'SeededCannotClaimExternal' | 'SeededDemoRow';
   cooldown_until?: string;
   active_task_id?: string;
 }
@@ -350,6 +350,8 @@ export interface BriefPlace {
   name: string;
   street_address: string;
   locality: string;
+  /** ISO-3166 alpha-2 from the agent's `spec.place.country`, when present. */
+  country?: string;
 }
 
 /** Only ever these keys. The buyer's own claim about the place is not one of them. */
@@ -371,6 +373,7 @@ interface SpecPlace {
   name?: unknown;
   street_address?: unknown;
   locality?: unknown;
+  country?: unknown;
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -378,10 +381,12 @@ const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 function briefPlace(spec: Record<string, unknown>): BriefPlace | undefined {
   const place = spec.place as SpecPlace | undefined;
   if (!place) return undefined;
+  const country = str(place.country);
   return {
     name: str(place.name),
     street_address: str(place.street_address),
     locality: str(place.locality),
+    ...(country ? { country } : {}),
   };
 }
 
@@ -521,7 +526,7 @@ export function toWorkerTaskRow(row: TaskRow, options: ListRowOptions): WorkerTa
     ...(distance === undefined ? {} : { distance_m: distance }),
     ...(claimExpiresInS === undefined ? {} : { claim_expires_in_s: claimExpiresInS }),
     state: own ? 'claimed' : 'open',
-    seeded: options.seeded,
+    seeded: options.seeded || row.seeded,
     brief: workerBrief(row),
     ...(rounded === undefined ? {} : { coordinate_rounded: rounded }),
   };

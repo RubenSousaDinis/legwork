@@ -5,17 +5,22 @@ import { recordRequests } from './requests';
 const replace = vi.fn();
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push }) }));
+vi.mock('@worldcoin/idkit', async () => {
+  const { AutoIdkitRequestWidget } = await import('./autoCompleteIdkit');
+  return { IDKitRequestWidget: AutoIdkitRequestWidget };
+});
 
 const { setScenario } = await import('../../mocks/scenarios');
 const { TaskList, LOOKING_FOR_TASKS, emptyBoardCopy } = await import('../../app/tasks/TaskList');
+const { CLAIM_SELFIE_CAPTION } = await import('../../app/tasks/ClaimSelfie');
 
 const TITLE = 'Padaria Central · Rua de Alcobaça 12, Leiria';
-const CLAIMING_LINE = 'Claiming this task…';
 
 let requests: ReturnType<typeof recordRequests>;
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   replace.mockClear();
   push.mockClear();
   requests = recordRequests();
@@ -63,13 +68,13 @@ describe('the waiting states', () => {
     expect(button.disabled).toBe(false);
     fireEvent.click(button);
 
-    // A relayed claim takes seconds. The button stops taking taps and says why.
+    // A Selfie Check, then a relayed claim. The button stops taking taps and says why.
     expect(button.disabled).toBe(true);
-    expect(screen.getByText(CLAIMING_LINE)).toBeTruthy();
+    expect(screen.getByText(CLAIM_SELFIE_CAPTION)).toBeTruthy();
     fireEvent.click(button);
     fireEvent.click(button);
 
-    await waitFor(() => expect(screen.queryByText(CLAIMING_LINE)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(CLAIM_SELFIE_CAPTION)).toBeNull());
     expect(requests.count('POST', '/api/tasks/1024/claim')).toBe(1);
   });
 });

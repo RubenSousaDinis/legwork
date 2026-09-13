@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /// @notice Binds a World ID nullifier to one payout address. Frozen in T-01a.
 /// @dev Task-type bitmask: verify-open = 1, photo-of = 2, call-confirm = 4, compare-two = 8.
-///      `area` is a geohash-5 string (Leiria is "ez5ku").
+///      `area` is a geohash-5 string (Leiria is "ez1dp").
 interface IWorkerRegistry {
     error NotRelayer();
     error DuplicateNullifier();

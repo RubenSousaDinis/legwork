@@ -1,6 +1,7 @@
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { resetAreaForTests } from '../lib/area';
+import { clearGeocodeCacheForTests } from '../lib/geocode';
 import { handlers, resetLastVerifyBody } from './handlers';
 import { resetScenarios } from './scenarios';
 
@@ -16,5 +17,6 @@ afterEach(() => {
   resetLastVerifyBody();
   resetScenarios();
   resetAreaForTests();
+  clearGeocodeCacheForTests();
 });
 afterAll(() => server.close());

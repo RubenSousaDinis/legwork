@@ -7,12 +7,13 @@ ground, one accent. Status-quo red appears only on `/deck` board 2.
 
 | Route | What it is | Public |
 |---|---|---|
-| `/` | Landing: tagline, two paths (human / agent), trust model. Static — no live data load. | yes |
+| `/` | Landing: tagline, two paths (human / agent), trust model. Static copy; the pool chip is the subgraph's count in live mode (`lib/data/pool.ts`). | yes |
 | `/?present=1` | The sparse present canvas on the same route, for filming. The CI gate navigates here. | yes |
 | `/present` | The same canvas with no query to remember on set. | yes |
 | `/live` | Mission control: feed left, escrow + agent centre, pool / screening / preflight / posters right. Min-width 1280, single column below. | yes |
 | `/agents` | How to hire a human: hosted and local install lines, six tools, four task types, prices, refusals. | yes |
 | `/about` | The claim, the trust model, what is live and what is seeded. | yes |
+| `/overview` | Unlisted briefing: product, worker and agent flows, technical architecture. Not in the header; `robots: { index: false }` and `disallow` in `app/robots.ts`. | yes |
 | `/support` | Four questions for someone who arrived from a task receipt. | yes |
 | `/deck` | Thirteen-board pitch, scroll-snap, no slide runner. | yes |
 | `/opengraph-image` | 1200x630 card so every link unfurls with the escrow meter. | yes |

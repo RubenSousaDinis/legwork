@@ -1,19 +1,23 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { poolString } from '../lib/format';
-import { getLiveDashboardData, refusalCounts } from '../lib/data/live';
+import { getLiveDashboardData, isFunded, refusalCounts, toFeedRow, type WireFeedRow } from '../lib/data/live';
+import { metaWithDisclosure } from '../components/TaskRow';
 import { ScreeningLog } from '../components/ScreeningLog';
 import { TaskRow } from '../components/TaskRow';
 import { http, HttpResponse } from 'msw';
 import {
   downHandlers,
+  FEED_DATE,
   feedHandler,
   fixtures,
   liveHandlers,
   liveServer,
+  ORIGIN,
   postersHandler,
   preflightHandler,
   refusalsHandler,
+  subgraphHandler,
   SUBGRAPH_URL,
 } from '../lib/data/fixtures/live/handlers';
 
@@ -27,18 +31,78 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('live adapter', () => {
+  it('feedRowShowsLocalityWhenTheWireCarriesIt', () => {
+    const row = toFeedRow({
+      task_id: 'b1',
+      task_type: 'photo-of',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'u33db',
+      locality: 'Berlin',
+      country: 'DE',
+      posted_at: '2026-09-05T14:02:00.000Z',
+      seeded: true,
+    });
+    expect(row.locality).toBe('Berlin · DE');
+    expect(row.meta.endsWith('· Berlin · DE')).toBe(true);
+    expect(row.meta).not.toContain('u33db');
+  });
+
+  it('feedRowFallsBackToTheAreaWithoutLocality', () => {
+    const row = toFeedRow({
+      task_id: 'l1',
+      task_type: 'verify-open',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'ez1dp',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    expect(row.locality).toBeUndefined();
+    expect(row.meta.endsWith('· ez1dp')).toBe(true);
+  });
+
+  it('feedRowLocalityAloneWhenCountryIsMissing', () => {
+    const row = toFeedRow({
+      task_id: 'p1',
+      task_type: 'verify-open',
+      fee_usdc: 0.45,
+      amount_usdc: 3,
+      area: 'ez1dp',
+      locality: 'Porto',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    expect(row.locality).toBe('Porto');
+  });
+
+  it('callConfirmDisclosureStillFollowsTheLocality', () => {
+    const row = toFeedRow({
+      task_id: 'c1',
+      task_type: 'call-confirm',
+      fee_usdc: 0.45,
+      amount_usdc: 2,
+      area: 'u33db',
+      locality: 'Berlin',
+      country: 'DE',
+      posted_at: '2026-09-05T14:02:00.000Z',
+    });
+    const meta = metaWithDisclosure(row);
+    expect(meta).toContain('· Berlin · DE ·');
+    expect(meta.endsWith('self-reported answer + timestamp (unverified)')).toBe(true);
+  });
+
   it('liveFeedMergesRefusalsWithoutSpec', async () => {
     server.use(...liveHandlers(fixtures.refusals1));
     const result = await getLiveDashboardData();
 
-    // Four funded rows plus two refusals (the five-key wire row and the leaky extra), newest first.
-    expect(result.feed).toHaveLength(6);
+    // Five funded rows plus two refusals (the five-key wire row and the leaky extra), newest first.
+    expect(result.feed).toHaveLength(7);
     expect(result.feed.map((r) => r.taskId.replace(/^refused-.*/, 'refused'))).toEqual([
       '7',
       '8',
       'refused',
       '6',
       '5',
+      '9',
       'refused',
     ]);
 
@@ -124,7 +188,8 @@ describe('live adapter', () => {
     server.use(...liveHandlers(fixtures.refusals1));
     const result = await getLiveDashboardData();
 
-    // Two REFUSED lines plus one PASSED line per funded row, newest first.
+    // Two REFUSED lines plus one PASSED line per funded row, newest first. Row 9 has no
+    // post tx — it never funded an escrow and never went through the gate — so no line.
     expect(result.screening.map((l) => l.outcome)).toEqual([
       'passed',
       'passed',
@@ -193,10 +258,16 @@ describe('live adapter', () => {
     expect(Object.keys(fromArray)).toHaveLength(6);
   });
 
-  it('recordedFixturesAreLeiriaAndCarryNothingPublicSurfacesMayNot', () => {
+  it('recordedFixturesCarryNothingPublicSurfacesMayNot', () => {
     const all = JSON.stringify(fixtures);
     expect(all).not.toContain('buyer_token');
-    for (const row of fixtures.feed.tasks) expect(row.area).toBe('ez1dp');
+    for (const row of fixtures.feed.tasks) {
+      expect(row.area).toBeTruthy();
+      if (row.locality !== 'Berlin') expect(row.area).toBe('ez1dp');
+    }
+    const berlin = fixtures.feed.tasks.find((row) => row.locality === 'Berlin');
+    expect(berlin?.seeded).toBe(true);
+    expect(berlin?.area).toBe('u33db');
     // The public feed carries no requester identity, and the adapter does not want one.
     expect(JSON.stringify(fixtures.feed)).not.toContain('buyer_agent_id');
 
@@ -338,5 +409,119 @@ describe('live adapter', () => {
     for (const el of reasons) {
       expect((el.textContent ?? '').split('authentication circumvention')).toHaveLength(2);
     }
+  });
+});
+
+/**
+ * A seeded board row (`/admin/seed-demo`) carries `demo-data.json`'s placeholder in `tx.post`
+ * and never touched the chain. It is a feed row with a `seeded` chip and nothing else: never
+ * the featured task, never a cent in the totals, never a PASSED line in the screening log.
+ */
+describe('funded rows only', () => {
+  const FUNDED_POST = `0x${'1a'.repeat(32)}`;
+  const PLACEHOLDER = '0x8f2a…c41d';
+  const AT = (minutesAgo: number) =>
+    new Date(Date.parse('2026-09-05T11:00:00.000Z') - minutesAgo * 60_000).toISOString();
+
+  function boardRow(id: string, state: string, minutesAgo: number): WireFeedRow {
+    return {
+      task_id: id,
+      state,
+      task_type: 'compare-two',
+      price_usdc: 1,
+      fee_usdc: 0.15,
+      area: 'any',
+      seeded: true,
+      posted_at: AT(minutesAgo),
+      tx: { post: PLACEHOLDER },
+    };
+  }
+
+  function fundedRow(id: string, state: string, minutesAgo: number, released = false): WireFeedRow {
+    return {
+      task_id: id,
+      state,
+      task_type: 'verify-open',
+      price_usdc: 3,
+      fee_usdc: 0.45,
+      area: 'ez1dn',
+      locality: 'Leiria',
+      country: 'PT',
+      seeded: true,
+      posted_at: AT(minutesAgo),
+      ...(released ? { proof: { hash: `0x${'ab'.repeat(32)}`, captured_at: AT(minutesAgo - 1) } } : {}),
+      tx: { post: FUNDED_POST, ...(released ? { release: `0x${'cd'.repeat(32)}` } : {}) },
+    };
+  }
+
+  function withFeed(rows: WireFeedRow[]) {
+    server.use(
+      http.get(`${ORIGIN}/api/public/feed`, () =>
+        HttpResponse.json({ tasks: rows }, { headers: { date: FEED_DATE } }),
+      ),
+      refusalsHandler(fixtures.refusals0),
+      postersHandler(),
+      preflightHandler(),
+      subgraphHandler(),
+    );
+  }
+
+  it('isFundedReadsTheEscrowHashAndNothingElse', () => {
+    expect(isFunded(fundedRow('41', 'released', 5, true))).toBe(true);
+    expect(isFunded(boardRow('9000126', 'open', 1))).toBe(false);
+    expect(isFunded({ ...boardRow('9', 'open', 1), tx: {} })).toBe(false);
+    // `seeded` is not the signal: the CLI worker's tasks are seeded and funded.
+    expect(isFunded({ ...fundedRow('34', 'released', 5, true), seeded: true })).toBe(true);
+  });
+
+  it('liveNeverCountsASeededBoardRowAsMoney', async () => {
+    withFeed([
+      boardRow('9000126', 'open', 1),
+      boardRow('9000001', 'released', 2),
+      fundedRow('41', 'released', 10, true),
+    ]);
+    const result = await getLiveDashboardData();
+
+    // The newest rows are board rows; the meter still shows the one real escrow.
+    expect(result.featured?.taskId).toBe('41');
+    expect(result.featured?.state).toBe('released');
+    expect(result.featured?.proofPresent).toBe(true);
+    expect(result.totals).toEqual({ lockedUsdc: 0, releasedTodayUsdc: 3, refundedUsdc: 0 });
+
+    // The board rows are still on the feed, newest first, every one chipped.
+    expect(result.feed.map((r) => r.taskId)).toEqual(['9000126', '9000001', '41']);
+    expect(result.feed.every((r) => r.seeded)).toBe(true);
+
+    // One post went through the gate, so one PASSED line.
+    expect(result.screening.filter((l) => l.outcome === 'passed')).toHaveLength(1);
+    expect(result.screening[0]?.at).toBe(AT(10));
+  });
+
+  it('liveFeaturesTheNewestFundedRowWhenEveryOneWasRefunded', async () => {
+    withFeed([boardRow('9000126', 'open', 1), fundedRow('40', 'refunded', 30), fundedRow('39', 'refunded', 40)]);
+    const result = await getLiveDashboardData();
+
+    expect(result.featured?.taskId).toBe('40');
+    expect(result.featured?.state).toBe('refunded');
+    expect(result.totals).toEqual({ lockedUsdc: 0, releasedTodayUsdc: 0, refundedUsdc: 6.9 });
+  });
+
+  it('liveMeterIsEmptyWhenOnlyBoardRowsExist', async () => {
+    withFeed([boardRow('9000126', 'open', 1), boardRow('9000001', 'released', 2)]);
+    const result = await getLiveDashboardData();
+
+    expect(result.featured).toBeNull();
+    expect(result.totals).toEqual({ lockedUsdc: 0, releasedTodayUsdc: 0, refundedUsdc: 0 });
+    expect(result.feed).toHaveLength(2);
+    expect(result.screening.filter((l) => l.outcome === 'passed')).toHaveLength(0);
+  });
+
+  it('livePinCannotPutABoardRowOnTheMeter', async () => {
+    withFeed([boardRow('9000126', 'open', 1), fundedRow('41', 'claimed', 10)]);
+    const result = await getLiveDashboardData({ taskId: '9000126' });
+
+    expect(result.featured?.taskId).toBe('41');
+    expect(result.featured?.state).toBe('locked');
+    expect(result.totals.lockedUsdc).toBe(3.45);
   });
 });

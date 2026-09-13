@@ -22,7 +22,7 @@ claimed; the UI is re-typed from `DESIGN-SPEC.md`, not copied.
 ## Try it
 
 ```bash
-claude mcp add --transport http legwork https://<host>/mcp
+claude mcp add --transport http legwork https://legwork-api.vercel.app/mcp
 ```
 
 Then ask your agent:
@@ -48,25 +48,24 @@ Bot-proof, not fraud-proof.
 
 - **Live, not ours:** World ID (Developer Portal, IDKit 4.x, Orb credentials), ERC-8004 identity and reputation registries on Base Sepolia, the x402 reference facilitator, USDC.
 - **Deployed by us on Base Sepolia:** WorkerRegistry, TaskEscrow, Reputation, AbuseMark, the subgraph (Studio), the Task API + MCP server, the mini-app, the dashboard.
-- **Seeded and labelled:** ~20 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show — their medians are labelled `seeded` or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it actually earned. Never claim the seeded workers are people.
+- **Seeded and labelled:** 23 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show — their medians are labelled `seeded` or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it actually earned. Never claim the seeded workers are people.
 
 | Live, not ours | Ours, deployed on Base Sepolia | Seeded and disclosed |
 | --- | --- | --- |
-| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry [`0xc33d229046507f4C2E664cbf974542c92eEAbAf4`](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | 20 worker rows via `seedWorker()` (cannot produce a verified registration) |
-| ERC-8004 IdentityRegistry [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | TaskEscrow [`0x641B56dfA3A033D84a75588c18579347A0DE3c6B`](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | `<N>` seeded task lifecycles |
+| World ID — Developer Portal, IDKit 4.x, Orb credentials | WorkerRegistry [`0xc33d229046507f4C2E664cbf974542c92eEAbAf4`](https://sepolia.basescan.org/address/0xc33d229046507f4C2E664cbf974542c92eEAbAf4) | 23 worker rows via `seedWorker()` (cannot produce a verified registration) |
+| ERC-8004 IdentityRegistry [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | TaskEscrow [`0x641B56dfA3A033D84a75588c18579347A0DE3c6B`](https://sepolia.basescan.org/address/0x641B56dfA3A033D84a75588c18579347A0DE3c6B) | 20 seeded onchain lifecycles (operator-funded, worked by seeded workers) plus 29 seeded board rows that never touched the chain |
 | ERC-8004 ReputationRegistry [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) | Reputation [`0x2f731B56D02080190fa2ef7813887B2743551E43`](https://sepolia.basescan.org/address/0x2f731B56D02080190fa2ef7813887B2743551E43) | one real registration (the demo phone) |
 | x402 reference facilitator | AbuseMark [`0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608`](https://sepolia.basescan.org/address/0x29145D47EFc76bEaBc3A4011cFf7fC0fBEa02608) | marks operator-attested |
-| USDC [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | Subgraph (Studio) `<studio url>` | relayed claims, gas paid by Legwork |
-| — | Task API + MCP server, mini-app, dashboard `<host>` | operator powers: seed, reset, resolve |
+| USDC [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | Subgraph (Studio) [public query URL](https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4) | relayed claims, gas paid by Legwork |
+| — | [Task API + MCP server](https://legwork-api.vercel.app), [mini-app](https://legwork-miniapp.vercel.app), [dashboard](https://legwork-dashboard.vercel.app) | operator powers: seed, reset, resolve |
 
-Plain addresses now; T-49 turns them into Basescan links on Day 10.
 
 ## How the loop works
 
 1. **Verify once.** A worker proves personhood with World ID through IDKit and registers one account — cloud-verified, operator-attested — onchain World ID verification is Orb-only today.
 2. **The agent asks for one of four typed things and pays through x402.** 3.00 to the worker plus a 0.45 fee on top = 3.45 charged to the agent. Free text is not a task type.
 3. **Money is locked before anyone can claim.** The escrow records the x402 payer as the buyer and the refund party; a per-task cap and a per-agent daily cap (5 open tasks / 25 USDC) bound the loss — our custody is the one block between settlement and escrow, and we say so.
-4. **The worker signs in with World ID and their World App wallet.** We relay the claim and pay the gas, so a worker never needs ETH.
+4. **The worker signs in with World ID (Orb) and their World App wallet.** Claiming a task requires a fresh Selfie Check — a live person behind the phone, not a second uniqueness credential. We relay the claim and pay the gas, so a worker never needs ETH.
 5. **Release on approve, or `autoRelease` after the task's dispute window.** Expiry refunds the buyer; a contested proof goes to operator `resolve`, which charges zero fee on either leg.
 6. **Both records move.** Worker reputation is nullifier-keyed and deduplicated per rater; the hiring agent's ERC-8004 record gets `paid-on-proof`, `disputed` or `task-refused:<class>`. A refused task moves no money.
 
@@ -153,7 +152,7 @@ Tick only tracks whose bullets are literally met.
 
 | Partner · track | Qualification bullet (verbatim) | Evidence (file / address / commit / timestamp) | Met? |
 | --- | --- | --- | --- |
-| World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Compatible flow, not Selfie Check.** `apps/miniapp/lib/worldid.ts` `pickPreset` / `IDKitRequestWidget`; `WORLD_CREDENTIAL_LEVEL=orb` (`docs/spikes/RESULTS.md` `## S2`); real worker `0xaed0c1102e45b7f528224eacb9309a0925015810` (`## Preflight`; `WorkerRegistered` tx `0x9e607b28b640f71f01ea2500688545f23a32ecda1dcb015831c3011c25b80935`, block 46592571, area `ez19y`). `WorkerRegistry` one nullifier = one account, only verified workers claim; `test_Register_DuplicateNullifierReverts` in `contracts/test/WorkerRegistry.t.sol`. Sandbox: RESULTS `## S2` (Orb 200, Selfie Check `verification_disabled`) and `FEEDBACK-WORLD.md` E5, E6, E8, E9. Feedback: `FEEDBACK-WORLD.md`, nine dated entries. Working app: https://legwork-miniapp.vercel.app. | yes |
+| World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Both credentials.** Orb at registration (one nullifier = one worker; uniqueness claim). Selfie Check at claim (live-person / abuse-prevention: `POST /idkit/verify` with a worker-session issues `lw_selfie`; `POST /tasks/:id/claim` requires it). Mini-app: `ClaimSelfie` + `pickPreset('selfie')` + IDKit `environment: sandbox` so desktop QR / PWA deep-link open World ID Sandbox. Worker `0xaed0c1102e45b7f528224eacb9309a0925015810` (`WorkerRegistered` tx `0x9e607b28b640f71f01ea2500688545f23a32ecda1dcb015831c3011c25b80935`). Feedback: `FEEDBACK-WORLD.md` (E5–E9 the gated-beta refusal; E10 grant channel; E11 dual-credential decision). Working app: https://legwork-miniapp.vercel.app. Live Sandbox confirmation of the claim-time camera is the operator's next pass. | yes |
 | The Graph — Best AI Tooling or AI Use Case (From Scratch) | Use The Graph as a load-bearing part. Consume live data from a Graph provider. net-new work started during the hackathon. open source with README or SKILL.md. | `preflight_workers` in `packages/mcp` (`src/tools/preflight.ts`); hosted mount `apps/api/app/mcp/route.ts` passes `createSubgraphClient` from `packages/subgraph-client`. `examples/transcript.md` shows the agent quoting `n_real` / `median_source`; `examples/prompt.md` requires it; Day-9 live capture `n_real: 1`, `median_source: "real"` (`RESULTS.md` `## Preflight`). Studio query URL https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4; Discord "does testnet Studio count as a Graph provider": unanswered as of 2026-09-09 (`RESULTS.md` `## Graph`). First commit `be479b42a7e4111cd0386b6ec832ea43f5876c5c` at 2026-09-04T17:18:30Z. `SKILL.md`; README states MIT (no root `LICENSE` file in the tree). | yes |
 | The Graph — Best Use of Composable or Standardized Graph Products | not selected — Discord unanswered (Studio-as-provider and Subgraph MCP both unanswered as of 2026-09-09); The Graph's Subgraph MCP tool was not shipped | RESULTS `## Graph`; this repo's MCP is Legwork's, not The Graph's Subgraph MCP product | no — do not select |
 | Bazantic — Agentify a New API | not selected — no gateway by freeze | No T-48 issue comment with gateway URL, recipe name, recording or username by Day 9 12:00 UTC | no — do not select |
@@ -228,6 +227,7 @@ The subgraph link is the public Studio query URL. No URL in this repository embe
 - [Submission pack](docs/submission.md)
 - [AI usage](docs/AI-USAGE.md)
 - [World ID feedback](FEEDBACK-WORLD.md)
+- [Bazantic feedback](FEEDBACK-BAZANTIC.md)
 - [External posters](POSTERS.md)
 - [Agent skill](SKILL.md)
 - [Task briefs](docs/plan/) — the disclosed pre-kickoff plan, copied at kickoff

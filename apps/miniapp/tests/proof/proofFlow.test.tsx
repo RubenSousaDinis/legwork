@@ -206,4 +206,57 @@ describe('the proof screen', () => {
       'Submitted, but flagged: geofence. The operator will resolve it — nothing has been paid yet.',
     );
   });
+
+  it('proofFlowPassesTheCountryToTheToggle', async () => {
+    const { http, HttpResponse } = await import('msw');
+    const { server } = await import('../../mocks/server');
+    const { TASK_SUBMITTED, TASKS_BOARD } = await import('../../mocks/handlers');
+    const { CALL_CONFIRM_TEMPLATES } = await import('@legwork/shared');
+
+    const usRow = {
+      ...TASKS_BOARD.tasks[0],
+      task_id: TASK_ID,
+      task_type: 'call-confirm' as const,
+      title: "Joe's Pizza · 7 Carmine Street, New York",
+      brief: {
+        place: {
+          name: "Joe's Pizza",
+          street_address: '7 Carmine Street',
+          locality: 'New York',
+          country: 'US',
+        },
+      },
+    };
+
+    server.use(
+      // `/tasks/list` must win over `/tasks/:id` — otherwise `:id` eats the word `list`.
+      http.get('*/api/tasks/list', () => HttpResponse.json({ tasks: [usRow] })),
+      http.get('*/api/tasks', () => HttpResponse.json({ tasks: [usRow] })),
+      http.get('*/api/tasks/:id', ({ params }) => {
+        if (params['id'] === 'list') return HttpResponse.json({ tasks: [usRow] });
+        return HttpResponse.json({
+          ...TASK_SUBMITTED,
+          status: 'claimed',
+          task_type: 'call-confirm',
+        });
+      }),
+    );
+
+    stubGeolocation(geolocationFailing(GEO_ERROR.TIMEOUT));
+    render(<ProofFlow claim={CLAIM} taskId={TASK_ID} />);
+    await screen.findByText('call-confirm');
+    await screen.findByText(/Joe's Pizza/);
+    await takeThePhoto();
+    await screen.findByText(GPS_CHIP);
+    fireEvent.click(screen.getByText('I am at the place'));
+
+    fireEvent.click(screen.getByText('I called'));
+    fireEvent.click(screen.getByText(CALL_CONFIRM_TEMPLATES.price_of.question));
+    await screen.findByText('their answer');
+    fireEvent.click(
+      document.querySelector('[data-answer="call-answer"] [data-option="price"]') as HTMLButtonElement,
+    );
+
+    expect(await screen.findByText('amount (USD)')).toBeTruthy();
+  });
 });

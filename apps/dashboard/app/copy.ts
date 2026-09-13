@@ -33,6 +33,6 @@ export const TRUST_MODEL_CLOSER = 'Bot-proof, not fraud-proof.';
 export const X402_SENTENCE =
   'An MCP client cannot answer an x402 challenge; the payer must hold a key.';
 
-/** README's opening paragraph, rewritten Leiria-first and under 320 characters. */
+/** README's opening paragraph, rewritten for a product that resolves a place anywhere OpenStreetMap knows it, under 320 characters. */
 export const LANDING_HERO =
-  'An agent posts a real-world task in Leiria — confirm a shop is open, photograph a poster, read a sign — and funds it in USDC escrow. A World ID-verified person nearby claims it, does it, and submits proof. The escrow releases on proof.';
+  'An agent posts a real-world task — is this shop in Lisbon open, how long is the queue in New York, what does the sign in Berlin say — and funds it in USDC escrow. A World ID-verified person nearby claims it, does it, and submits proof. The escrow releases on proof.';

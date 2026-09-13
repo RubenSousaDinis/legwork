@@ -14,7 +14,9 @@ export type Poi = {
 
 /**
  * The place side of the gate. T-22 implements this over the real gzipped extract; the JSON
- * implementation below runs the corpus. There is no live geocoder on any path.
+ * implementation below runs the corpus. The packaged index never reaches the network. A
+ * single-id live lookup exists in `overpassLookup.ts`; the API decides whether to use it
+ * (T-62).
  */
 export interface PlaceIndex {
   /** `undefined` means the id is outside the covered region, not that it does not exist. */

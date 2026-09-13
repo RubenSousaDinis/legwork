@@ -98,7 +98,7 @@ type WorkerTaskRow = {
   task_id: string;
   title: string;
   distance_m?: number;
-  brief?: { place?: { name: string } };
+  brief?: { place?: { name: string; country?: string } };
 };
 
 type Photo = { blob: Blob; url: string };
@@ -121,6 +121,8 @@ export type ProofFlowProps = {
 export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
   const [task, setTask] = useState<TaskView | null>(null);
   const [title, setTitle] = useState<string | null>(null);
+  /** ISO-3166 from the claimed row's brief — drives the call-confirm price currency. */
+  const [placeCountry, setPlaceCountry] = useState<string | undefined>(undefined);
 
   const [photo, setPhoto] = useState<Photo | null>(null);
   /** The phone's clock when the shutter went, for the readout — never sent anywhere. */
@@ -182,6 +184,7 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
         const row = data.tasks.find((candidate) => candidate.task_id === taskId);
         if (!live || row === undefined) return;
         setTitle(row.title);
+        setPlaceCountry(row.brief?.place?.country);
         if (
           fix.ok &&
           row.distance_m !== undefined &&
@@ -419,7 +422,13 @@ export function ProofFlow({ taskId, claim, now }: ProofFlowProps) {
 
           {photo !== null && taskType !== null ? (
             <>
-              <AnswerToggle now={now} onChange={setAnswer} taskType={taskType} value={answer} />
+              <AnswerToggle
+                country={placeCountry}
+                now={now}
+                onChange={setAnswer}
+                taskType={taskType}
+                value={answer}
+              />
               <CharacterField
                 label={NOTE_LABEL}
                 maxLength={NOTE_MAX_CHARS}

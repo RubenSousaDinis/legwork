@@ -27,4 +27,15 @@ describe('agents page', () => {
     expect(text).toContain('0.45');
     expect(text).toContain(X402_SENTENCE);
   });
+
+  it('agentsPageStatesTheNewLimitNotTheOldOne', () => {
+    const { container } = render(<AgentsPage />);
+    const text = container.textContent ?? '';
+    expect(text).toContain('resolves live');
+    expect(text).toContain('Overpass');
+    expect(text).toContain('503');
+    expect(text).toContain('packaged index');
+    expect(text).not.toContain('Leiria-only');
+    expect(text).not.toContain('(Portuguese)');
+  });
 });

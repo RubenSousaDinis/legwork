@@ -109,6 +109,8 @@ export interface WireFeedRow {
   price_usdc?: number;
   fee_usdc: number;
   area?: string;
+  locality?: string;
+  country?: string;
   seeded?: boolean;
   posted_at: string;
   released_at?: string;
@@ -253,8 +255,11 @@ const TYPE_LABEL: Record<TaskType, string> = {
 };
 
 const PASSED_REASON = 'schema ok · placeId resolved';
-/** Leiria as a geohash-5. The one area this deployment works in. */
-const LEIRIA_AREA = 'ez1dp';
+/**
+ * The cell the preflight reads when no featured row names one. Leiria — the operator's own
+ * cell, not a claim about where the product works.
+ */
+const FALLBACK_AREA = 'ez1dp';
 const MAX_FEED_ROWS = 20;
 const MAX_SCREENING_LINES = 12;
 const PAGE = 500;
@@ -277,6 +282,23 @@ function composeTitle(type: TaskType | 'free-text', area?: string): string {
 
 function rowStatus(row: WireFeedRow): string {
   return row.status ?? row.state ?? 'open';
+}
+
+/**
+ * A 32-byte transaction hash: what `TaskEscrow.post` mints and what the API stores in
+ * `tx.post` for every task that locked money. A seeded board row carries `demo-data.json`'s
+ * own placeholder there instead — it never touched the chain.
+ */
+const TX_HASH = /^0x[0-9a-f]{64}$/i;
+
+/**
+ * Whether money was ever locked for this row. Only a funded row may reach the escrow meter,
+ * the money totals or the screening log's PASSED lines. A seeded board row shows what an
+ * agent asks for and nothing more: it stays a feed row, and the `seeded` chip is the whole
+ * of its story.
+ */
+export function isFunded(row: WireFeedRow): boolean {
+  return TX_HASH.test(row.tx?.post ?? '');
 }
 
 /** The posted rate the worker keeps. `price_usdc` and `amount_usdc` name the same field. */
@@ -327,10 +349,17 @@ function toFeatured(row: WireFeedRow): FeaturedTask {
   return featured;
 }
 
-function toFeedRow(row: WireFeedRow): TaskRowData {
+export function toFeedRow(row: WireFeedRow): TaskRowData {
   const amount = rowAmount(row);
   const fee = row.fee_usdc ?? 0;
   const status = rowStatus(row);
+  const locality =
+    row.locality && row.country
+      ? `${row.locality} · ${row.country}`
+      : row.locality
+        ? row.locality
+        : undefined;
+  const place = locality ?? row.area;
   const out: TaskRowData = {
     taskId: row.task_id,
     type: row.task_type,
@@ -338,8 +367,9 @@ function toFeedRow(row: WireFeedRow): TaskRowData {
     priceUsdc: amount,
     agentPaysUsdc: agentPaysFor(amount, fee),
     state: status as TaskRowData['state'],
-    meta: row.area ? `posted ${hhmm(row.posted_at)} · ${row.area}` : `posted ${hhmm(row.posted_at)}`,
+    meta: place ? `posted ${hhmm(row.posted_at)} · ${place}` : `posted ${hhmm(row.posted_at)}`,
     seeded: row.seeded === true,
+    ...(locality ? { locality } : {}),
   };
   const tx = row.tx?.release ?? row.tx?.submit;
   if (tx) out.tx = tx;
@@ -388,7 +418,8 @@ export function refusalCounts(refusals: WireRefusals | null): Record<AbuseClass,
 /**
  * Totals are additive to §2, which does not name them: `DashboardData.totals` is
  * required and the meter renders it, so it is read off the funded rows exactly the way
- * T-10's demo adapter reads it. Refused rows are skipped — they never funded anything.
+ * T-10's demo adapter reads it. Refused rows are skipped — they never funded anything — and
+ * so are seeded board rows, which the caller filters out with `isFunded` before this runs.
  */
 function totalsOf(rows: WireFeedRow[]): DashboardTotals {
   const totals: DashboardTotals = { lockedUsdc: 0, releasedTodayUsdc: 0, refundedUsdc: 0 };
@@ -472,14 +503,21 @@ export async function getLiveDashboardData(
 
   const wireRows = (feedResponse?.body.tasks ?? []).slice();
   wireRows.sort((a, b) => byTimeDesc(a.posted_at, b.posted_at));
+  // The rows that ever locked money. A seeded board row is a feed row and nothing else.
+  const fundedRows = wireRows.filter(isFunded);
 
-  // Rule (2): only a funded row can be featured, so a refusal has no path to the meter.
-  const pinned = opts.taskId ? wireRows.find((r) => r.task_id === opts.taskId) : undefined;
-  const newest = wireRows.find((r) => featuredStateOf(rowStatus(r), r.tx?.release) !== 'refunded');
+  // Rule (2): only a funded row can be featured, so neither a refusal nor a seeded board row
+  // has a path to the meter. The newest live lifecycle wins; when every funded row has been
+  // refunded, the newest of those is still a real escrow and reads `REFUNDED`, which is more
+  // honest than a meter locked on nothing.
+  const pinned = opts.taskId ? fundedRows.find((r) => r.task_id === opts.taskId) : undefined;
+  const newest =
+    fundedRows.find((r) => featuredStateOf(rowStatus(r), r.tx?.release) !== 'refunded') ??
+    fundedRows[0];
   const featuredRow = pinned ?? newest;
   const featured = featuredRow ? toFeatured(featuredRow) : null;
 
-  const preflightArea = featuredRow?.area ?? LEIRIA_AREA;
+  const preflightArea = featuredRow?.area ?? FALLBACK_AREA;
   const preflightResponse = await fetchJson<WirePreflight>(
     `/public/preflight?task_type=verify-open&area=${encodeURIComponent(preflightArea)}`,
   );
@@ -494,7 +532,8 @@ export async function getLiveDashboardData(
   merged.sort((a, b) => byTimeDesc(a.at, b.at));
   const feed = merged.slice(0, MAX_FEED_ROWS).map((m) => m.row);
 
-  // ---- screening: every refusal, plus one PASSED line per funded row.
+  // ---- screening: every refusal, plus one PASSED line per funded row. A seeded board row
+  // never went through the gate, so it gets no line.
   const specById = new Map((pool?.recent ?? []).map((t) => [t.id, t.specHash]));
   const screening: ScreeningLine[] = [
     ...recent.map((entry): ScreeningLine => {
@@ -509,7 +548,7 @@ export async function getLiveDashboardData(
       if (entry.rule_id) line.ruleId = entry.rule_id;
       return line;
     }),
-    ...wireRows.map(
+    ...fundedRows.map(
       (row): ScreeningLine => ({
         at: row.posted_at,
         outcome: 'passed',
@@ -617,7 +656,7 @@ export async function getLiveDashboardData(
   const data: DashboardData = {
     dataMode: 'live',
     featured,
-    totals: totalsOf(wireRows),
+    totals: totalsOf(fundedRows),
     feed,
     agent,
     pool: poolData,

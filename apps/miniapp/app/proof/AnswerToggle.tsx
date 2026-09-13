@@ -6,7 +6,9 @@ import {
   type CallTemplateId,
   type TaskType,
 } from '@legwork/shared';
+import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
+import { currencyForCountry, ISO_4217 } from '../../lib/currency';
 
 /**
  * The answer, by task type — segmented buttons, none preselected.
@@ -61,7 +63,8 @@ export type AnswerState = {
   answer: string | null;
   template_id?: CallTemplateId;
   called_at?: string;
-  price?: { amount: number; currency: 'EUR' };
+  /** `currency` is the place's code, never this screen's own: a worker calling Joe's Pizza hears dollars. */
+  price?: { amount: number; currency: string };
   time?: string;
   choice?: 'a' | 'b' | 'neither';
   reason?: string;
@@ -134,11 +137,19 @@ export type AnswerToggleProps = {
   onChange: (next: AnswerState) => void;
   /** Injectable clock so a test can pin the moment the worker says they called. */
   now?: () => Date;
+  /** The place's ISO-3166-1 alpha-2 code, off the worker brief. Absent means the screen asks. */
+  country?: string;
 };
 
-export function AnswerToggle({ taskType, value, onChange, now = () => new Date() }: AnswerToggleProps) {
+export function AnswerToggle({
+  taskType,
+  value,
+  onChange,
+  now = () => new Date(),
+  country,
+}: AnswerToggleProps) {
   if (taskType === 'call-confirm') {
-    return <CallConfirmAnswer now={now} onChange={onChange} value={value} />;
+    return <CallConfirmAnswer country={country} now={now} onChange={onChange} value={value} />;
   }
 
   if (taskType === 'compare-two') {
@@ -194,10 +205,12 @@ function CallConfirmAnswer({
   value,
   onChange,
   now,
+  country,
 }: {
   value: AnswerState;
   onChange: (next: AnswerState) => void;
   now: () => Date;
+  country: string | undefined;
 }) {
   const template = value.template_id === undefined ? null : CALL_CONFIRM_TEMPLATES[value.template_id];
 
@@ -250,28 +263,11 @@ function CallConfirmAnswer({
       )}
 
       {value.answer === 'price' ? (
-        <label className="lw-field-row">
-          <span className="lw-list-label lw-list-label--flush">amount (EUR)</span>
-          <input
-            className="lw-input lw-input--price"
-            data-hit="44"
-            data-input="price"
-            inputMode="decimal"
-            min="0"
-            onChange={(event) => {
-              const amount = Number(event.target.value);
-              onChange({
-                ...value,
-                price: Number.isFinite(amount) && event.target.value !== ''
-                  ? { amount, currency: 'EUR' }
-                  : undefined,
-              });
-            }}
-            step="0.01"
-            type="number"
-            value={value.price === undefined ? '' : String(value.price.amount)}
-          />
-        </label>
+        <PriceField
+          currency={currencyForCountry(country)}
+          onPrice={(price) => onChange({ ...value, price })}
+          price={value.price}
+        />
       ) : null}
 
       {value.answer === 'time' ? (
@@ -287,6 +283,86 @@ function CallConfirmAnswer({
           />
         </label>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Amount, and only the currency the place already named — or a three-letter input when it
+ * did not. Typing a figure alone never invents a code; the price only lands once the code
+ * matches `ISO_4217`.
+ */
+function PriceField({
+  currency,
+  price,
+  onPrice,
+}: {
+  currency: string | undefined;
+  price: { amount: number; currency: string } | undefined;
+  onPrice: (next: { amount: number; currency: string } | undefined) => void;
+}) {
+  const [amountText, setAmountText] = useState(
+    price === undefined ? '' : String(price.amount),
+  );
+  const [codeText, setCodeText] = useState(price?.currency ?? '');
+  const known = currency !== undefined;
+  const label = known ? `amount (${currency})` : 'amount';
+
+  function emit(nextAmount: string, nextCode: string) {
+    const amount = Number(nextAmount);
+    if (!Number.isFinite(amount) || nextAmount === '') {
+      onPrice(undefined);
+      return;
+    }
+    if (known) {
+      onPrice({ amount, currency });
+      return;
+    }
+    if (!ISO_4217.test(nextCode)) {
+      onPrice(undefined);
+      return;
+    }
+    onPrice({ amount, currency: nextCode });
+  }
+
+  return (
+    <div className="lw-field-row">
+      <label className="lw-field-row">
+        <span className="lw-list-label lw-list-label--flush">{label}</span>
+        <input
+          className="lw-input lw-input--price"
+          data-hit="44"
+          data-input="price"
+          inputMode="decimal"
+          min="0"
+          onChange={(event) => {
+            const next = event.target.value;
+            setAmountText(next);
+            emit(next, known ? (currency ?? '') : codeText);
+          }}
+          step="0.01"
+          type="number"
+          value={amountText}
+        />
+      </label>
+      {known ? null : (
+        <label className="lw-field-row">
+          <span className="lw-list-label lw-list-label--flush">currency</span>
+          <input
+            className="lw-input"
+            data-hit="44"
+            data-input="currency"
+            maxLength={3}
+            onChange={(event) => {
+              const next = event.target.value.toUpperCase();
+              setCodeText(next);
+              emit(amountText, next);
+            }}
+            placeholder="EUR"
+            value={codeText}
+          />
+        </label>
+      )}
     </div>
   );
 }

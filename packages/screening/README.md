@@ -89,7 +89,7 @@ spec: if it ever refuses, the build is red.
 
 * `expected` — `ACCEPT` or `REFUSE`.
 * `class` — one of the six, or `null` for a refusal that never marks (schema, type gate, cap,
-  region not covered). `marks` is exactly `class !== null`.
+  an unresolvable `place_id`). `marks` is exactly `class !== null`.
 * `gate` — which stage is expected to catch it: `schema` · `type` · `deny` · `kw` · `person` ·
   `ident` · `place` · `classifier` · `classifier-timeout` · `cap`, or `null` on an accept.
 * `classifier` — what the `FakeClassifier` should answer on the free-text path, and how slowly.
@@ -136,5 +136,18 @@ real Leiria + Lisbon extract (`fixtures/osm/leiria-lisbon.json.gz`, 52 418 busin
 gzipped), the Overpass query, the keep-listed tag keys and the ODbL attribution are documented in
 [`src/osm/README.md`](src/osm/README.md) (T-22); `pnpm osm:extract` regenerates the file, and
 `getPlaceIndex()` from `src/osm/placeIndex.ts` loads it once at boot.
+
+### Place resolution: packaged first, live fallback
+
+The gate's `PlaceIndex` stays synchronous. Two helpers let the API (T-62) resolve an id
+outside the packaged extract without opening a socket from this package on its own:
+
+* **`createOverpassLookup`** (`src/osm/overpassLookup.ts`) — one POST per call for a single
+  OSM id. Caches `found` for 86400 seconds and `not_found` for 600 seconds; `unavailable`
+  is never cached. At most 1000 entries. A looked-up POI keeps a phone only when the mapper
+  wrote it with a leading `+` (bare local numbers are dropped). Exactly one request — no
+  retry.
+* **`LayeredPlaceIndex`** (`src/osm/layeredIndex.ts`) — the packaged index with looked-up
+  POIs overlaid; the base answers first, then an extra `JsonPlaceIndex` for the live layer.
 
 > © OpenStreetMap contributors, ODbL

@@ -11,7 +11,7 @@ Two bounding boxes, `S,W,N,E`:
 | Leiria | `39.68,-8.90,39.82,-8.70` |
 | Lisbon | `38.68,-9.25,38.83,-9.08` |
 
-Leiria and Lisbon only — an id outside the extract is refused as `region not covered`, never geocoded live.
+Leiria and Lisbon only — an id outside the extract is refused as `place_id not found in OpenStreetMap` unless the API resolves that single id live through `overpassLookup.ts`.
 
 ## Regenerating the extract
 

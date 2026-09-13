@@ -47,23 +47,42 @@ Server only, read in the temporary route handlers and never in a client bundle:
 A missing value warns to the console and falls back. Nothing throws — the probe has to render
 on a phone that was handed a half-filled Vercel environment.
 
-## Which credential the claims follow
+## Which credentials the worker presents
 
-The deployment ships on **Orb** until the operator flips it. Every uniqueness sentence is a
-function of `CredentialLevel` in `@legwork/shared` — the banner sub-line, the landing caption,
-the first about-fact, and the trust-model paragraph on `/about` and `/support`. At `orb` those
-strings are the wording on `main` today. At `selfie` they say a live person, camera-checked,
-and never uniqueness: World's own page says Selfie Check does not guarantee one-person-one-account.
+Login and claim are **Selfie Check**, with IDKit `environment: sandbox`, so World ID Sandbox
+on a phone can complete the camera. World's own page says Selfie Check does not guarantee
+one-person-one-account; the banner therefore reads "a live person, camera-checked", not
+"one account per person".
 
-Reverting is two environment values and a redeploy, nothing else:
+A second Selfie Check still sits in front of CLAIM (spent-once `lw_selfie`). Reverting the
+login widget to Orb is a code change, not an env flip.
 
 ```
 WORLD_CREDENTIAL_LEVEL=orb
 NEXT_PUBLIC_WORLD_CREDENTIAL_LEVEL=orb
 ```
 
-`pickPreset`, IDKit, and the verify routes already send `selfieCheckLegacy` at `selfie`. This
-package does not hard-code the level in a rendered string.
+## Testing Selfie Check locally (World ID Sandbox)
+
+Keep those two values on `orb`. Exporting `WORLD_CREDENTIAL_LEVEL=selfie` in the shell only
+fakes the chip and is not a pass.
+
+1. Run the API on `:3001` and this app. If the root `.env` points `NEXT_PUBLIC_API_BASE_URL`
+   at Vercel, override it so the rewrite stays local — otherwise login is `403 origin_not_allowed`:
+
+   ```
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:3001 pnpm --filter @legwork/miniapp dev
+   ```
+2. **Desktop.** Open the mini-app, tap `Login with World ID`. IDKit shows a QR. Scan it
+   with **World ID Sandbox** on the phone (not production World App). Finish the selfie.
+3. **Phone PWA.** Open the same origin on the phone (same Wi-Fi, or an https tunnel — a
+   LAN `http://` origin is not a secure context, so Add to Home Screen / camera / GPS
+   need https). Add to Home Screen, tap login. Sandbox opens via deep link instead of QR.
+4. CLAIM asks for a second Selfie Check (spent-once). Same Sandbox QR.
+
+A pass is `POST /idkit/verify` reaching the API and a claim tx landing, not the chip.
+`verification_disabled` is still a fail — record the new error and date in
+`FEEDBACK-WORLD.md`.
 
 ## Running it
 
@@ -118,8 +137,11 @@ from the Portal-registered production URL.
    credential level selects, forwards the result as-is to `/api/idkit/verify`, and shows the
    preset name, the nonce and expiry, the raw widget result and the API response. The run of
    Sept 8 settled which preset works: `orbLegacy` verifies end to end, `selfieCheckLegacy`
-   completes the check on the device and then returns `verification_disabled`, because Selfie
-   Check (Beta) is access-gated and the flag was never granted for this app — see
+   completes the check on the device. Registration is Orb (`orbLegacy`); claim is Selfie
+   Check (`selfieCheckLegacy`, IDKit `environment: sandbox`) so World ID Sandbox on the
+   phone is the camera. The Sept 8 run returned `verification_disabled` because the Beta
+   flag was off; the grant arrived 2026-09-08 (see `FEEDBACK-WORLD.md` E10). Live
+   confirmation that the claim-time camera no longer returns that code is the next pass —
    `docs/spikes/RESULTS.md` `## S2`.
 3. **Take a photo.** A native `<input type="file" accept="image/*" capture="environment">`.
    Tick the checkbox if the camera opened directly rather than the gallery — that is the

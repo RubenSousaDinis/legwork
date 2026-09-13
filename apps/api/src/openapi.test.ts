@@ -108,6 +108,12 @@ describe('openapi', () => {
     }
   });
 
+  it('openapiListsThe503OnCheck', () => {
+    const response = document.paths['/check'].post.responses['503'];
+    expect(response).toBeDefined();
+    expect(String(response.description).toLowerCase()).toContain('place lookup');
+  });
+
   it('everyContractRouteDocumented', () => {
     for (const route of PUBLIC_ROUTES) {
       const operation = operationOf(document, route);
