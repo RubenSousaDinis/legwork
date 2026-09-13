@@ -1251,6 +1251,16 @@ body {
   margin-top: var(--s-4);
 }
 
+/*
+ * ...and the same gap without having to remember the modifier. /about and /support stack
+ * four and five bare `.lw-card`s straight into `<main>`, so every one of them sat flush
+ * against the last — one long slab of card instead of a stack. Same 16 px as `--top`, so a
+ * card already carrying the modifier is unchanged.
+ */
+.lw-card + .lw-card {
+  margin-top: var(--s-4);
+}
+
 /* An id, an address or a hash: mono, and it breaks rather than overflowing the card. */
 .lw-address {
   font-family: var(--font-mono);
