@@ -1,13 +1,13 @@
 # Legwork — real-world verification for AI agents
 
-![The paid beat of the hire loop: an AI agent locked 3.45 USDC in escrow, a verified human claimed, walked and submitted proof, and the contract released 3.00 to the worker and 0.45 fee — the live dashboard's escrow meter beside the worker's phone, Base Sepolia testnet](docs/media/present-1280x720.png)
+![The paid beat of the hire loop: an AI agent locked 3.45 USDC in escrow, a verified human claimed, walked and submitted proof, and the contract released 3.00 to the worker and 0.45 fee; the live dashboard's escrow meter beside the worker's phone, Base Sepolia testnet](docs/media/present-1280x720.png)
 
-*video: https://ethglobal.com/showcase/legwork-qnywe — the demo, as submitted. The 40-second hire-loop GIF (LOCKED 3.45 → claim → proof → RELEASED 3.00 + 0.45) is not cut yet; the still above, the 1280×720 frame read for the Day-9 PNG check, stands in its place.*
+*video: https://ethglobal.com/showcase/legwork-qnywe. The 40-second hire-loop GIF (LOCKED 3.45 → claim → proof → RELEASED 3.00 + 0.45) is not cut yet; the still above is the 1280×720 frame from the Day-9 PNG check.*
 
 **Agents hire verified humans for the legwork software can't do. Escrow releases on proof.**
 
-An agent posts a real-world task — confirm a shop is open, photograph a poster, read a
-sign — and funds it in USDC escrow. A World ID-verified person nearby claims it, does it,
+An agent posts a real-world task (confirm a shop is open, photograph a poster, read a
+sign) and funds it in USDC escrow. A World ID-verified person nearby claims it, does it,
 and submits proof. The escrow releases on proof. Built on Base Sepolia for ETHOnline 2026.
 
 *The state of this repo on 2026-09-13: the four contracts are deployed to Base Sepolia; the subgraph, Task API, MCP server, mini-app and dashboard are deployed and answering, and a World ID-verified person has been paid 3.00 USDC for a real errand on the street. Hacking began at 16:00 UTC on 2026-09-04; every line here is written after that timestamp.*
@@ -18,8 +18,8 @@ testnet USDC; the worker was paid for real, separately.
 
 Pre-kickoff artifacts: this planning pack, a pitch deck and a static UI mockup, all dated and public. No code or stylesheet from them is in this repo.
 
-The plan is reproduced verbatim under `docs/plan/` so the disclosure is checkable rather than
-claimed; the UI is re-typed from `DESIGN-SPEC.md`, not copied.
+The plan is reproduced verbatim under `docs/plan/` so the disclosure is checkable; the UI is
+re-typed from `DESIGN-SPEC.md`, not copied.
 
 ## Try it
 
@@ -33,7 +33,7 @@ Then ask your agent:
 
 > Ask Legwork which of these two storefront photos is more legible
 
-**Honest limits.** `verify-open`, `photo-of` and `call-confirm` need a real business with an OpenStreetMap id — Leiria and Lisbon resolve from a packaged index, anywhere else resolves live with one Overpass request, and a 503 `place_lookup_unavailable` means retry once after `retry_after_s` (the worker pool is one real worker plus a hand-recruited standby crew in Leiria); workers are online `<hours>` UTC; `compare-two` and `call-confirm` can be done from anywhere; answers come back in minutes, not milliseconds — poll `task_status` with `wait_seconds=50` and never re-post the same task. A malformed request returns a plain 4xx and never produces a `task-refused` mark; only a well-formed request that hits one of the six abuse classes does. Settlement is Base Sepolia testnet; mainnet payouts are roadmap.
+**Honest limits.** `verify-open`, `photo-of` and `call-confirm` need a real business with an OpenStreetMap id: Leiria and Lisbon resolve from a packaged index, anywhere else resolves live with one Overpass request, and a 503 `place_lookup_unavailable` means retry once after `retry_after_s` (the worker pool is one real worker plus a hand-recruited standby crew in Leiria); workers are online `<hours>` UTC; `compare-two` and `call-confirm` can be done from anywhere; answers come back in minutes, not milliseconds. Poll `task_status` with `wait_seconds=50` and never re-post the same task. A malformed request returns a plain 4xx and never produces a `task-refused` mark; only a well-formed request that hits one of the six abuse classes does. Settlement is Base Sepolia testnet; mainnet payouts are roadmap.
 
 The six tools, their input and output shapes and the four task types are in [`SKILL.md`](SKILL.md)
 and [`docs/mcp.md`](docs/mcp.md).
@@ -42,7 +42,7 @@ and [`docs/mcp.md`](docs/mcp.md).
 
 > Marketplaces already let agents hire humans. Legwork is the first where every worker is one verified human, every payment is escrowed onchain and released on proof, every hiring agent is accountable, and the documented abuse classes are refused at the API.
 
-**The trust model.** Verification proves a worker is a live, unique person — not that they are honest or competent. Escrow bounds the agent's loss to one task, and a per-agent daily cap bounds it to one day. Screening is a cost floor, not a cure. Legwork's guarantee is **bounded, attributable work**: an agent never pays for nothing, a worker never works for nothing, and every task leaves a record both sides can read.
+**The trust model.** Verification proves a worker is a live, unique person. It does not prove they are honest or competent. Escrow bounds the agent's loss to one task, and a per-agent daily cap bounds it to one day. Screening is a cost floor, not a cure. Legwork guarantees **bounded, attributable work**: an agent never pays for nothing, a worker never works for nothing, and every task leaves a record both sides can read.
 
 Bot-proof, not fraud-proof.
 
@@ -50,7 +50,7 @@ Bot-proof, not fraud-proof.
 
 - **Live, not ours:** World ID (Developer Portal, IDKit 4.x, Orb credentials), ERC-8004 identity and reputation registries on Base Sepolia, the x402 reference facilitator, USDC.
 - **Deployed by us on Base Sepolia:** WorkerRegistry, TaskEscrow, Reputation, AbuseMark, the subgraph (Studio), the Task API + MCP server, the mini-app, the dashboard.
-- **Seeded and labelled:** 23 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show — their medians are labelled `seeded` or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it actually earned. Never claim the seeded workers are people.
+- **Seeded and labelled:** 23 workers via `seedWorker` (synthetic nullifiers, flagged onchain and rendered as such), a handful of operator-funded completed tasks so the preflight has something to show; their medians are labelled `seeded`, or the preflight uses real completions only. ONE real registration: the demo worker's phone. The filmed worker account shows only what it earned. Never claim the seeded workers are people.
 
 | Live, not ours | Ours, deployed on Base Sepolia | Seeded and disclosed |
 | --- | --- | --- |
@@ -66,8 +66,8 @@ Bot-proof, not fraud-proof.
 
 1. **Verify once.** A worker proves personhood with World ID through IDKit and registers one account — cloud-verified, operator-attested — onchain World ID verification is Orb-only today.
 2. **The agent asks for one of four typed things and pays through x402.** 3.00 to the worker plus a 0.45 fee on top = 3.45 charged to the agent. Free text is not a task type.
-3. **Money is locked before anyone can claim.** The escrow records the x402 payer as the buyer and the refund party; a per-task cap and a per-agent daily cap (5 open tasks / 25 USDC) bound the loss — our custody is the one block between settlement and escrow, and we say so.
-4. **The worker signs in with World ID (Orb) and their World App wallet.** Claiming a task requires a fresh Selfie Check — a live person behind the phone, not a second uniqueness credential. We relay the claim and pay the gas, so a worker never needs ETH.
+3. **Money is locked before anyone can claim.** The escrow records the x402 payer as the buyer and the refund party; a per-task cap and a per-agent daily cap (5 open tasks / 25 USDC) bound the loss; our custody is the one block between settlement and escrow, and we say so.
+4. **The worker signs in with World ID (Selfie Check, with Orb as the fallback) and their World App wallet.** Claiming a task requires a fresh Selfie Check: a live person behind the phone, not a second uniqueness credential. We relay the claim and pay the gas, so a worker never needs ETH.
 5. **Release on approve, or `autoRelease` after the task's dispute window.** Expiry refunds the buyer; a contested proof goes to operator `resolve`, which charges zero fee on either leg.
 6. **Both records move.** Worker reputation is nullifier-keyed and deduplicated per rater; the hiring agent's ERC-8004 record gets `paid-on-proof`, `disputed` or `task-refused:<class>`. A refused task moves no money.
 
@@ -90,7 +90,7 @@ We cite neighbours by name and claim only the empty cell: none refuses the docum
 
 ## Threat model
 
-One test per row, named after the attack. The full table — with the v0 response for each — is in [`docs/threat-model.md`](docs/threat-model.md).
+One test per row, named after the attack. The full table, with the v0 response for each, is in [`docs/threat-model.md`](docs/threat-model.md).
 
 | Attack | Test |
 | --- | --- |
@@ -114,11 +114,11 @@ One test per row, named after the attack. The full table — with the v0 respons
 | Worker's approximate location exposed to the poster | documented below |
 | Settle → post custody block | documented below |
 
-GPS is self-reported and spoofable; we anchor it, geofence it, dispute outside the radius — we do not prove it.
+GPS is self-reported and spoofable; we anchor it, geofence it and dispute outside the radius. We do not prove it.
 
 ## Negative attestations in ERC-8004: what a hire-a-human API can honestly write about an agent
 
-AbuseMark holds the Task API's own registered ERC-8004 identity and is the only writer of agent-side feedback, so every mark has a named author a reader can look up. It writes three tags: `paid-on-proof` when an escrow released on an approved proof, `disputed` when a proof failed, and `task-refused:<class>` where the class is one of six labels taken verbatim from the abuse literature — credential fraud · identity impersonation · automated reconnaissance · social media manipulation · authentication circumvention · referral fraud (Mehta, arXiv:2602.19514). The agent id that a mark names is resolved from the payer through the ERC-8004 IdentityRegistry (`ownerOf` or `getAgentWallet`) and never read from the request body, because a subject you did not authenticate is a subject anyone can frame. If the payer has no ERC-8004 identity, the refusal is logged and nothing is written onchain. A schema error is a plain 4xx and never marks; only a well-formed request that hits one of the six classes does. Marks are idempotent per (agentId, specHash) and rate-limited by `markCooldown` — 86400 seconds by default, lowered to 120 seconds for the filmed run and disclosed on screen when it is. Every mark is operator-attested in v0: one signer, one key, no second opinion, and the dashboard says so beside the mark rather than in fine print. An abuser can re-register an agent and start clean; the mark follows the identity, not the operator — a cost floor, documented.
+AbuseMark holds the Task API's own registered ERC-8004 identity and is the only writer of agent-side feedback, so every mark has a named author a reader can look up. It writes three tags: `paid-on-proof` when an escrow released on an approved proof, `disputed` when a proof failed, and `task-refused:<class>` where the class is one of six labels taken verbatim from the abuse literature: credential fraud · identity impersonation · automated reconnaissance · social media manipulation · authentication circumvention · referral fraud (Mehta, arXiv:2602.19514). The agent id that a mark names is resolved from the payer through the ERC-8004 IdentityRegistry (`ownerOf` or `getAgentWallet`) and never read from the request body, because a subject you did not authenticate is a subject anyone can frame. If the payer has no ERC-8004 identity, the refusal is logged and nothing is written onchain. A schema error is a plain 4xx and never marks; only a well-formed request that hits one of the six classes does. Marks are idempotent per (agentId, specHash) and rate-limited by `markCooldown` (86400 seconds by default, lowered to 120 seconds for the filmed run and disclosed on screen when it is). Every mark is operator-attested in v0: one signer, one key, no second opinion, and the dashboard says so beside the mark rather than in fine print. An abuser can re-register an agent and start clean; the mark follows the identity, not the operator: a cost floor, documented.
 
 ## Out of scope
 
@@ -129,8 +129,8 @@ AbuseMark holds the Task API's own registered ERC-8004 identity and is the only 
 - The settle→post custody block: for one block, the Task API's operator wallet holds the agent's payment before the escrow does. Our custody is the one block between settlement and escrow, and we say so.
 - Photo retention: proof photos are stored privately, served through signed URLs to the buyer, and retained for the dispute window; retention is stated, not enforced by contract.
 - Worker location: only a coarse area is indexed publicly, but the poster of a task learns roughly where its worker stood. Documented, not solved.
-- Worker safety at scale: daylight-hours default, maximum distance, a kill switch — required before the first external poster, absent from the demo.
-- Operator powers in v0: seed workers, reset a registration for rehearsal, resolve a dispute — all disclosed, all single-signer; multisig is roadmap.
+- Worker safety at scale: daylight-hours default, maximum distance, a kill switch; required before the first external poster, absent from the demo.
+- Operator powers in v0: seed workers, reset a registration for rehearsal, resolve a dispute: all disclosed, all single-signer; multisig is roadmap.
 - Collusion between a hiring agent's operator and a worker (self-dealing to farm reputation): per-human dedup caps the benefit at one voice; not solved. In the demo the operator is on every side of the transaction, and the video says so.
 
 ## Operator powers in v0
@@ -155,7 +155,7 @@ Tick only tracks whose bullets are literally met.
 | Partner · track | Qualification bullet (verbatim) | Evidence (file / address / commit / timestamp) | Met? |
 | --- | --- | --- | --- |
 | World — Selfie Check | Uses Selfie Check or a Selfie Check-compatible World ID credential flow in a meaningful way. Treats Selfie Check as a risk, eligibility, fairness, continuity, or abuse-prevention signal. Test via the Sandbox App. Include a detailed feedback document. Show a working app. | **Selfie Check, twice.** Login presents `selfieCheckLegacy` and again at claim, both against production World App (IDKit `environment: production`). Confirmed live on 2026-09-13: the camera completed, `POST /idkit/verify` answered 200, and `WorkerRegistered` tx [`0x203f2851b267a13e61cf1195e54087cc77f60bd6ab5325ac3313074693d7f425`](https://sepolia.basescan.org/tx/0x203f2851b267a13e61cf1195e54087cc77f60bd6ab5325ac3313074693d7f425) bound worker `0x869b94343b8506d441603fb8edebbb35065c0d67` in area `ez19y`. The credential is World's, not a fallback: the API's `WORLD_CREDENTIAL_LEVEL` is `orb`, so the `selfie` recorded on the session could only have come from World's own response. Claim-time is a second, spent-once check — `POST /idkit/verify` with a worker-session issues `lw_selfie`; `POST /tasks/:id/claim` requires it (`ClaimSelfie`). A World ID with no face credential falls back to `orbLegacy` at login. Feedback: `FEEDBACK-WORLD.md` (E5–E9 the gated-beta refusal; E10 grant channel; E11 the credential decision; E12 the sandbox refusal; E13 the 2026-09-13 resolution). Working app: https://legwork-miniapp.vercel.app. | yes |
-| The Graph — Best AI Tooling or AI Use Case (From Scratch) | Use The Graph as a load-bearing part. Consume live data from a Graph provider. net-new work started during the hackathon. open source with README or SKILL.md. | `preflight_workers` in `packages/mcp` (`src/tools/preflight.ts`); hosted mount `apps/api/app/mcp/route.ts` passes `createSubgraphClient` from `packages/subgraph-client`. `examples/transcript.md` shows the agent quoting `n_real` / `median_source`; `examples/prompt.md` requires it; Day-9 live capture `n_real: 1`, `median_source: "real"` (`RESULTS.md` `## Preflight`). Studio query URL https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4; Discord "does testnet Studio count as a Graph provider": unanswered as of 2026-09-09 (`RESULTS.md` `## Graph`). First commit `be479b42a7e4111cd0386b6ec832ea43f5876c5c` at 2026-09-04T17:18:30Z. `SKILL.md`; README states MIT (no root `LICENSE` file in the tree). | yes |
+| The Graph — Best AI Tooling or AI Use Case (From Scratch) | Use The Graph as a load-bearing part. Consume live data from a Graph provider. net-new work started during the hackathon. open source with README or SKILL.md. | `preflight_workers` in `packages/mcp` (`src/tools/preflight.ts`); hosted mount `apps/api/app/mcp/route.ts` passes `createSubgraphClient` from `packages/subgraph-client`. `examples/transcript.md` shows the agent quoting `n_real` / `median_source`; `examples/prompt.md` requires it; Day-9 live capture `n_real: 1`, `median_source: "real"` (`RESULTS.md` `## Preflight`). Studio query URL https://api.studio.thegraph.com/query/74763/legwork-base-sepolia/6653cb4; Discord "does testnet Studio count as a Graph provider": unanswered as of 2026-09-09 (`RESULTS.md` `## Graph`); the Composable track's own prize text names Subgraph Studio as a Graph provider. First commit `be479b42a7e4111cd0386b6ec832ea43f5876c5c` at 2026-09-04T17:18:30Z. `SKILL.md`; README states MIT (no root `LICENSE` file in the tree). | yes |
 | The Graph — Best Use of Composable or Standardized Graph Products | not selected — Discord unanswered (Studio-as-provider and Subgraph MCP both unanswered as of 2026-09-09); The Graph's Subgraph MCP tool was not shipped | RESULTS `## Graph`; this repo's MCP is Legwork's, not The Graph's Subgraph MCP product | no — do not select |
 | Bazantic — Agentify a New API | Create an account on bazantic.com; create an x402/MPP gateway for the project; add a service that was not available through Bazantic and is not an API available via the other sponsors; create a working gateway for that service; create a recipe using both services in one working flow; demonstrate it in a screen recording; provide the bazantic username. | Username **RubenSousaDinis**. Overpass gateway `https://vz23lkwccfa6hfawpnzw5ohzyy.bazgateway.com` over the public interpreter `https://overpass-api.de/api/interpreter`, listed free — OpenStreetMap is on none of this hackathon's sponsor lists. Legwork Task API gateway `https://nf26bnkznrbc3cg5rbq2hmej5q.bazgateway.com`. Recipe `place-anywhere-then-quote` ([`examples/recipes/place-anywhere-then-quote.md`](examples/recipes/place-anywhere-then-quote.md), published in Bazantic's UI). Recording [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, 2026-09-13. Re-verified 2026-09-13: gateway POST 200 `node/536546148`; Legwork `/check` `accepted: true`, `price_usdc: 3.45`; unpaid `/tasks` 402, nothing posted. Record: [`docs/bazantic.md`](docs/bazantic.md); feedback [`FEEDBACK-BAZANTIC.md`](FEEDBACK-BAZANTIC.md). | yes |
 | Bazantic — Best Recipe Using Sponsor APIs | A recipe chaining the project's API with a sponsor API in one working flow, demonstrated. | Recipe `worker-pool-then-quote` exists and is published — The Graph Studio query URL feeding Legwork `postCheck` and an unpaid `postTasks` 402 ([`examples/recipes/worker-pool-then-quote.md`](examples/recipes/worker-pool-then-quote.md)). The 2026-09-13 clip lists its card in Bazantic's recipe list but runs the Overpass flow, so no recorded run of this recipe exists. | not yet — needs a clip of this recipe running |
@@ -168,12 +168,12 @@ for by the operator's own demo agent, which is on the allowlist and therefore ex
 
 ## AI usage
 
-This project was built with AI assistance and documents it rather than hiding it.
+This project was built with AI assistance and documents it.
 
 - Every commit carries the trailer `AI-Usage: <tool + model> drafted <what>; human <reviewed|edited> <what>`, and CI fails a pull request with a commit that lacks one (the five exceptions on `main` are listed in the compiled record).
 - Every pull request has an **AI usage** section in its body.
-- The prompts are committed, not described: `examples/prompt.md` for the demo agent, and the screening classifier's system prompt under `packages/screening/src/classifier/`.
-- [`docs/AI-USAGE.md`](docs/AI-USAGE.md) compiles the whole picture — every tool and model named in the trailers, with a row per pull request and per commit. All 474 `AI-Usage:` lines on `main` (at `559b83d`, 2026-09-13) are accounted for; none are rolled into an "other", and the five commits that carry none are listed there too.
+- The prompts are committed: `examples/prompt.md` for the demo agent, and the screening classifier's system prompt under `packages/screening/src/classifier/`.
+- [`docs/AI-USAGE.md`](docs/AI-USAGE.md) compiles the whole picture: every tool and model named in the trailers, with a row per pull request and per commit. All 474 `AI-Usage:` lines on `main` (at `559b83d`, 2026-09-13) are accounted for; none are rolled into an "other", and the five commits that carry none are listed there too.
 
 The Reputation contract is re-implemented from the same threat model, written from a blank file after kickoff.
 
@@ -187,7 +187,7 @@ The repo is MIT licensed.
 
 Base Sepolia, chain id 84532. Addresses are copied from
 [`contracts/deployments/base-sepolia.json`](contracts/deployments/base-sepolia.json); every deploy
-transaction is linked, which is also the Start Fresh evidence — the contracts were deployed at
+transaction is linked, which is also the Start Fresh evidence: the contracts were deployed at
 **2026-09-07T11:33:42Z**, from block 46506271.
 
 ### Ours
