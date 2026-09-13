@@ -52,7 +52,11 @@ describe('credential-selected copy', () => {
     for (const dir of dirs) {
       for (const file of walkSource(dir)) {
         const src = readFileSync(file, 'utf8');
-        for (const match of src.matchAll(/'([^']*selfie[^']*)'/g)) {
+        // `[^'\n]`, not `[^']`: a single-quoted TS literal cannot contain a newline, and
+        // an apostrophe in a nearby comment ("worker's") otherwise opens a match that runs
+        // across lines and swallows identifiers — `selfieOpen`, `selfie_required` — which are
+        // not copy. Narrowing it keeps every real hard-coded string in scope.
+        for (const match of src.matchAll(/'([^'\n]*selfie[^'\n]*)'/g)) {
           const inner = match[1]!;
           const around = src.slice(Math.max(0, match.index! - 24), match.index! + match[0].length + 24);
           if (inner === 'selfie' && isLevelToken(around)) continue;

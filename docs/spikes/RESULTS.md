@@ -54,6 +54,17 @@ feedback the same track asks for. Access to the face credential has been request
 `developers@toolsforhumanity.com`; if it is granted before the freeze, the level is one environment
 value and a deploy. The session ordering was fixed in the mini-app the same day.
 
+### S2 follow-up — 2026-09-11
+
+Sandbox access with Selfie Check enabled arrived on 2026-09-08 (Firebase App Distribution,
+`org.world.id.sandbox`, `murph.finnicum@toolsforhumanity.com` — see `FEEDBACK-WORLD.md` E10).
+The product decision is **not** to swap Orb for Selfie Check. Registration stays Orb
+(uniqueness). Claim requires a Selfie Check (live-person / abuse-prevention). The claim widget
+sends `selfieCheckLegacy` with IDKit `environment: sandbox`. Live phone confirmation on
+2026-09-13: the Sandbox camera completes and World then returns `environment_mismatch` at
+production verify (FEEDBACK-WORLD E12). S2's original `verification_disabled` refusal is
+history; the remaining block is cloud verify of sandbox proofs against this production RP.
+
 ## S3
 
 _x402 exact-EVM verify → post → settle + replay_

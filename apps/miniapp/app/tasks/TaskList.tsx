@@ -1,18 +1,29 @@
 'use client';
 
 import { CLAIM_COOLDOWN_S } from '@legwork/shared';
+import type { RpContext } from '@worldcoin/idkit-core';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EarningsBar } from '../../components/EarningsBar';
-import { TaskCard, formatDistance, type TaskRow } from '../../components/TaskCard';
+import {
+  CLAIMING_LINE,
+  SELFIE_BEFORE_CLAIM,
+  TaskCard,
+  formatDistance,
+  type TaskRow,
+} from '../../components/TaskCard';
 import { TaskMap } from '../../components/TaskMap';
 import { Chip } from '../../components/ui/Chip';
+import { Waiting } from '../../components/ui/Waiting';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lastKnownPosition, resolveArea } from '../../lib/area';
 import { GEOCODE_DEBOUNCE_MS, focusFromPoints, geocodeAddress, type GeocodeHit } from '../../lib/geocode';
 import { NEAR_ME_M, rowMatchesQuery } from '../../lib/search';
+import { forgetSession } from '../../lib/session';
+import { IdkitFailure, requestRpContext, summarizeDebugReport } from '../../lib/worldid';
+import { describeIdkitError, IDKIT_FALLBACK_SENTENCE } from '../(auth)/idkitErrors';
+import { ClaimSelfie, CLAIM_SELFIE_CAPTION } from './ClaimSelfie';
 import { clearActiveClaim, readActiveClaim, writeActiveClaim, type ActiveClaim } from './activeClaim';
-import { Waiting } from '../../components/ui/Waiting';
 
 /**
  * The worker's task list. It polls `GET /tasks/list` every 3 seconds because a claim is a race —
@@ -64,6 +75,7 @@ export const CLAIM_ERRORS: Record<string, string> = {
   // was seeded, and for a request made by hand.
   SeededDemoRow:
     'This is a seeded demo row. It shows what an agent asks for; nobody can claim it.',
+  selfie_required: SELFIE_BEFORE_CLAIM,
 };
 
 /**
@@ -120,6 +132,19 @@ export function recoverClaim(rows: TaskRow[], now: number = Date.now()): ActiveC
 }
 
 function claimErrorMessage(thrown: unknown): string {
+  if (thrown instanceof IdkitFailure) {
+    const described = describeIdkitError(thrown.code);
+    const detail = summarizeDebugReport(thrown.report);
+    return detail === '' ? described.sentence : `${described.sentence} (${thrown.code})`;
+  }
+  if (thrown instanceof ApiError) {
+    const body = thrown.body as { reason?: unknown; error?: unknown; active_task_id?: unknown };
+    const reason = typeof body.reason === 'string' ? body.reason : null;
+    if (reason) {
+      const mapped = describeIdkitError(reason);
+      if (mapped.sentence !== IDKIT_FALLBACK_SENTENCE) return mapped.sentence;
+    }
+  }
   const code = errorCode(thrown);
   if (code === 'AlreadyClaimed' && thrown instanceof ApiError) {
     const body = thrown.body as { active_task_id?: unknown } | null;
@@ -173,10 +198,17 @@ export function TaskList() {
   const [nearMe, setNearMe] = useState(false);
   /** Nominatim only — when the query already matches pins, `pinFocus` wins in the same frame. */
   const [geoFocus, setGeoFocus] = useState<GeocodeHit | null>(null);
+  // `camera`, not the credential's name: this is the phase of the claim the worker is in,
+  // and the guard in packages/shared keeps credential words out of the apps.
+  const [claimPhase, setClaimPhase] = useState<'camera' | 'relay' | null>(null);
+  const [selfieOpen, setSelfieOpen] = useState(false);
+  const [selfieRp, setSelfieRp] = useState<RpContext | null>(null);
 
   // The row the claim belongs to, kept so the pinned card still renders in the moment between
   // claiming and the next poll — and after the poll, if the API stops listing it.
   const claimedRow = useRef<TaskRow | null>(null);
+  const pendingClaim = useRef<TaskRow | null>(null);
+  const selfiePassed = useRef(false);
 
   // Read through a ref so `poll` never changes identity: a new `poll` would tear down and
   // rebuild the interval on every render, and each rebuild is an extra request.
@@ -207,7 +239,15 @@ export function TaskList() {
         setClaim(recovered);
       }
     } catch (thrown) {
-      if (thrown instanceof ApiError && thrown.status === 401) routerRef.current.replace('/');
+      if (thrown instanceof ApiError && thrown.status === 401) {
+        // The redirect alone is a no-op when the board already *is* `/`, and the mirror still
+        // said "verified": the poll 401s again, the board never leaves `asking`, and the
+        // screen reads "Looking for open tasks near you…" forever under a "Verified human ✓"
+        // header. Dropping the mirror is what turns this page back into `UnverifiedTasks`,
+        // which is the sign-in screen — a verified-but-unregistered worker got stranded here.
+        forgetSession();
+        routerRef.current.replace('/');
+      }
       // A later poll failing does not un-answer the list already on screen; only a board
       // that never got one goes to `unreachable`.
       else setBoard((current) => (current === 'asking' ? 'unreachable' : current));
@@ -297,10 +337,9 @@ export function TaskList() {
     };
   }, []);
 
-  const onClaim = useCallback(
+  const finishClaim = useCallback(
     async (row: TaskRow) => {
-      setError(null);
-      setClaiming(row.task_id);
+      setClaimPhase('relay');
       try {
         const position = lastKnownPosition();
         const response = await apiFetch<ClaimResponse>(`/tasks/${row.task_id}/claim`, {
@@ -322,14 +361,65 @@ export function TaskList() {
       } catch (thrown) {
         const code = errorCode(thrown);
         setError({ task_id: row.task_id, message: claimErrorMessage(thrown) });
-        // Someone was faster: the list is already wrong, so ask again rather than wait 3 s.
         if (code === 'AlreadyClaimed') void poll();
       } finally {
+        pendingClaim.current = null;
         setClaiming(null);
+        setClaimPhase(null);
+        setSelfieOpen(false);
+        setSelfieRp(null);
       }
     },
     [poll],
   );
+
+  const onClaim = useCallback(
+    async (row: TaskRow) => {
+      setError(null);
+      setClaiming(row.task_id);
+      setClaimPhase('camera');
+      selfiePassed.current = false;
+      pendingClaim.current = row;
+      try {
+        const { rp_context } = await requestRpContext();
+        setSelfieRp(rp_context);
+        setSelfieOpen(true);
+      } catch (thrown) {
+        setError({ task_id: row.task_id, message: claimErrorMessage(thrown) });
+        pendingClaim.current = null;
+        setClaiming(null);
+        setClaimPhase(null);
+      }
+    },
+    [],
+  );
+
+  const onSelfieVerified = useCallback(() => {
+    if (selfiePassed.current) return;
+    selfiePassed.current = true;
+    setSelfieOpen(false);
+    const row = pendingClaim.current;
+    if (row) void finishClaim(row);
+  }, [finishClaim]);
+
+  const onSelfieFailed = useCallback((thrown: unknown) => {
+    selfiePassed.current = false;
+    const row = pendingClaim.current;
+    setSelfieOpen(false);
+    setSelfieRp(null);
+    setClaiming(null);
+    setClaimPhase(null);
+    pendingClaim.current = null;
+    if (row) setError({ task_id: row.task_id, message: claimErrorMessage(thrown) });
+  }, []);
+
+  const onSelfieOpenChange = useCallback((open: boolean) => {
+    setSelfieOpen(open);
+    if (open || selfiePassed.current) return;
+    pendingClaim.current = null;
+    setClaiming(null);
+    setClaimPhase(null);
+  }, []);
 
   const onRelease = useCallback(
     async (task_id: string) => {
@@ -451,6 +541,7 @@ export function TaskList() {
             error={error?.task_id === pinned.task_id ? error.message : undefined}
             expanded
             claiming={claiming === pinned.task_id}
+            claimingLine={claimPhase === 'camera' ? CLAIM_SELFIE_CAPTION : CLAIMING_LINE}
             onClaim={() => void onClaim(pinned)}
             onRelease={() => void onRelease(pinned.task_id)}
             onToggle={() => setExpandedId(null)}
@@ -492,6 +583,7 @@ export function TaskList() {
             expanded={expandedId === row.task_id}
             key={row.task_id}
             claiming={claiming === row.task_id}
+            claimingLine={claimPhase === 'camera' ? CLAIM_SELFIE_CAPTION : CLAIMING_LINE}
             onClaim={() => void onClaim(row)}
             onRelease={() => void onRelease(row.task_id)}
             onToggle={() => setExpandedId((current) => (current === row.task_id ? null : row.task_id))}
@@ -499,6 +591,14 @@ export function TaskList() {
           />
         ))}
       </ul>
+
+      <ClaimSelfie
+        onFailed={onSelfieFailed}
+        onOpenChange={onSelfieOpenChange}
+        onVerified={onSelfieVerified}
+        open={selfieOpen}
+        rpContext={selfieRp}
+      />
 
       {/* The bar is fixed to the viewport, so the last card needs the height back. */}
       <div aria-hidden="true" className="lw-earnings-bar__spacer" />

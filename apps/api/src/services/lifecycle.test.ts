@@ -34,7 +34,7 @@ import { createTestDb, type TestDb } from '../../test/db';
 import { setChainForTests } from '../chain';
 import { resetConfigForTests } from '../config';
 import { observations, proofs, screeningLog, tasks } from '../db/schema';
-import { issueWorkerSession } from '../session';
+import { issueSelfieSession, issueWorkerSession } from '../session';
 import {
   dbState,
   secondsToDate,
@@ -114,7 +114,16 @@ async function sessionFor(worker: Address, nullifier = NULLIFIER): Promise<strin
   return token;
 }
 
+async function selfieFor(worker: Address): Promise<string> {
+  const { token } = await issueSelfieSession({ worker, nullifier: '9001', level: 'face' });
+  return token;
+}
+
 const auth = (token: string) => ({ authorization: `Bearer ${token}` });
+const claimAuth = async (worker: Address, token: string) => ({
+  headers: auth(token),
+  cookies: { lw_selfie: await selfieFor(worker) },
+});
 
 /** Posts on the fake and mirrors the row, the way T-16's `POST /tasks` will. */
 async function postTask(
@@ -365,7 +374,7 @@ describe('POST /tasks/:id/claim', () => {
     const res = await call(claimRoute, {
       method: 'POST',
       params: { id: taskId.toString() },
-      headers: auth(seededToken),
+      ...(await claimAuth(SEEDED_WORKER, seededToken)),
     });
     expect(res.status).toBe(200);
     const [row] = await fixture.db.select().from(tasks).where(eq(tasks.taskId, taskId));
@@ -409,7 +418,7 @@ describe('POST /tasks/:id/claim', () => {
     const raced = await call(claimRoute, {
       method: 'POST',
       params: { id: target.toString() },
-      headers: auth(token),
+      ...(await claimAuth(WORKER, token)),
     });
     expect(raced.status).toBe(409);
     expect((await raced.json()).error).toBe('InCooldown');
@@ -432,7 +441,7 @@ describe('POST /tasks/:id/claim', () => {
     const ok = await call(claimRoute, {
       method: 'POST',
       params: { id: target.toString() },
-      headers: auth(token),
+      ...(await claimAuth(WORKER, token)),
     });
     expect(ok.status).toBe(200);
     const body = (await ok.json()) as {

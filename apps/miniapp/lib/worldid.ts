@@ -2,7 +2,7 @@
 
 import { IDKitRequestWidget, type IDKitDebugReport, type IDKitResult } from '@worldcoin/idkit';
 import { orbLegacy, selfieCheckLegacy, type Preset, type RpContext } from '@worldcoin/idkit-core';
-import { createElement, useCallback, useRef, type ReactElement } from 'react';
+import { createElement, useCallback, useEffect, useRef, type ReactElement } from 'react';
 import { apiFetch } from './api';
 import { WORLD_ACTION, WORLD_APP_ID, type CredentialLevel } from './env';
 
@@ -40,6 +40,16 @@ export class IdkitFailure extends Error {
   }
 }
 
+/**
+ * IDKit maps create-time throws to `generic_error`. An empty `app_id` is the one we can
+ * name — Next did not inline `NEXT_PUBLIC_WORLD_APP_ID`.
+ */
+export function refineIdkitCode(code: string, createError?: string): string {
+  if (code !== 'generic_error' || !createError) return code;
+  if (createError.includes('app_id is required')) return 'missing_app_id';
+  return code;
+}
+
 /** The longest response payload the failure line shows; the console gets the whole report. */
 const REPORT_PAYLOAD_MAX = 400;
 
@@ -64,8 +74,8 @@ export function summarizeDebugReport(report: IDKitDebugReport | undefined): stri
  * Selfie Check when the Portal granted access, Orb otherwise — and Orb whenever the level is
  * unset. The IDKit signal is not part of our contract, so it is ''.
  */
-export function pickPreset(level: CredentialLevel | undefined): Preset {
-  return level === 'selfie' ? selfieCheckLegacy({ signal: '' }) : orbLegacy({ signal: '' });
+export function pickPreset(level: CredentialLevel | undefined, signal: string = ''): Preset {
+  return level === 'selfie' ? selfieCheckLegacy({ signal }) : orbLegacy({ signal });
 }
 
 export function requestRpContext(action: string = WORLD_ACTION): Promise<RpContextResponse> {
@@ -83,12 +93,69 @@ export function verifyProof(result: unknown): Promise<VerifyResponse> {
   });
 }
 
+export type IdkitEnvironment = 'production' | 'staging' | 'sandbox';
+
+const ENVIRONMENT_KEY = 'lw_idkit_environment';
+
+/**
+ * Login opens the real World App. Sandbox is still reachable — `startVerify('sandbox')` and
+ * a remembered choice both win — but the phone in the demo is a production World App, and a
+ * sandbox QR sends it to an app it does not have.
+ */
+export const DEFAULT_IDKIT_ENVIRONMENT: IdkitEnvironment = 'production';
+
+/**
+ * IDKit hands `environment` to WASM as a string with no validation: anything else is a
+ * `memory access out of bounds` inside the allocator, which the widget reports as
+ * `generic_error` — "Something went wrong", with nothing naming the real cause. So nothing
+ * reaches the widget without passing through here.
+ */
+export function isIdkitEnvironment(value: unknown): value is IdkitEnvironment {
+  return value === 'production' || value === 'staging' || value === 'sandbox';
+}
+
+/** Same guard, same reason: `pickPreset` must never be handed something that is not a level. */
+export function isCredentialLevel(value: unknown): value is CredentialLevel {
+  return value === 'selfie' || value === 'orb';
+}
+
+export function rememberedIdkitEnvironment(): IdkitEnvironment {
+  if (typeof window === 'undefined') return DEFAULT_IDKIT_ENVIRONMENT;
+  try {
+    const stored = sessionStorage.getItem(ENVIRONMENT_KEY);
+    if (isIdkitEnvironment(stored)) return stored;
+  } catch {
+    // Private mode can throw; the default still opens World App.
+  }
+  return DEFAULT_IDKIT_ENVIRONMENT;
+}
+
+export function rememberIdkitEnvironment(value: IdkitEnvironment): void {
+  if (typeof window === 'undefined' || !isIdkitEnvironment(value)) return;
+  try {
+    sessionStorage.setItem(ENVIRONMENT_KEY, value);
+  } catch {
+    // Same as read: a missing store must not block the widget.
+  }
+}
+
 export type IdkitVerifyProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Fetched by the caller from `POST /idkit/request` before the widget opens. */
   rpContext: RpContext;
   level: CredentialLevel;
+  /** Defaults to `WORLD_ACTION`. Claim-time Selfie Check uses the same action. */
+  action?: string;
+  /** Bound into the proof. Claim-time Selfie Check sends the worker address. */
+  signal?: string;
+  /**
+   * IDKit's environment override. Login and claim Selfie Check default to `sandbox` so the
+   * QR / deep link opens World ID Sandbox on a phone. A production retry is stored so claim
+   * uses the same app the login proof came from.
+   */
+  environment?: IdkitEnvironment;
+  action_description?: string;
   onVerified: (response: VerifyResponse) => void;
   /** A widget error code, or whatever `POST /idkit/verify` threw — a 409 arrives here. */
   onFailed: (error: unknown) => void;
@@ -104,17 +171,28 @@ export function IdkitVerify({
   onOpenChange,
   rpContext,
   level,
+  action = WORLD_ACTION,
+  signal = '',
+  environment,
+  action_description,
   onVerified,
   onFailed,
 }: IdkitVerifyProps): ReactElement {
   const verified = useRef<VerifyResponse | null>(null);
+  const hostFailed = useRef(false);
+
+  useEffect(() => {
+    if (open) hostFailed.current = false;
+  }, [open]);
 
   const handleVerify = useCallback(
     async (result: IDKitResult) => {
       verified.current = null;
+      hostFailed.current = false;
       try {
         verified.current = await verifyProof(result);
       } catch (error) {
+        hostFailed.current = true;
         onFailed(error);
         // Rethrown so the widget shows the failure instead of reporting a success.
         throw error;
@@ -127,20 +205,39 @@ export function IdkitVerify({
     if (verified.current) onVerified(verified.current);
   }, [onVerified]);
 
+  const onWidgetError = useCallback(
+    (code: unknown, debugReport?: IDKitDebugReport) => {
+      const text = String(code);
+      // handleVerify already handed the API error to the screen. The widget then maps that
+      // throw to `failed_by_host_app` / `generic_error` with no report — echoing it would
+      // replace `environment_mismatch` with "World ID did not answer".
+      if (
+        hostFailed.current &&
+        debugReport === undefined &&
+        (text === 'failed_by_host_app' || text === 'generic_error')
+      ) {
+        return;
+      }
+      // warn, not error: Next.js 16 treats `console.error` as a full-screen overlay, and
+      // this path is a handled failure. The phone log still gets the line.
+      console.warn('[idkit] verification failed', text, debugReport);
+      onFailed(new IdkitFailure(text, debugReport));
+    },
+    [onFailed],
+  );
+
   return createElement(IDKitRequestWidget, {
-    action: WORLD_ACTION,
+    action,
+    action_description,
     allow_legacy_proofs: true,
     app_id: WORLD_APP_ID as `app_${string}`,
+    ...(isIdkitEnvironment(environment) ? { environment } : {}),
     handleVerify,
-    onError: (code: unknown, debugReport?: IDKitDebugReport) => {
-      // The console line is for the phone log; the failure object is for the screen.
-      console.error('[idkit] verification failed', code, debugReport);
-      onFailed(new IdkitFailure(String(code), debugReport));
-    },
+    onError: onWidgetError,
     onOpenChange,
     onSuccess,
     open,
-    preset: pickPreset(level),
+    preset: pickPreset(level, signal),
     rp_context: rpContext,
   });
 }

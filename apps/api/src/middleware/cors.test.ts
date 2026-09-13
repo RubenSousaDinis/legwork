@@ -58,4 +58,28 @@ describe('cors', () => {
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://dashboard.legwork.test');
     expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
   });
+
+  it('allows loopback and LAN origins outside production', async () => {
+    const local = await middleware(
+      request('/check', { method: 'OPTIONS', headers: { origin: 'http://localhost:3003' } }),
+    );
+    expect(local.status).toBe(204);
+    expect(local.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:3003');
+
+    const lan = await middleware(
+      request('/check', { method: 'OPTIONS', headers: { origin: 'http://192.168.1.253:3003' } }),
+    );
+    expect(lan.status).toBe(204);
+
+    const prod = createMiddleware({
+      env: { MINIAPP_URL: MINIAPP, DASHBOARD_URL: DASHBOARD, NODE_ENV: 'production' },
+      store,
+      now: () => 1_700_000_000_000,
+    });
+    const blocked = await prod(
+      request('/check', { method: 'OPTIONS', headers: { origin: 'http://localhost:3003' } }),
+    );
+    expect(blocked.status).toBe(403);
+    expect(await blocked.json()).toEqual({ error: 'origin_not_allowed' });
+  });
 });

@@ -33,6 +33,7 @@ export function readEnv(env: Record<string, string | undefined> = {}): Middlewar
     MINIAPP_URL: env.MINIAPP_URL,
     DASHBOARD_URL: env.DASHBOARD_URL,
     ADMIN_API_KEY: env.ADMIN_API_KEY,
+    NODE_ENV: env.NODE_ENV,
   };
 }
 

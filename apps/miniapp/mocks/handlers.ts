@@ -430,8 +430,14 @@ export const handlers = [
   http.post('*/api/idkit/verify', async ({ request }) => {
     lastVerifyText = await request.text();
     if (scenario().idkitVerify === 'nullifier_already_registered') {
-      idkitCookieIssued = false;
-      return json(NULLIFIER_ALREADY_REGISTERED, { status: 409 });
+      // The API issues the idkit cookie here too, and names the worker the nullifier is
+      // bound to: a returning human signs in with the proof they just gave.
+      idkitCookieIssued = true;
+      const bound = registry.find((entry) => entry.nullifier === NULLIFIER);
+      return json(
+        { ...NULLIFIER_ALREADY_REGISTERED, ...(bound ? { worker: bound.worker } : {}) },
+        { status: 409 },
+      );
     }
     idkitCookieIssued = true;
     return json(VERIFY_RESPONSE);

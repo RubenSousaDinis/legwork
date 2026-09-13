@@ -24,6 +24,10 @@ describe('probe', () => {
     expect(orbLegacy).not.toHaveBeenCalled();
 
     vi.mocked(selfieCheckLegacy).mockClear();
+    pickPreset('selfie', '0xworker');
+    expect(selfieCheckLegacy).toHaveBeenCalledWith({ signal: '0xworker' });
+
+    vi.mocked(selfieCheckLegacy).mockClear();
     vi.mocked(orbLegacy).mockClear();
 
     pickPreset('orb');

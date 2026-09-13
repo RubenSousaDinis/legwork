@@ -34,6 +34,7 @@ const AuthPage = (await import('../../app/(auth)/verify/page')).default;
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   resetSessionForTests();
   setScenario({ earnings: 'unauthorized' });
 });
@@ -46,11 +47,22 @@ describe('a failed World ID check', () => {
       'You closed World ID before finishing. Try again.',
     );
 
-    // The code the lead is chasing is not one IDKit documents, so it keeps its code and
-    // takes the fallback sentence rather than being explained as something it is not.
-    const unknown = describeIdkitError('verification_disabled');
+    const selfieDisabled = describeIdkitError('verification_disabled');
+    expect(selfieDisabled.sentence).toBe(
+      'Selfie Check is disabled for this app in this environment. The Sandbox grant may not have reached the phone.',
+    );
+    expect(selfieDisabled.code).toBe('verification_disabled');
+
+    const sandboxRefused = describeIdkitError('environment_mismatch');
+    expect(sandboxRefused.sentence).toContain('Retry with World App');
+    expect(sandboxRefused.code).toBe('environment_mismatch');
+
+    expect(describeIdkitError('missing_app_id').sentence).toContain('NEXT_PUBLIC_WORLD_APP_ID');
+
+    // A code World has not named yet keeps its code and takes the fallback sentence.
+    const unknown = describeIdkitError('not_a_real_idkit_code');
     expect(unknown.sentence).toBe(IDKIT_FALLBACK_SENTENCE);
-    expect(unknown.code).toBe('verification_disabled');
+    expect(unknown.code).toBe('not_a_real_idkit_code');
 
     render(<AuthPage />);
     fireEvent.click(await screen.findByText(VERIFY_BUTTON));
@@ -64,7 +76,13 @@ describe('a failed World ID check', () => {
 
     // The raw code is still on screen — the phone log T-41 keeps is written from it.
     expect(line.querySelector('[data-error-code]')?.textContent).toBe('verification_disabled');
-    expect(line.textContent).toContain(IDKIT_FALLBACK_SENTENCE);
+    expect(line.textContent).toContain(selfieDisabled.sentence);
+
+    // The widget stays mounted. Closing it on a widget code is what made the QR
+    // disappear before it painted: `generic_error` used to bounce to landing.
+    expect(document.querySelector('[data-step="verifying"]')).not.toBeNull();
+    expect(screen.getByText('fail-idkit')).toBeTruthy();
+    expect(document.querySelector('[data-auth-step="verifying"]')).not.toBeNull();
 
     // Amber is the refusal colour. A World ID that did not answer accused nobody of anything.
     expect(document.querySelector('.lw-error')).toBeNull();

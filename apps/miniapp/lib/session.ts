@@ -134,6 +134,19 @@ function clearMirror(): void {
   window.localStorage.removeItem(MIRROR_KEY);
 }
 
+/**
+ * The cookie is gone — say so, here and now.
+ *
+ * A route that gets a 401 already knows what `restoreSession()` would go and ask. Leaving the
+ * mirror in place is what put a worker on a board that said "Verified human ✓" over a list
+ * that could never load: verified-but-not-registered reads as signed in to every component
+ * that only looks at the mirror.
+ */
+export function forgetSession(): void {
+  clearMirror();
+  publish({ state: UNVERIFIED, ready: true });
+}
+
 // ------------------------------------------------------------------ the API
 
 type WalletAuthPayload = { address: string; message: string; signature: string };

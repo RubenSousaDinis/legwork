@@ -1,6 +1,6 @@
 import type { IDKitDebugReport } from '@worldcoin/idkit';
 import { describe, expect, it } from 'vitest';
-import { IdkitFailure, summarizeDebugReport } from '../lib/worldid';
+import { IdkitFailure, refineIdkitCode, summarizeDebugReport } from '../lib/worldid';
 
 const REPORT: IDKitDebugReport = {
   version: 1,
@@ -30,5 +30,9 @@ describe('idkit failure', () => {
     const long = summarizeDebugReport({ ...REPORT, response_payload: 'a'.repeat(1000) });
     expect(long.length).toBeLessThan(460);
     expect(long.endsWith('…')).toBe(true);
+
+    expect(refineIdkitCode('generic_error', 'app_id is required')).toBe('missing_app_id');
+    expect(refineIdkitCode('generic_error', 'Failed to initialize IDKit WASM')).toBe('generic_error');
+    expect(refineIdkitCode('user_rejected', 'app_id is required')).toBe('user_rejected');
   });
 });

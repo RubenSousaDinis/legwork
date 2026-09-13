@@ -69,6 +69,8 @@ export type TaskCardProps = {
   onClaim: () => void;
   /** This row's claim is in flight: the relay has the transaction and has not answered. */
   claiming?: boolean;
+  /** Overrides `CLAIMING_LINE` while a Selfie Check is open. */
+  claimingLine?: string;
   claim?: TaskCardClaim;
   onRelease: () => void;
   error?: string;
@@ -95,6 +97,13 @@ export const SEEDED_NOT_CLAIMABLE =
  * claim — and the line under it says what those seconds are.
  */
 export const CLAIMING_LINE = 'Claiming this task…';
+
+/**
+ * Claim-time Selfie Check sits in front of the relay. The button keeps the name CLAIM;
+ * this line is what says the camera check is running.
+ */
+export const SELFIE_BEFORE_CLAIM =
+  'Selfie Check first — a live person has to be behind this claim.';
 
 /**
  * The claim window closing does not hand the task back: `TaskEscrow.expire` is what moves the
@@ -186,6 +195,7 @@ export function TaskCard({
   onToggle,
   onClaim,
   claiming = false,
+  claimingLine = CLAIMING_LINE,
   claim,
   onRelease,
   error,
@@ -301,7 +311,12 @@ export function TaskCard({
               </p>
             </div>
           ) : (
-            <ClaimButton claiming={claiming} onClaim={onClaim} row={row} />
+            <ClaimButton
+              claiming={claiming}
+              claimingLine={claimingLine}
+              onClaim={onClaim}
+              row={row}
+            />
           )}
 
           <p className="lw-chips lw-chips--centred" data-row="relayed">
@@ -338,10 +353,12 @@ function ClaimButton({
   row,
   onClaim,
   claiming,
+  claimingLine,
 }: {
   row: TaskRow;
   onClaim: () => void;
   claiming: boolean;
+  claimingLine: string;
 }) {
   const tooFar =
     row.distance_m !== undefined &&
@@ -355,16 +372,21 @@ function ClaimButton({
           {tooFarToClaimReason(row.distance_m as number)}
         </p>
       ) : (
-        <p className="lw-body" data-claim="confirm" data-floor="20">
-          {claimConfirmation(row)}
-        </p>
+        <>
+          <p className="lw-body" data-claim="confirm" data-floor="20">
+            {claimConfirmation(row)}
+          </p>
+          <p className="lw-note" data-claim="selfie" data-floor="20">
+            {SELFIE_BEFORE_CLAIM}
+          </p>
+        </>
       )}
       {/* The label does not change: an action keeps its name through the whole flow, and
           the waiting line under it is what says the flow is running. */}
       <Button disabled={tooFar || claiming} full onClick={onClaim} size="lg" variant="primary">
         CLAIM
       </Button>
-      {claiming ? <Waiting step="claim">{CLAIMING_LINE}</Waiting> : null}
+      {claiming ? <Waiting step="claim">{claimingLine}</Waiting> : null}
     </div>
   );
 }
