@@ -112,6 +112,10 @@ local install line; local mode pays via x402 and returns the task.
 
 **Output (refused)** — `RefusalPayload`, see below.
 
+**Other outcomes**
+
+- `503 place_lookup_unavailable` — the live place lookup did not answer; nothing posted, charged or marked; retry once after `retry_after_s` (30 s). Local mode returns the API body with `isError: true`; `check_task` returns a tool error quoting the status and the body. Neither is a refusal, so neither carries the no-retry sentence.
+
 ### `task_status`
 
 Current state of a task; long-polls up to `wait_seconds`. `answer` is always wrapped as
@@ -201,7 +205,7 @@ Dry-run the screening for a task without posting or paying. Never marks.
 | Field | Type | Notes |
 |---|---|---|
 | `refused` | `true` | |
-| `class` | one of the six abuse classes, or `null` | `null` is a refusal outside the six (for example, region not covered) and never marks |
+| `class` | one of the six abuse classes, or `null` | `null` is a refusal outside the six and never marks. A place the live lookup could not find is not a refusal: it is a plain 400 `invalid_request` on `spec.place.place_id` (`unresolvable place_id`) |
 | `reason` | `string` ≤ 300 | a constant; never spec text, a place name or a buyer identity |
 | `rule_id` | `string` ≤ 64 | which rule fired, e.g. `deny.auth` |
 | `retryable` | `false` | always |

@@ -11,7 +11,7 @@ Two bounding boxes, `S,W,N,E`:
 | Leiria | `39.68,-8.90,39.82,-8.70` |
 | Lisbon | `38.68,-9.25,38.83,-9.08` |
 
-Leiria and Lisbon only — an id outside the extract is refused as `place_id not found in OpenStreetMap` unless the API resolves that single id live through `overpassLookup.ts`.
+Leiria and Lisbon in this file. An id outside it is looked up live by the API (T-61 `overpassLookup.ts`, one request, cached); the extract itself never opens a socket.
 
 ## Regenerating the extract
 
@@ -19,10 +19,11 @@ Leiria and Lisbon only — an id outside the extract is refused as `place_id not
 pnpm osm:extract        # or: pnpm tsx scripts/osm-extract.ts
 ```
 
-`scripts/osm-extract.ts` is the only file in this package's lane that touches the network. It
-queries one bounding box at a time, merges the two responses, and writes
-`packages/screening/fixtures/osm/leiria-lisbon.json.gz`. Nothing under `src/` or `test/` opens a
-socket, and the gate never geocodes at request time: the extract is loaded once at boot.
+`scripts/osm-extract.ts` is the file that builds the extract. It queries one bounding box at a
+time, merges the two responses, and writes `packages/screening/fixtures/osm/leiria-lisbon.json.gz`.
+The extract is loaded once at boot. The one other place a socket opens is
+`src/osm/overpassLookup.ts`, and only when the API calls it for a single id the extract lacks
+(T-61): one request, never on import, never a search. Nothing under `test/` opens a socket.
 
 The output is deterministic — the timestamp comes from the source data rather than the wall
 clock, POIs are sorted by type then numeric id, and tag keys are sorted — so re-running the

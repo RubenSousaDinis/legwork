@@ -24,10 +24,10 @@ money and would own every task it posted.
 Legwork charges its fee on top of what the worker keeps: a 3.00 task costs 3.45 (0.45 fee on
 top); the worker receives 3.00. Escrow locks 3.45.
 
-This recipe widens what an agent can **resolve and quote**. It does not change what the
-deployed product accepts. A `place_id` outside
-`packages/screening/fixtures/osm/leiria-lisbon.json.gz` still cannot be posted today.
-`OsmPlaceIndex` covers Leiria and Lisbon only. Say that; do not imply the limitation is gone.
+This recipe resolves a place the packaged index does not know and gets it screened and quoted.
+Since Day 8 the Task API looks such an id up live (one Overpass request, T-61/T-62); before
+Day 8 it answered 400. If the live lookup does not answer, `postCheck` returns 503
+`place_lookup_unavailable`: wait `retry_after_s` and send the same request once more; never loop.
 
 © OpenStreetMap contributors, ODbL. The packaged file is a cached extract of Leiria and Lisbon
 business POIs, not OpenStreetMap.
@@ -42,9 +42,10 @@ business POIs, not OpenStreetMap.
 | OSM id | `node/536546148` |
 | Coordinate (3 decimals) | 40.210, -8.419 |
 | In `OsmPlaceIndex` | no — `coordinateOf("node/536546148")` is undefined |
-| Live `POST /check` | **400** `{error: invalid_request, field: spec.place.place_id, reason: unresolvable place_id node/536546148}` |
+| Live `POST /check` | **200** `{accepted: true, spec_hash, price_usdc: 3.45}` (re-run 2026-09-13T15:42:14Z) |
+| Before Day 8 | **400** `{error: invalid_request, field: spec.place.place_id, reason: unresolvable place_id node/536546148}` (agent-run 2026-09-10) |
 
-Coimbra is outside Leiria and Lisbon. That is the whole claim.
+Coimbra is outside the Leiria and Lisbon extract; since Day 8 the Task API resolves it live.
 
 ---
 
@@ -94,9 +95,11 @@ never marks.
 }
 ```
 
-Expect **400** `unresolvable place_id node/536546148`. That is the packaged index saying no.
-It is not a refusal and it is not a posted task. The Overpass step already has the id; this
-step is what the product does with it today.
+Expect **200** `{ accepted: true, spec_hash, price_usdc: 3.45 }`. A **400** `unresolvable
+place_id` now means Overpass has no business at that id; a **503** `place_lookup_unavailable`
+means Overpass did not answer: retry once after `retry_after_s`. None of the three is a posted
+task, and none marks. The Overpass step already has the id; this step is what the product does
+with it.
 
 ---
 
@@ -106,11 +109,10 @@ step is what the product does with it today.
 Send **no** `PAYMENT-SIGNATURE`.
 
 Expect HTTP **402** with `price_usdc: 3.45`, `accepts[]`, and `remaining_budget`. Payment is
-checked before the place. The 402 is a quote, not a posted task, and not a promise that
-paying would create one — `postCheck` already said this `place_id` does not resolve.
+checked before the place. The 402 is a quote, not a posted task. `postCheck` already said the
+spec screens; paying is the step this recipe stops before.
 
 If the call answers 201, something posted a real task — stop and say so.
 
-The result of the flow is the OSM id from step 1 together with the 402 quote from step 3, and
-the 400 from `postCheck` that keeps the product's limit visible. Paying, if anyone then
-wanted a task the API cannot accept, is still the agent's own x402 call.
+The result of the flow is the OSM id from step 1, the 200 from `postCheck` that says the spec
+screens, and the 402 quote from step 3. Paying is still the agent's own x402 call.
