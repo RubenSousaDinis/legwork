@@ -25,6 +25,7 @@ did not: the unpaid post returned 402, and no `PAYMENT-SIGNATURE` was sent.
 | Bazantic account username | RubenSousaDinis |
 | Screen-recording link | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 | Gateways the plan allows | at least two, demonstrated 2026-09-10 (`nf26bnkznrbc3cg5rbq2hmej5q` Legwork, `vz23lkwccfa6hfawpnzw5ohzyy` Overpass). Exact plan cap: TODO(operator) |
+| Sponsor feedback | [`FEEDBACK-BAZANTIC.md`](../FEEDBACK-BAZANTIC.md) — B1–B3 |
 
 Both now exist — the username above, and the recording the operator made on 2026-09-13. Flipping
 the prize rows in `README.md` and `docs/submission.md` on that evidence is the lead's edit, not
@@ -45,6 +46,7 @@ this task's.
 | Bazantic account username | operator | RubenSousaDinis |
 | Screen-recording link | operator | [Integrating Bazantic, Overpass, and Legwork](https://www.loom.com/share/1942b481782740e28feeb72f9b4346aa) — 1:36, operator-recorded 2026-09-13 |
 | Gateways the plan allows | operator | at least two, demonstrated 2026-09-10 (both hosts answer). Exact plan cap: TODO(operator) — asked on issue #209 before any gateway was created |
+| Sponsor feedback (JSON body vs Overpass form encoding) | operator | [`FEEDBACK-BAZANTIC.md`](../FEEDBACK-BAZANTIC.md) B1–B3 |
 
 ## Plan limit — asked before anything was created
 
@@ -203,3 +205,13 @@ the gateway lists the API; paying is still the agent's own x402 call.
 | (e) | 400 on corpus `node/900000001`; 200 accepted / `price_usdc: 3.45` on live `node/3092370961` |
 | (f) | 402 `price_usdc: 3.45`, `accepts[]`, `remaining_budget`; no task posted |
 | (g) | this file |
+
+## Sponsor feedback
+
+[`FEEDBACK-BAZANTIC.md`](../FEEDBACK-BAZANTIC.md), kept while the gateways were built and published
+with the submission. Short version: Bazantic's Recipe Test and Playground POST **JSON**; the public
+Overpass interpreter accepts form `data=` or raw Overpass QL and answers **400** to a JSON body, so
+those two surfaces go red on the Overpass gateway while ordinary form-encoded calls through the same
+gateway host answer **200**. We did not put a JSON bridge in front of Overpass — a wrapper is the
+thing a judge would fairly read as the agentified service. Legwork's own JSON routes through
+Bazantic behave as designed, including the intentional unpaid **402** that is the quote.
