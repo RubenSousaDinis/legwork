@@ -26,7 +26,6 @@
     "@worldcoin/minikit-js": "catalog:",
     "@x402/core": "catalog:",
     "drizzle-orm": "catalog:",
-    "exifr": "catalog:",
     "fast-json-stable-stringify": "catalog:",
     "jose": "catalog:",
     "mcp-handler": "catalog:",
